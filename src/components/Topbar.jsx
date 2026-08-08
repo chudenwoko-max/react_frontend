@@ -15,7 +15,7 @@ function Topbar() {
     <header style={styles.header}>
       {/* Left */}
       <div style={styles.left}>
-        <span style={styles.brand}>Lamibeles</span>
+        <span style={styles.brand}>OrbitPay</span>
       </div>
 
       {/* Right */}

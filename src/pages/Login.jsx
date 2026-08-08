@@ -88,7 +88,7 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.brandSection}>
-          <h1 style={styles.brand}>Lamibeles</h1>
+          <h1 style={styles.brand}>OrbitPay</h1>
           <p style={styles.tagline}>
             {requires2FA ? "Enter Verification Code" : "Sign in to your account"}
           </p>

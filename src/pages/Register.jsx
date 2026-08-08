@@ -42,7 +42,7 @@ export default function Register() {
       <div style={styles.card}>
         <div style={styles.header}>
           <h1 style={styles.title}>Create Account</h1>
-          <p style={styles.subtitle}>Join Lamibeles and start sending money instantly</p>
+          <p style={styles.subtitle}>Join OrbitPay and start sending money instantly</p>
         </div>
 
         <form onSubmit={handleSubmit}>

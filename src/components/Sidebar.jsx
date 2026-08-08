@@ -50,7 +50,7 @@ export default function Sidebar() {
     <div style={styles.sidebar}>
       {/* Brand */}
       <div style={styles.brand}>
-        <h2 style={styles.brandText}>Lamibeles</h2>
+        <h2 style={styles.brandText}>OrbitPay</h2>
       </div>
 
       {/* Menu */}

@@ -65,7 +65,7 @@ export default function Statements() {
         <div style={styles.statementCard} id="statement-print">
           <div style={styles.statementHeader}>
             <div>
-              <h2 style={{ margin: 0 }}>Lamibeles</h2>
+              <h2 style={{ margin: 0 }}>OrbitPay</h2>
               <p style={{ margin: "4px 0 0", color: "#6b7280" }}>
                 Account Statement
               </p>
