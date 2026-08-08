@@ -1,27 +1,12 @@
-import { FaMobileAlt } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
-
 import {
-  FaHome,
-  FaWallet,
-  FaPaperPlane,
-  FaMoneyBill,
-  FaArrowDown,
-  FaExchangeAlt,
-  FaUser,
-  FaImage,
-  FaUniversity,
-  FaShieldAlt,
-  FaHandHoldingUsd,
-  FaPiggyBank,
-  FaCreditCard,
-  FaUserFriends,
-  FaClock,
-  FaHeadset,
-  FaFileAlt,
+  FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
+  FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
+  FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
+  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes
 } from "react-icons/fa";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: <FaHome /> },
     { path: "/wallet", label: "Wallet", icon: <FaWallet /> },
@@ -45,14 +30,21 @@ export default function Sidebar() {
   ];
 
   return (
-    <div style={styles.sidebar}>
+    <div
+      style={{
+        ...styles.sidebar,
+        transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+      }}
+      className="sidebar"
+    >
+      {/* Close button for mobile */}
+      <button onClick={onClose} style={styles.closeBtn}>
+        <FaTimes size={18} />
+      </button>
+
       {/* Brand */}
       <div style={styles.brand}>
-        <img
-          src="/orbitpay-logo.png"
-          alt="OrbitPay"
-          style={styles.logo}
-        />
+        <img src="/orbitpay-logo.png" alt="OrbitPay" style={styles.logo} />
       </div>
 
       {/* Menu */}
@@ -61,6 +53,7 @@ export default function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={onClose}
             style={({ isActive }) => ({
               ...styles.link,
               ...(isActive ? styles.activeLink : {}),
@@ -83,8 +76,21 @@ const styles = {
     borderRight: "1px solid #e5e7eb",
     display: "flex",
     flexDirection: "column",
-    position: "sticky",
+    position: "fixed",
     top: 0,
+    left: 0,
+    zIndex: 50,
+    transition: "transform 0.3s ease",
+  },
+  closeBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    color: "#64748b",
+    display: "block",
   },
   brand: {
     padding: "24px 20px",
@@ -113,11 +119,10 @@ const styles = {
     color: "#4b5563",
     fontSize: 14,
     fontWeight: 500,
-    transition: "all 0.2s",
   },
   activeLink: {
     background: "#f1f5f9",
-    color: "#0F172A", // Navy
+    color: "#0F172A",
     fontWeight: 600,
   },
   icon: {

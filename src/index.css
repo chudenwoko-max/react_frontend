@@ -36,6 +36,7 @@ a {
   background: #f4f6f8;
 }
 
+/* Tooltip */
 .tooltip {
   position: relative;
   display: inline-block;
@@ -51,7 +52,7 @@ a {
   padding: 6px 8px;
   position: absolute;
   z-index: 1000;
-  bottom: 125%; /* show above button */
+  bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
@@ -61,4 +62,26 @@ a {
 .tooltip:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
+}
+
+/* ===============================
+   Responsive Sidebar
+   =============================== */
+
+/* Mobile: Sidebar is hidden by default */
+.sidebar {
+  transform: translateX(-100%);
+}
+
+/* Desktop: Always show the Sidebar */
+@media (min-width: 768px) {
+  .sidebar {
+    transform: translateX(0) !important;
+    position: sticky !important;
+  }
+
+  /* Hide hamburger button on desktop */
+  .menu-btn {
+    display: none !important;
+  }
 }

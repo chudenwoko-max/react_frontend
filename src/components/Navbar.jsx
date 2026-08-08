@@ -1,8 +1,9 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
+import { FaBars } from "react-icons/fa";
 
-function Navbar() {
+function Navbar({ onMenuClick }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -14,11 +15,14 @@ function Navbar() {
 
   return (
     <nav style={styles.nav}>
+      {/* Hamburger - only visible on mobile */}
+      <button onClick={onMenuClick} style={styles.menuBtn}>
+        <FaBars size={20} />
+      </button>
+
       <div style={styles.right}>
-        {/* Notification Bell */}
         <NotificationBell />
 
-        {/* User Info */}
         <div style={styles.userInfo}>
           <img
             src={
@@ -41,19 +45,26 @@ function Navbar() {
 
 export default Navbar;
 
-// ================= STYLES =================
 const styles = {
   nav: {
     background: "#ffffff",
     height: "64px",
-    padding: "0 28px",
+    padding: "0 20px",
     display: "flex",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
     borderBottom: "1px solid #e5e7eb",
     position: "sticky",
     top: 0,
     zIndex: 50,
+  },
+  menuBtn: {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "8px",
+    display: "block",
+    color: "#0F172A",
   },
   right: {
     display: "flex",
