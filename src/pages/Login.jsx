@@ -88,7 +88,11 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.brandSection}>
-          <h1 style={styles.brand}>OrbitPay</h1>
+          <img
+            src="/orbitpay-logo.png"
+            alt="OrbitPay"
+            style={styles.logo}
+          />
           <p style={styles.tagline}>
             {requires2FA ? "Enter Verification Code" : "Sign in to your account"}
           </p>
@@ -163,7 +167,6 @@ export default function Login() {
           </form>
         )}
 
-        {/* Create Account Link */}
         {!requires2FA && (
           <p style={styles.footerText}>
             Don't have an account?{" "}
@@ -199,11 +202,10 @@ const styles = {
     textAlign: "center",
     marginBottom: 32,
   },
-  brand: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#111827",
-    margin: 0,
+  logo: {
+    height: 52,
+    marginBottom: 12,
+    objectFit: "contain",
   },
   tagline: {
     color: "#6b7280",
@@ -231,7 +233,7 @@ const styles = {
   button: {
     width: "100%",
     padding: "13px",
-    background: "#2563eb",
+    background: "#0F172A", // Navy primary
     color: "white",
     border: "none",
     borderRadius: 10,
@@ -272,7 +274,7 @@ const styles = {
     color: "#6b7280",
   },
   link: {
-    color: "#2563eb",
+    color: "#0F172A",
     fontWeight: 500,
     textDecoration: "none",
   },

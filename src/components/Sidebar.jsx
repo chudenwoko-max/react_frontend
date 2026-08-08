@@ -1,4 +1,3 @@
-
 import { FaMobileAlt } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
@@ -43,14 +42,17 @@ export default function Sidebar() {
     { path: "/scheduled", label: "Scheduled", icon: <FaClock /> },
     { path: "/support", label: "Help & Support", icon: <FaHeadset /> },
     { path: "/statements", label: "Statements", icon: <FaFileAlt /> },
-    
   ];
 
   return (
     <div style={styles.sidebar}>
       {/* Brand */}
       <div style={styles.brand}>
-        <h2 style={styles.brandText}>OrbitPay</h2>
+        <img
+          src="/orbitpay-logo.png"
+          alt="OrbitPay"
+          style={styles.logo}
+        />
       </div>
 
       {/* Menu */}
@@ -73,7 +75,6 @@ export default function Sidebar() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   sidebar: {
     width: "260px",
@@ -88,12 +89,12 @@ const styles = {
   brand: {
     padding: "24px 20px",
     borderBottom: "1px solid #f3f4f6",
+    display: "flex",
+    alignItems: "center",
   },
-  brandText: {
-    margin: 0,
-    fontSize: 20,
-    fontWeight: 700,
-    color: "#111827",
+  logo: {
+    height: 38,
+    objectFit: "contain",
   },
   nav: {
     padding: "16px 12px",
@@ -115,8 +116,8 @@ const styles = {
     transition: "all 0.2s",
   },
   activeLink: {
-    background: "#eff6ff",
-    color: "#2563eb",
+    background: "#f1f5f9",
+    color: "#0F172A", // Navy
     fontWeight: 600,
   },
   icon: {
