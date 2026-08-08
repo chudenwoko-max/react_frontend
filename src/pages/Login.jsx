@@ -203,7 +203,7 @@ const styles = {
     marginBottom: 32,
   },
   logo: {
-    height: 52,
+    height: 104,
     marginBottom: 12,
     objectFit: "contain",
   },

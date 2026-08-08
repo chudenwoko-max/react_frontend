@@ -93,7 +93,7 @@ const styles = {
     alignItems: "center",
   },
   logo: {
-    height: 38,
+    height: 76,
     objectFit: "contain",
   },
   nav: {
