@@ -60,18 +60,19 @@ export default function Sidebar({ isOpen, onClose }) {
 
 const styles = {
   sidebar: {
-    width: "260px",
-    height: "calc(100vh - 64px)", // starts below navbar
-    background: "#ffffff",
-    borderRight: "1px solid #e5e7eb",
-    display: "flex",
-    flexDirection: "column",
-    position: "fixed",
-    top: "64px",                 // ← critical: starts under the navbar
-    left: 0,
-    zIndex: 40,                  // lower than navbar
-    transition: "transform 0.3s ease",
-  },
+  width: "260px",
+  height: "calc(100vh - 64px)",
+  background: "#ffffff",
+  borderRight: "1px solid #e5e7eb",
+  display: "flex",
+  flexDirection: "column",
+  position: "fixed",
+  top: "64px",
+  left: 0,
+  zIndex: 999,               // ← very high so it is always on top
+  transition: "transform 0.3s ease",
+  boxShadow: "4px 0 15px rgba(0,0,0,0.08)",
+},
   nav: {
     padding: "12px",
     display: "flex",

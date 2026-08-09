@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // closed by default on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const checkScreen = () => {
@@ -21,16 +21,23 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
+    <div style={{ display: "flex", height: "100vh", background: "#f7f9fc", position: "relative" }}>
       
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
       />
 
-      {/* Dark overlay removed completely */}
+      {/* NO overlay at all */}
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ 
+        flex: 1, 
+        display: "flex", 
+        flexDirection: "column", 
+        minWidth: 0,
+        position: "relative",
+        zIndex: 1
+      }}>
         <Navbar 
           isSidebarOpen={sidebarOpen}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
