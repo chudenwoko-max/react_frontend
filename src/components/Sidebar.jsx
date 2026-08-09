@@ -37,9 +37,6 @@ export default function Sidebar({ isOpen, onClose }) {
       }}
       className="sidebar"
     >
-      {/* Simple top spacing */}
-      <div style={styles.topSpacing}></div>
-
       {/* Menu */}
       <nav style={styles.nav}>
         {menuItems.map((item) => (
@@ -64,19 +61,16 @@ export default function Sidebar({ isOpen, onClose }) {
 const styles = {
   sidebar: {
     width: "260px",
-    height: "100vh",
+    height: "calc(100vh - 64px)", // starts below navbar
     background: "#ffffff",
     borderRight: "1px solid #e5e7eb",
     display: "flex",
     flexDirection: "column",
     position: "fixed",
-    top: 0,
+    top: "64px",                 // ← critical: starts under the navbar
     left: 0,
-    zIndex: 50,
+    zIndex: 40,                  // lower than navbar
     transition: "transform 0.3s ease",
-  },
-  topSpacing: {
-    height: "20px",
   },
   nav: {
     padding: "12px",

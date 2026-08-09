@@ -25,7 +25,7 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
           {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
 
-        {/* Logo */}
+        {/* Logo - now very close to hamburger */}
         <img
           src="/orbitpay-logo.png"
           alt="OrbitPay"
@@ -69,24 +69,24 @@ const styles = {
     borderBottom: "1px solid #e5e7eb",
     position: "sticky",
     top: 0,
-    zIndex: 50,
+    zIndex: 100, // higher than sidebar
   },
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "14px",
+    gap: "8px", // ← reduced from 14px (logo now close to hamburger)
   },
   menuBtn: {
     background: "transparent",
     border: "none",
     cursor: "pointer",
-    padding: "8px",
+    padding: "6px",
     color: "#0F172A",
     display: "flex",
     alignItems: "center",
   },
   logo: {
-    height: 46,
+    height: 42, // slightly larger & clean
     objectFit: "contain",
   },
   right: {
