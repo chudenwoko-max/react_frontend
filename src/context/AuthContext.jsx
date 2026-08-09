@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../api/axiosClient"; // ← use your axios client
 
 const AuthContext = createContext();
 
@@ -12,23 +13,19 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("ACCESS_TOKEN");
 
     if (!token) {
-      setUser(null); // logged out
+      setUser(null);
       return;
     }
 
-    fetch("http://localhost:8000/api/profile/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    axiosClient
+      .get("profile/")
       .then((res) => {
-        if (!res.ok) throw new Error("Unauthorized");
-        return res.json();
-      })
-      .then((data) => {
-        setUser(data);
+        setUser(res.data);
       })
       .catch(() => {
+        // Token invalid or expired
+        localStorage.removeItem("ACCESS_TOKEN");
+        localStorage.removeItem("REFRESH_TOKEN");
         setUser(null);
       });
   }, []);
