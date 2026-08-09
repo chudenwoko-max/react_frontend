@@ -16,16 +16,18 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
   return (
     <nav style={styles.nav}>
       <div style={styles.left}>
-        {/* Hamburger */}
+        {/* Hamburger / Close with GitHub-style tooltip */}
         <button
           onClick={onMenuClick}
           style={styles.menuBtn}
           className="menu-btn"
+          title={isSidebarOpen ? "Close menu" : "Open menu"}
+          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
           {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        {/* Only the logo - enlarged & very close to hamburger */}
+        {/* Logo only */}
         <img
           src="/orbitpay-logo.png"
           alt="OrbitPay"
@@ -74,7 +76,7 @@ const styles = {
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "4px", // ← extremely close (GitHub style)
+    gap: "4px",
   },
   menuBtn: {
     background: "transparent",
@@ -86,7 +88,7 @@ const styles = {
     alignItems: "center",
   },
   logo: {
-    height: 42,           // enlarged
+    height: 42,
     width: "auto",
     objectFit: "contain",
   },
