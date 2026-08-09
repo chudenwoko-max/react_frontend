@@ -12,11 +12,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          // Add more heavy libraries here if needed later, e.g.:
-          // charts: ['recharts'],
-          // utils: ['axios', 'date-fns'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor'
+            }
+            // You can add more groups later if needed
+            // if (id.includes('recharts')) return 'charts'
+            // if (id.includes('axios')) return 'utils'
+          }
         },
       },
     },
