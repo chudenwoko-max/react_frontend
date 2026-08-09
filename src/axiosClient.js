@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.0.187:8000";
+const API_BASE_URL = "https://currency-cvt-fintech-1.onrender.com";   // ← forced
 
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
