@@ -1,9 +1,9 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
-import { FaBars } from "react-icons/fa";
+import { FaBars, FaTimes } from "react-icons/fa";
 
-function Navbar({ onMenuClick }) {
+function Navbar({ onMenuClick, isSidebarOpen }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -15,11 +15,19 @@ function Navbar({ onMenuClick }) {
 
   return (
     <nav style={styles.nav}>
-      {/* Hamburger - only visible on mobile */}
-      <button onClick={onMenuClick} style={styles.menuBtn}>
-        <FaBars size={20} />
-      </button>
+      {/* Left side - Menu button */}
+      <div style={styles.left}>
+        <button
+          onClick={onMenuClick}
+          style={styles.menuBtn}
+          className="menu-btn"
+          title={isSidebarOpen ? "Close menu" : "Open menu"}
+        >
+          {isSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+        </button>
+      </div>
 
+      {/* Right side */}
       <div style={styles.right}>
         <NotificationBell />
 
@@ -58,13 +66,20 @@ const styles = {
     top: 0,
     zIndex: 50,
   },
+  left: {
+    display: "flex",
+    alignItems: "center",
+  },
   menuBtn: {
     background: "transparent",
     border: "none",
     cursor: "pointer",
     padding: "8px",
-    display: "block",
     color: "#0F172A",
+    borderRadius: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   right: {
     display: "flex",
