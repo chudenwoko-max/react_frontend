@@ -24,18 +24,15 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
           title={isSidebarOpen ? "Close menu" : "Open menu"}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+          {isSidebarOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
 
-        {/* Logo + OrbitPay text (same size, very close) */}
-        <div style={styles.brand}>
-          <img
-            src="/orbitpay-logo.png"
-            alt="OrbitPay"
-            style={styles.logo}
-          />
-          <span style={styles.brandText}>OrbitPay</span>
-        </div>
+        {/* Only the logo (already has OrbitPay text) - enlarged & tight */}
+        <img
+          src="/orbitpay-logo.png"
+          alt="OrbitPay"
+          style={styles.logo}
+        />
       </div>
 
       <div style={styles.right}>
@@ -79,32 +76,21 @@ const styles = {
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "6px", // tight gap like GitHub
+    gap: "2px", // extremely close like GitHub
   },
   menuBtn: {
     background: "transparent",
     border: "none",
     cursor: "pointer",
-    padding: "6px",
+    padding: "4px",
     color: "#0F172A",
     display: "flex",
     alignItems: "center",
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
   },
   logo: {
-    height: 32,          // same visual size as text
-    width: 32,
+    height: 36, // same visual size as the 24px icon + padding
+    width: "auto",
     objectFit: "contain",
-  },
-  brandText: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#0F172A",
-    letterSpacing: "-0.3px",
   },
   right: {
     display: "flex",
