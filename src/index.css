@@ -68,16 +68,18 @@ a {
    Responsive Sidebar
    =============================== */
 
-/* Mobile: Sidebar hidden by default */
+/* Let React control the open/close state on mobile */
 .sidebar {
-  transform: translateX(-100%);
+  /* no forced transform here */
 }
 
 /* Desktop styles */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .sidebar {
     transform: translateX(0) !important;
     position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
   }
 
   /* Hide hamburger button on desktop */
