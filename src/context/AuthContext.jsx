@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosClient from "../api/axiosClient"; // ← use your axios client
+import axiosClient from "../axiosClient";
 
 const AuthContext = createContext();
 
@@ -23,7 +23,6 @@ export function AuthProvider({ children }) {
         setUser(res.data);
       })
       .catch(() => {
-        // Token invalid or expired
         localStorage.removeItem("ACCESS_TOKEN");
         localStorage.removeItem("REFRESH_TOKEN");
         setUser(null);
