@@ -21,31 +21,31 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f7f9fc", position: "relative" }}>
-      
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
+    <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
-      {/* NO overlay at all */}
-
-      <div style={{ 
-        flex: 1, 
-        display: "flex", 
-        flexDirection: "column", 
-        minWidth: 0,
-        position: "relative",
-        zIndex: 1
-      }}>
-        <Navbar 
+      {/* Main area */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          position: "relative",
+        }}
+      >
+        <Navbar
           isSidebarOpen={sidebarOpen}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
+          onMenuClick={() => setSidebarOpen((prev) => !prev)}
         />
 
-        <div style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
+        <main style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
