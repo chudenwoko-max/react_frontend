@@ -4,21 +4,21 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // FORCE closed
 
-  // Detect screen size
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setSidebarOpen(true);   // Desktop → always open
+    // Only open automatically on large screens
+    const checkScreen = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
       } else {
-        setSidebarOpen(false);  // Mobile → always closed on load
+        setSidebarOpen(false);
       }
     };
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    checkScreen();
+    window.addEventListener("resize", checkScreen);
+    return () => window.removeEventListener("resize", checkScreen);
   }, []);
 
   return (
@@ -29,13 +29,15 @@ export default function MainLayout() {
         onClose={() => setSidebarOpen(false)} 
       />
 
-      {/* Dark overlay when sidebar is open on mobile */}
-      {sidebarOpen && window.innerWidth < 768 && (
+      {sidebarOpen && window.innerWidth < 1024 && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
             position: "fixed",
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             background: "rgba(0,0,0,0.4)",
             zIndex: 40,
           }}
