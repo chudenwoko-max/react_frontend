@@ -1,9 +1,24 @@
 import { NavLink } from "react-router-dom";
 import {
-  FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
-  FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
-  FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
-  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes
+  FaHome,
+  FaWallet,
+  FaPaperPlane,
+  FaMoneyBill,
+  FaArrowDown,
+  FaExchangeAlt,
+  FaUser,
+  FaImage,
+  FaUniversity,
+  FaShieldAlt,
+  FaHandHoldingUsd,
+  FaPiggyBank,
+  FaCreditCard,
+  FaUserFriends,
+  FaClock,
+  FaHeadset,
+  FaFileAlt,
+  FaMobileAlt,
+  FaTimes,
 } from "react-icons/fa";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -37,14 +52,17 @@ export default function Sidebar({ isOpen, onClose }) {
       }}
       className="sidebar"
     >
-      {/* Close button for mobile */}
-      <button onClick={onClose} style={styles.closeBtn}>
-        <FaTimes size={18} />
-      </button>
+      {/* Header with Logo + Close button */}
+      <div style={styles.header}>
+        <img
+          src="/orbitpay-logo.png"
+          alt="OrbitPay"
+          style={styles.logo}
+        />
 
-      {/* Brand */}
-      <div style={styles.brand}>
-        <img src="/orbitpay-logo.png" alt="OrbitPay" style={styles.logo} />
+        <button onClick={onClose} style={styles.closeBtn} className="close-btn">
+          <FaTimes size={18} />
+        </button>
       </div>
 
       {/* Menu */}
@@ -82,25 +100,27 @@ const styles = {
     zIndex: 50,
     transition: "transform 0.3s ease",
   },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "18px 16px",
+    borderBottom: "1px solid #f3f4f6",
+  },
+  logo: {
+    height: 42,
+    objectFit: "contain",
+  },
   closeBtn: {
-    position: "absolute",
-    top: 16,
-    right: 16,
     background: "transparent",
     border: "none",
     cursor: "pointer",
     color: "#64748b",
-    display: "block",
-  },
-  brand: {
-    padding: "24px 20px",
-    borderBottom: "1px solid #f3f4f6",
+    padding: "6px",
+    borderRadius: "6px",
     display: "flex",
     alignItems: "center",
-  },
-  logo: {
-    height: 76,
-    objectFit: "contain",
+    justifyContent: "center",
   },
   nav: {
     padding: "16px 12px",
@@ -108,6 +128,7 @@ const styles = {
     flexDirection: "column",
     gap: 4,
     overflowY: "auto",
+    flex: 1,
   },
   link: {
     display: "flex",

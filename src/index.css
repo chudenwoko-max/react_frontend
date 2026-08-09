@@ -22,7 +22,7 @@ a {
   transition: all 0.2s ease;
 }
 
-/* Scrollbar styling (professional fintech look) */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -68,12 +68,12 @@ a {
    Responsive Sidebar
    =============================== */
 
-/* Mobile: Sidebar is hidden by default */
+/* Mobile: Sidebar hidden by default */
 .sidebar {
   transform: translateX(-100%);
 }
 
-/* Desktop: Always show the Sidebar */
+/* Desktop styles */
 @media (min-width: 768px) {
   .sidebar {
     transform: translateX(0) !important;
@@ -82,6 +82,11 @@ a {
 
   /* Hide hamburger button on desktop */
   .menu-btn {
+    display: none !important;
+  }
+
+  /* Hide close button on desktop */
+  .close-btn {
     display: none !important;
   }
 }
