@@ -1,6 +1,7 @@
 /* Global background and font */
+/* Global background and font */
 body {
-  background: #f4f6f8;
+  background: #F8FAFC;          /* Soft Cool Gray - recommended */
   font-family: "Inter", sans-serif;
   margin: 0;
   padding: 0;
