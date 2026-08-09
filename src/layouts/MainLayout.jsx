@@ -4,10 +4,9 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // FORCE closed
+  const [sidebarOpen, setSidebarOpen] = useState(false); // closed by default on mobile
 
   useEffect(() => {
-    // Only open automatically on large screens
     const checkScreen = () => {
       if (window.innerWidth >= 1024) {
         setSidebarOpen(true);
@@ -29,20 +28,7 @@ export default function MainLayout() {
         onClose={() => setSidebarOpen(false)} 
       />
 
-      {sidebarOpen && window.innerWidth < 1024 && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.4)",
-            zIndex: 40,
-          }}
-        />
-      )}
+      {/* Dark overlay removed completely */}
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Navbar 
