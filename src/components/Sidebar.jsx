@@ -1,24 +1,9 @@
 import { NavLink } from "react-router-dom";
 import {
-  FaHome,
-  FaWallet,
-  FaPaperPlane,
-  FaMoneyBill,
-  FaArrowDown,
-  FaExchangeAlt,
-  FaUser,
-  FaImage,
-  FaUniversity,
-  FaShieldAlt,
-  FaHandHoldingUsd,
-  FaPiggyBank,
-  FaCreditCard,
-  FaUserFriends,
-  FaClock,
-  FaHeadset,
-  FaFileAlt,
-  FaMobileAlt,
-  FaTimes,
+  FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
+  FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
+  FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
+  FaClock, FaHeadset, FaFileAlt, FaMobileAlt
 } from "react-icons/fa";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -52,20 +37,8 @@ export default function Sidebar({ isOpen, onClose }) {
       }}
       className="sidebar"
     >
-      {/* Header with Logo + Close button */}
-      <div style={styles.header}>
-        <div style={styles.logoWrapper}>
-          <img
-            src="/orbitpay-logo.png"
-            alt="OrbitPay"
-            style={styles.logo}
-          />
-        </div>
-
-        <button onClick={onClose} style={styles.closeBtn} className="close-btn">
-          <FaTimes size={18} />
-        </button>
-      </div>
+      {/* Simple top spacing */}
+      <div style={styles.topSpacing}></div>
 
       {/* Menu */}
       <nav style={styles.nav}>
@@ -102,38 +75,11 @@ const styles = {
     zIndex: 50,
     transition: "transform 0.3s ease",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 16px",
-    borderBottom: "1px solid #f3f4f6",
-    minHeight: "70px",
-  },
-  logoWrapper: {
-    display: "flex",
-    alignItems: "center",
-    flex: 1,
-  },
-  logo: {
-    height: 48,
-    maxWidth: "180px",
-    objectFit: "contain",
-  },
-  closeBtn: {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "#64748b",
-    padding: "8px",
-    borderRadius: "6px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: "8px",
+  topSpacing: {
+    height: "20px",
   },
   nav: {
-    padding: "16px 12px",
+    padding: "12px",
     display: "flex",
     flexDirection: "column",
     gap: 4,
