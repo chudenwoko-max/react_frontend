@@ -25,15 +25,12 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
           {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        {/* Logo + Brand (very close to hamburger - GitHub style) */}
-        <div style={styles.brandContainer}>
-          <img
-            src="/orbitpay-logo.png"
-            alt="OrbitPay"
-            style={styles.logo}
-          />
-          <span style={styles.brandText}>OrbitPay</span>
-        </div>
+        {/* Only the logo - enlarged & very close to hamburger */}
+        <img
+          src="/orbitpay-logo.png"
+          alt="OrbitPay"
+          style={styles.logo}
+        />
       </div>
 
       <div style={styles.right}>
@@ -77,7 +74,7 @@ const styles = {
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "6px", // ← very tight (GitHub style)
+    gap: "4px", // ← extremely close (GitHub style)
   },
   menuBtn: {
     background: "transparent",
@@ -88,20 +85,10 @@ const styles = {
     display: "flex",
     alignItems: "center",
   },
-  brandContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
   logo: {
-    height: 38,           // enlarged
+    height: 42,           // enlarged
+    width: "auto",
     objectFit: "contain",
-  },
-  brandText: {
-    fontSize: 20,         // enlarged
-    fontWeight: 700,
-    color: "#0F172A",
-    letterSpacing: "-0.3px",
   },
   right: {
     display: "flex",
