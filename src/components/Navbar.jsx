@@ -16,7 +16,7 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
   return (
     <nav style={styles.nav}>
       <div style={styles.left}>
-        {/* Hamburger / Close with GitHub-style tooltip */}
+        {/* Hamburger */}
         <button
           onClick={onMenuClick}
           style={styles.menuBtn}
@@ -27,12 +27,15 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
           {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        {/* Logo only */}
-        <img
-          src="/orbitpay-logo.png"
-          alt="OrbitPay"
-          style={styles.logo}
-        />
+        {/* Logo + OrbitPay text (same size, very close) */}
+        <div style={styles.brand}>
+          <img
+            src="/orbitpay-logo.png"
+            alt="OrbitPay"
+            style={styles.logo}
+          />
+          <span style={styles.brandText}>OrbitPay</span>
+        </div>
       </div>
 
       <div style={styles.right}>
@@ -76,7 +79,7 @@ const styles = {
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: "6px", // tight gap like GitHub
   },
   menuBtn: {
     background: "transparent",
@@ -87,10 +90,21 @@ const styles = {
     display: "flex",
     alignItems: "center",
   },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
   logo: {
-    height: 42,
-    width: "auto",
+    height: 32,          // same visual size as text
+    width: 32,
     objectFit: "contain",
+  },
+  brandText: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "#0F172A",
+    letterSpacing: "-0.3px",
   },
   right: {
     display: "flex",
