@@ -4,19 +4,15 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Always start closed
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Detect screen size
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-
-      // On desktop, keep sidebar open. On mobile, keep it closed.
-      if (!mobile) {
-        setSidebarOpen(true);
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);   // Desktop → always open
       } else {
-        setSidebarOpen(false);
+        setSidebarOpen(false);  // Mobile → always closed on load
       }
     };
 
@@ -25,17 +21,16 @@ export default function MainLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen((prev) => !prev);
-  };
-
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
       
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
 
-      {/* Overlay only on mobile when open */}
-      {isMobile && sidebarOpen && (
+      {/* Dark overlay when sidebar is open on mobile */}
+      {sidebarOpen && window.innerWidth < 768 && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
@@ -49,8 +44,8 @@ export default function MainLayout() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <Navbar 
-          onMenuClick={toggleSidebar} 
-          isSidebarOpen={sidebarOpen} 
+          isSidebarOpen={sidebarOpen}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)} 
         />
 
         <div style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
