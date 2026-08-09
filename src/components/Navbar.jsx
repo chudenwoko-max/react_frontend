@@ -15,7 +15,7 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
 
   return (
     <nav style={styles.nav}>
-      {/* Left side: Hamburger + Logo */}
+      {/* Left side */}
       <div style={styles.left}>
         <button
           onClick={onMenuClick}
@@ -23,10 +23,9 @@ function Navbar({ onMenuClick, isSidebarOpen }) {
           className="menu-btn"
           title={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          {isSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
         </button>
 
-        {/* Logo next to hamburger */}
         <img
           src="/orbitpay-logo.png"
           alt="OrbitPay"
@@ -76,7 +75,7 @@ const styles = {
   left: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "14px",
   },
   menuBtn: {
     background: "transparent",
@@ -90,7 +89,7 @@ const styles = {
     justifyContent: "center",
   },
   logo: {
-    height: 36,
+    height: 48,          // ← Enlarged
     objectFit: "contain",
   },
   right: {

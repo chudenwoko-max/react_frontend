@@ -4,15 +4,17 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Always start closed
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
+
+      // On desktop, keep sidebar open. On mobile, keep it closed.
       if (!mobile) {
-        setSidebarOpen(true); // always open on desktop
+        setSidebarOpen(true);
       } else {
         setSidebarOpen(false);
       }
@@ -24,16 +26,15 @@ export default function MainLayout() {
   }, []);
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    setSidebarOpen((prev) => !prev);
   };
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
       
-      {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Dark overlay on mobile when sidebar is open */}
+      {/* Overlay only on mobile when open */}
       {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
