@@ -54,11 +54,13 @@ export default function Sidebar({ isOpen, onClose }) {
     >
       {/* Header with Logo + Close button */}
       <div style={styles.header}>
-        <img
-          src="/orbitpay-logo.png"
-          alt="OrbitPay"
-          style={styles.logo}
-        />
+        <div style={styles.logoWrapper}>
+          <img
+            src="/orbitpay-logo.png"
+            alt="OrbitPay"
+            style={styles.logo}
+          />
+        </div>
 
         <button onClick={onClose} style={styles.closeBtn} className="close-btn">
           <FaTimes size={18} />
@@ -104,11 +106,18 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "18px 16px",
+    padding: "16px 16px",
     borderBottom: "1px solid #f3f4f6",
+    minHeight: "70px",
+  },
+  logoWrapper: {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
   },
   logo: {
-    height: 42,
+    height: 48,
+    maxWidth: "180px",
     objectFit: "contain",
   },
   closeBtn: {
@@ -116,11 +125,12 @@ const styles = {
     border: "none",
     cursor: "pointer",
     color: "#64748b",
-    padding: "6px",
+    padding: "8px",
     borderRadius: "6px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: "8px",
   },
   nav: {
     padding: "16px 12px",
