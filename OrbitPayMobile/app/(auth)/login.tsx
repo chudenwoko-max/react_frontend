@@ -4,6 +4,7 @@ import { TextInput, Button, Text, HelperText } from "react-native-paper";
 import { Link, router } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
+import axios from "axios";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -29,11 +30,22 @@ export default function LoginScreen() {
 
       await login(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Invalid username or password");
-    } finally {
-      setLoading(false);
-    }
+    } catch (error: any) {
+  if (axios.isAxiosError(error)) {
+    console.log("Login API failed:", {
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+  } else {
+    console.error("Unexpected login error:", error);
+  }
+
+  setError(
+    error.response?.data?.error ||
+    error.response?.data?.detail ||
+    "Unable to log in. Please try again."
+  );
+}
   };
 
   return (
