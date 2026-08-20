@@ -33,9 +33,13 @@ export default function LoginScreen() {
     } catch (error: any) {
   if (axios.isAxiosError(error)) {
     console.log("Login API failed:", {
-      status: error.response?.status,
-      data: error.response?.data,
-    });
+  message: error.message,
+  code: error.code,
+  status: error.response?.status,
+  data: error.response?.data,
+  url: error.config?.url,
+  method: error.config?.method,
+});
   } else {
     console.error("Unexpected login error:", error);
   }
