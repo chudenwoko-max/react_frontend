@@ -6,7 +6,7 @@ const API_BASE_URL = "https://currency-cvt-fintech-1.onrender.com";
 
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     "Content-Type": "application/json",
   },
