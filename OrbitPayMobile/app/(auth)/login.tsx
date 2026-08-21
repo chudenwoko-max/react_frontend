@@ -5,6 +5,7 @@ import { Link, router } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import axios from "axios";
+import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -13,7 +14,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
+    const handleLogin = async () => {
     if (!username || !password) {
       setError("Please fill in all fields");
       return;
@@ -23,9 +24,12 @@ export default function LoginScreen() {
     setError("");
 
     try {
+      const fingerprint = await getDeviceFingerprint();
+
       const res = await axiosClient.post("login/", {
         username,
         password,
+        device_fingerprint: fingerprint,
       });
 
       await login(res.data.access, res.data.refresh);
@@ -36,21 +40,21 @@ export default function LoginScreen() {
       let message = "Unable to log in. Please try again.";
 
       if (error.response) {
-        // Server responded with an error
-        message = error.response.data?.error
-          || error.response.data?.detail
-          || JSON.stringify(error.response.data);
+        message =
+          error.response.data?.error ||
+          error.response.data?.detail ||
+          JSON.stringify(error.response.data);
       } else if (error.request) {
-        // No response received (network problem)
         message = "Network error. Cannot reach the server.";
       } else {
         message = error.message || message;
       }
 
       setError(message);
+    } finally {
+      setLoading(false);
     }
   };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
