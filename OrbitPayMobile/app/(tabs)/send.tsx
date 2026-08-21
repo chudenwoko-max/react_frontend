@@ -13,6 +13,8 @@ import { TextInput, Button, HelperText } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
 
+const HIGH_VALUE_THRESHOLD = 50000;
+
 export default function SendScreen() {
   const { selectedUser } = useLocalSearchParams<{ selectedUser?: string }>();
   const [recipient, setRecipient] = useState(selectedUser || "");
@@ -21,61 +23,97 @@ export default function SendScreen() {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isHighValue, setIsHighValue] = useState(false);
 
   const handleSend = async () => {
-  if (!recipient || !amount || !pin) {
-    setError("Please fill in recipient, amount and PIN");
-    return;
-  }
-
-  if (isNaN(Number(amount)) || Number(amount) <= 0) {
-    setError("Please enter a valid amount");
-    return;
-  }
-
-  setLoading(true);
-  setError("");
-
-  try {
-    // 1. First get a pin_token
-    const tokenRes = await axiosClient.post("create-pin/", {
-      pin: pin, // some backends require the pin here too
-    });
-
-    const pinToken = tokenRes.data.pin_token;
-
-    if (!pinToken) {
-      throw new Error("Could not get PIN token");
+    if (!recipient || !amount || !pin) {
+      setError("Please fill in recipient, amount and PIN");
+      return;
     }
 
-    // 2. Now send the money with the token
-    const res = await axiosClient.post("send-money/", {
-      recipient: recipient,
-      amount: amount,
-      pin: pin,
-      pin_token: pinToken,   // ← this was missing
-      note: note || "",
-    });
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
 
-    // Web-friendly success
-    window.alert(res.data.message || "Money sent successfully!");
+    setLoading(true);
+    setError("");
 
-    setRecipient("");
-    setAmount("");
-    setPin("");
-    setNote("");
-    router.replace("/(tabs)");
-  } catch (err: any) {
-    console.log("Send error:", err.response?.data);
-    const message =
-      err.response?.data?.error ||
-      err.response?.data?.detail ||
-      "Failed to send money. Please try again.";
-    setError(message);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      // 1. Always get a normal pin_token first
+      const tokenRes = await axiosClient.post("create-pin/", { pin });
+      const pinToken = tokenRes.data.pin_token;
+
+      if (!pinToken) {
+        throw new Error("Could not get PIN token");
+      }
+
+      let highValueToken = null;
+
+      // 2. If amount ≥ 50,000 → request high-value confirmation
+      if (numericAmount >= HIGH_VALUE_THRESHOLD) {
+        setIsHighValue(true);
+
+        const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
+          amount: numericAmount,
+          recipient,
+        });
+
+        highValueToken = confirmRes.data.high_value_token;
+
+        // Optional: show extra confirmation to user
+        const confirmed = await new Promise((resolve) => {
+          Alert.alert(
+            "High Value Transfer",
+            `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
+            [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Confirm", onPress: () => resolve(true) },
+            ]
+          );
+        });
+
+        if (!confirmed) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Send the money
+      const payload: any = {
+        recipient,
+        amount: numericAmount,
+        pin,
+        pin_token: pinToken,
+        note: note || "",
+      };
+
+      if (highValueToken) {
+        payload.high_value_token = highValueToken;
+      }
+
+      const res = await axiosClient.post("send-money/", payload);
+
+      Alert.alert("Success", res.data.message || "Money sent successfully!");
+
+      setRecipient("");
+      setAmount("");
+      setPin("");
+      setNote("");
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      console.log("Send error:", err.response?.data);
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Failed to send money. Please try again.";
+      setError(message);
+    } finally {
+      setLoading(false);
+      setIsHighValue(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -89,7 +127,14 @@ export default function SendScreen() {
         <Text style={styles.title}>Send Money</Text>
         <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
 
-        {/* Searchable Recipient Field */}
+        {Number(amount) >= HIGH_VALUE_THRESHOLD && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              High-value transfer (₦50,000+). Extra confirmation required.
+            </Text>
+          </View>
+        )}
+
         <TouchableOpacity
           onPress={() =>
             router.push({
@@ -150,7 +195,7 @@ export default function SendScreen() {
           style={styles.button}
           contentStyle={{ paddingVertical: 6 }}
         >
-          Send Money
+          {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -183,5 +228,19 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 12,
     borderRadius: 10,
+  },
+  warningBox: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  warningText: {
+    color: "#92400E",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
