@@ -75,7 +75,7 @@ export default function SessionsScreen() {
   };
 
   const renderItem = ({ item }: { item: Session }) => (
-    <View style={styles.card}>
+    <View style={[styles.card, item.is_current && styles.currentCard]}>
       <View style={styles.row}>
         <View style={styles.iconCircle}>
           <MaterialCommunityIcons
@@ -92,19 +92,28 @@ export default function SessionsScreen() {
         </View>
 
         <View style={styles.info}>
-          <Text style={styles.deviceName}>{item.device_name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.deviceName}>{item.device_name}</Text>
+            {item.is_current && (
+              <View style={styles.currentBadge}>
+                <Text style={styles.currentBadgeText}>This device</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.meta}>
             {item.ip_address} • {item.location}
           </Text>
           <Text style={styles.meta}>Last active: {item.last_activity}</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.revokeBtn}
-          onPress={() => revokeSession(item.id, item.device_name)}
-        >
-          <Text style={styles.revokeText}>Revoke</Text>
-        </TouchableOpacity>
+        {!item.is_current && (
+          <TouchableOpacity
+            style={styles.revokeBtn}
+            onPress={() => revokeSession(item.id, item.device_name)}
+          >
+            <Text style={styles.revokeText}>Revoke</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -175,6 +184,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  currentCard: {
+    borderWidth: 1.5,
+    borderColor: "#0F172A",
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -191,10 +204,27 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
   deviceName: {
     fontSize: 15,
     fontWeight: "600",
     color: "#0F172A",
+  },
+  currentBadge: {
+    backgroundColor: "#0F172A",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   meta: {
     fontSize: 12,
