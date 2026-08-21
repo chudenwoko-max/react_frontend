@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F0F1A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.orbitpay.app",
@@ -34,6 +36,12 @@
       "expo-router",
       "expo-font",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cc8156e9-fb42-4809-93e3-f4a0df99ee1f"
+      }
+    }
   }
 }
