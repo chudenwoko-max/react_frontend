@@ -44,9 +44,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 
 const formatCategory = (cat?: string) => {
   if (!cat) return "Other";
-  return cat
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 export default function HistoryScreen() {
@@ -54,12 +52,37 @@ export default function HistoryScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (pageNumber = 1) => {
     try {
-      const res = await axiosClient.get("transactions/");
+      setLoading(true);
+      const res = await axiosClient.get("transactions/", {
+        params: {
+          page: pageNumber,
+          page_size: 10,
+        },
+      });
+
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setTransactions(data);
+
+      // Handle both DRF pagination styles
+      if (res.data.count !== undefined) {
+        const total = Math.ceil(res.data.count / 10);
+        setTotalPages(total || 1);
+        setHasNext(!!res.data.next);
+        setHasPrev(!!res.data.previous);
+      } else {
+        setTotalPages(1);
+        setHasNext(false);
+        setHasPrev(false);
+      }
+
+      setPage(pageNumber);
     } catch (error) {
       console.log("History error:", error);
       setTransactions([]);
@@ -70,12 +93,17 @@ export default function HistoryScreen() {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    fetchTransactions(1);
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchTransactions();
+    fetchTransactions(1);
+  };
+
+  const goToPage = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    fetchTransactions(newPage);
   };
 
   const renderItem = ({ item }: { item: Transaction }) => {
@@ -156,7 +184,7 @@ export default function HistoryScreen() {
     );
   };
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#0F172A" />
@@ -174,18 +202,14 @@ export default function HistoryScreen() {
           item.id?.toString() || item.reference_id || Math.random().toString()
         }
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
             <View style={styles.emptyIconCircle}>
-              <MaterialCommunityIcons
-                name="history"
-                size={40}
-                color="#94A3B8"
-              />
+              <MaterialCommunityIcons name="history" size={40} color="#94A3B8" />
             </View>
             <Text style={styles.emptyTitle}>No transactions yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -195,6 +219,45 @@ export default function HistoryScreen() {
           </View>
         }
       />
+
+      {/* Pagination Controls */}
+      {transactions.length > 0 && (
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[styles.pageBtn, !hasPrev && styles.pageBtnDisabled]}
+            onPress={() => goToPage(page - 1)}
+            disabled={!hasPrev}
+          >
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={22}
+              color={hasPrev ? "#0F172A" : "#CBD5E1"}
+            />
+            <Text style={[styles.pageBtnText, !hasPrev && { color: "#CBD5E1" }]}>
+              Prev
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.pageInfo}>
+            Page {page} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.pageBtn, !hasNext && styles.pageBtnDisabled]}
+            onPress={() => goToPage(page + 1)}
+            disabled={!hasNext}
+          >
+            <Text style={[styles.pageBtnText, !hasNext && { color: "#CBD5E1" }]}>
+              Next
+            </Text>
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={22}
+              color={hasNext ? "#0F172A" : "#CBD5E1"}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -297,5 +360,38 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  pageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  pageBtnDisabled: {
+    backgroundColor: "#F1F5F9",
+  },
+  pageBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  pageInfo: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
   },
 });
