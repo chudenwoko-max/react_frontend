@@ -167,12 +167,19 @@ export default function Dashboard() {
   const fetchRecentTransactions = async () => {
     try {
       const res = await axiosClient.get("transactions/", {
-        params: { page_size: 100 },
+        params: {
+          page: 1,
+          page_size: 8          // only get latest 8
+        },
       });
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
 
-      setRecentTransactions(data.slice(0, 20));
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data.results || [];
 
+      setRecentTransactions(data);
+
+      // Calculate this month spent / received
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
@@ -219,7 +226,6 @@ export default function Dashboard() {
       setMonthReceived(0);
     }
   };
-
   const fetchWeeklySpending = async () => {
     try {
       const res = await axiosClient.get("analytics/weekly-spending/");
@@ -573,10 +579,10 @@ export default function Dashboard() {
             code === "NGN"
               ? "₦"
               : code === "USD"
-              ? "$"
-              : code === "EUR"
-              ? "€"
-              : "£";
+                ? "$"
+                : code === "EUR"
+                  ? "€"
+                  : "£";
 
           return (
             <TouchableOpacity
@@ -646,18 +652,18 @@ export default function Dashboard() {
         </TouchableOpacity>
 
         <TouchableOpacity
-  style={styles.actionButton}
-  onPress={() => router.push("/orbit-ai")}
->
-  <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
-    <MaterialCommunityIcons
-      name="robot-happy-outline"
-      size={24}
-      color="#7C3AED"
-    />
-  </View>
-  <Text style={styles.actionText}>Orbit AI</Text>
-</TouchableOpacity>
+          style={styles.actionButton}
+          onPress={() => router.push("/orbit-ai")}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
+            <MaterialCommunityIcons
+              name="robot-happy-outline"
+              size={24}
+              color="#7C3AED"
+            />
+          </View>
+          <Text style={styles.actionText}>Orbit AI</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 7-Day Spending Chart */}
