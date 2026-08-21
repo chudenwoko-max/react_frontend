@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
@@ -22,10 +23,51 @@ type Transaction = {
   description?: string;
   note?: string;
   created_at?: string;
+  category?: string;
 };
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  income: { bg: "#DCFCE7", text: "#16A34A" },
+  transfer_received: { bg: "#DCFCE7", text: "#16A34A" },
+  transfer_sent: { bg: "#FEE2E2", text: "#DC2626" },
+  withdraw: { bg: "#FFEDD5", text: "#EA580C" },
+  airtime: { bg: "#DBEAFE", text: "#2563EB" },
+  data: { bg: "#DBEAFE", text: "#2563EB" },
+  electricity: { bg: "#F3E8FF", text: "#7C3AED" },
+  cable: { bg: "#F3E8FF", text: "#7C3AED" },
+  bills: { bg: "#F3E8FF", text: "#7C3AED" },
+  food: { bg: "#FEF3C7", text: "#D97706" },
+  transport: { bg: "#E0E7FF", text: "#4F46E5" },
+  shopping: { bg: "#FCE7F3", text: "#DB2777" },
+  savings: { bg: "#CCFBF1", text: "#0D9488" },
+  other: { bg: "#F1F5F9", text: "#64748B" },
+};
+
+const formatCategory = (cat?: string) => {
+  if (!cat) return "Other";
+  return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const SkeletonCard = () => (
+  <View style={styles.skeletonCard}>
+    <View style={styles.skeletonLineShort} />
+    <View style={styles.skeletonLine} />
+    <View style={styles.skeletonLineMedium} />
+  </View>
+);
+
+const SkeletonTx = () => (
+  <View style={styles.skeletonTxRow}>
+    <View style={styles.skeletonCircle} />
+    <View style={styles.skeletonTxLines}>
+      <View style={styles.skeletonLineShort} />
+      <View style={styles.skeletonLineMedium} />
+    </View>
+  </View>
+);
+
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [balance, setBalance] = useState<string>("₦ 0.00");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,6 +78,43 @@ export default function Dashboard() {
   const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [savingsGoals, setSavingsGoals] = useState<any[]>([]);
   const [wallets, setWallets] = useState<any[]>([]);
+  const [weeklyInsight, setWeeklyInsight] = useState<any>(null);
+  const [savingsSuggestion, setSavingsSuggestion] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
+  const [cashflowAlert, setCashflowAlert] = useState<any>(null);
+
+  const fetchSavingsSuggestion = async () => {
+    try {
+      const res = await axiosClient.get("savings/suggestions/");
+      const list = Array.isArray(res.data) ? res.data : [];
+      setSavingsSuggestion(list.length > 0 ? list[0] : null);
+    } catch (error) {
+      console.log("Savings suggestion error:", error);
+      setSavingsSuggestion(null);
+    }
+  };
+
+  const acceptSuggestion = async () => {
+    if (!savingsSuggestion?.id) return;
+    try {
+      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/accept/`);
+      setSavingsSuggestion(null);
+      await fetchSavingsGoals();
+    } catch (error) {
+      console.log("Accept suggestion error:", error);
+    }
+  };
+
+  const dismissSuggestion = async () => {
+    if (!savingsSuggestion?.id) return;
+    try {
+      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/dismiss/`);
+      setSavingsSuggestion(null);
+    } catch (error) {
+      console.log("Dismiss suggestion error:", error);
+    }
+  };
 
   const fetchBalance = async () => {
     try {
@@ -87,10 +166,12 @@ export default function Dashboard() {
 
   const fetchRecentTransactions = async () => {
     try {
-      const res = await axiosClient.get("transactions/");
+      const res = await axiosClient.get("transactions/", {
+        params: { page_size: 100 },
+      });
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
 
-      setRecentTransactions(data.slice(0, 6));
+      setRecentTransactions(data.slice(0, 20));
 
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -98,10 +179,6 @@ export default function Dashboard() {
 
       let spent = 0;
       let received = 0;
-
-      const days = [0, 0, 0, 0, 0, 0, 0];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
 
       data.forEach((tx: any) => {
         if (!tx.created_at) return;
@@ -131,26 +208,57 @@ export default function Dashboard() {
             spent += amount;
           }
         }
-
-        const txDay = new Date(tx.created_at);
-        txDay.setHours(0, 0, 0, 0);
-        const diffTime = today.getTime() - txDay.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays >= 0 && diffDays <= 6 && !isCredit) {
-          days[diffDays] += amount;
-        }
       });
 
       setMonthSpent(spent);
       setMonthReceived(received);
-      setWeeklyData(days.reverse());
     } catch (error) {
       console.log("Recent transactions error:", error);
       setRecentTransactions([]);
       setMonthSpent(0);
       setMonthReceived(0);
+    }
+  };
+
+  const fetchWeeklySpending = async () => {
+    try {
+      const res = await axiosClient.get("analytics/weekly-spending/");
+      const days = res.data.weekly_spending || [];
+      // Backend returns oldest → newest (7 items)
+      setWeeklyData(days.map((d: any) => Number(d.amount) || 0));
+    } catch (error) {
+      console.log("Weekly spending error:", error);
       setWeeklyData([0, 0, 0, 0, 0, 0, 0]);
+    }
+  };
+
+  const fetchLatestInsight = async () => {
+    try {
+      const res = await axiosClient.get("insights/latest/");
+      const weekly = res.data?.weekly || null;
+      setWeeklyInsight(weekly);
+
+      // Mark as read (once)
+      if (weekly?.id && weekly.is_read === false) {
+        try {
+          await axiosClient.post(`insights/${weekly.id}/read/`);
+        } catch (e) {
+          console.log("Mark insight read error:", e);
+        }
+      }
+    } catch (error) {
+      console.log("Insight error:", error);
+      setWeeklyInsight(null);
+    }
+  };
+
+  const fetchCashflowAlert = async () => {
+    try {
+      const res = await axiosClient.get("analytics/cashflow/");
+      setCashflowAlert(res.data?.show ? res.data : null);
+    } catch (error) {
+      console.log("Cashflow error:", error);
+      setCashflowAlert(null);
     }
   };
 
@@ -162,6 +270,10 @@ export default function Dashboard() {
       fetchRecentTransactions(),
       fetchSavingsGoals(),
       fetchWallets(),
+      fetchWeeklySpending(),
+      fetchLatestInsight(),
+      fetchSavingsSuggestion(),
+      fetchCashflowAlert(),
     ]);
     setLoading(false);
     setRefreshing(false);
@@ -187,9 +299,52 @@ export default function Dashboard() {
     }
   };
 
+  const getFilteredTransactions = () => {
+    let filtered = recentTransactions;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (tx) =>
+          (tx.description || "").toLowerCase().includes(query) ||
+          (tx.note || "").toLowerCase().includes(query) ||
+          (tx.category || "").toLowerCase().includes(query)
+      );
+    }
+
+    // Apply type filter
+    if (filterType !== "all") {
+      filtered = filtered.filter((tx) => {
+        const type = (tx.type || tx.transaction_type || "").toLowerCase();
+        const desc = (tx.description || tx.note || "").toLowerCase();
+        const category = (tx.category || "").toLowerCase();
+
+        const isCredit =
+          type === "credit" ||
+          type === "fund" ||
+          type === "receive" ||
+          type === "funding" ||
+          type === "referral_bonus" ||
+          desc.includes("received") ||
+          desc.includes("wallet funding") ||
+          desc.includes("funded");
+
+        if (filterType === "sent") return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw";
+        if (filterType === "received") return isCredit;
+        if (filterType === "bills") return desc.includes("bill") || ["electricity", "cable", "data", "airtime"].includes(category);
+        if (filterType === "others") return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw" && !["electricity", "cable", "data", "airtime"].includes(category);
+        return true;
+      });
+    }
+
+    return filtered;
+  };
+
   const renderTransaction = (item: Transaction) => {
     const type = (item.type || item.transaction_type || "").toLowerCase();
     const description = (item.description || item.note || "").toLowerCase();
+    const category = (item.category || "other").toLowerCase();
 
     const isCredit =
       type === "credit" ||
@@ -200,6 +355,8 @@ export default function Dashboard() {
       description.includes("received") ||
       description.includes("wallet funding") ||
       description.includes("funded");
+
+    const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
 
     return (
       <TouchableOpacity
@@ -222,16 +379,23 @@ export default function Dashboard() {
             color={isCredit ? "#16A34A" : "#DC2626"}
           />
         </View>
-
         <View style={styles.txInfo}>
           <Text style={styles.txTitle} numberOfLines={1}>
             {item.description || item.note || item.type || "Transaction"}
           </Text>
-          <Text style={styles.txDate}>
-            {item.created_at
-              ? new Date(item.created_at).toLocaleDateString()
-              : "—"}
-          </Text>
+
+          <View style={styles.txMetaRow}>
+            <View style={[styles.categoryBadge, { backgroundColor: colors.bg }]}>
+              <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
+                {formatCategory(category)}
+              </Text>
+            </View>
+            <Text style={styles.txDate}>
+              {item.created_at
+                ? new Date(item.created_at).toLocaleDateString()
+                : "—"}
+            </Text>
+          </View>
         </View>
 
         <Text
@@ -257,32 +421,32 @@ export default function Dashboard() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-     {/* Header */}
-<View style={styles.headerRow}>
-  <View style={styles.headerRight}>
-    <TouchableOpacity
-      onPress={() => router.push("/notifications")}
-      style={styles.iconButton}
-    >
-      <MaterialCommunityIcons
-        name="bell-outline"
-        size={24}
-        color="#0F172A"
-      />
-      {unreadCount > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => router.push("/notifications")}
+            style={styles.iconButton}
+          >
+            <MaterialCommunityIcons
+              name="bell-outline"
+              size={24}
+              color="#0F172A"
+            />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
 
-    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-      <Text style={styles.logoutText}>Logout</Text>
-    </TouchableOpacity>
-  </View>
-</View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Balance Card */}
       <View style={styles.balanceCard}>
@@ -293,6 +457,84 @@ export default function Dashboard() {
           <Text style={styles.balance}>{balance}</Text>
         )}
       </View>
+
+      {/* Orbit Insights & Smart Save - with Skeleton Loading */}
+      {loading ? (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      ) : (
+        <>
+          {weeklyInsight && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons name="lightbulb-on-outline" size={20} color="#F59E0B" />
+                <Text style={styles.insightLabel}>Orbit Insight · This week</Text>
+              </View>
+              <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
+              <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+            </View>
+          )}
+
+          {savingsSuggestion && (
+            <View style={styles.suggestionCard}>
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons name="piggy-bank-outline" size={20} color="#0D9488" />
+                <Text style={styles.suggestionLabel}>Smart Save</Text>
+              </View>
+
+              <Text style={styles.insightTitle}>
+                Save ₦{Number(savingsSuggestion.suggested_amount).toLocaleString()} weekly
+              </Text>
+              <Text style={styles.insightMessage}>
+                {savingsSuggestion.reason}
+              </Text>
+
+              <View style={styles.suggestionActions}>
+                <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
+                  <Text style={styles.acceptText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
+                  <Text style={styles.dismissText}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {cashflowAlert && (
+            <View
+              style={[
+                styles.cashflowCard,
+                cashflowAlert.status === "critical"
+                  ? styles.cashflowCritical
+                  : styles.cashflowWarning,
+              ]}
+            >
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons
+                  name="alert-circle-outline"
+                  size={20}
+                  color={cashflowAlert.status === "critical" ? "#DC2626" : "#D97706"}
+                />
+                <Text
+                  style={[
+                    styles.cashflowLabel,
+                    {
+                      color:
+                        cashflowAlert.status === "critical" ? "#DC2626" : "#D97706",
+                    },
+                  ]}
+                >
+                  Cash Flow Alert
+                </Text>
+              </View>
+              <Text style={styles.insightTitle}>{cashflowAlert.title}</Text>
+              <Text style={styles.insightMessage}>{cashflowAlert.message}</Text>
+            </View>
+          )}
+        </>
+      )}
 
       {/* This Month Snapshot */}
       <View style={styles.snapshotCard}>
@@ -402,6 +644,20 @@ export default function Dashboard() {
           </View>
           <Text style={styles.actionText}>History</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+  style={styles.actionButton}
+  onPress={() => router.push("/orbit-ai")}
+>
+  <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
+    <MaterialCommunityIcons
+      name="robot-happy-outline"
+      size={24}
+      color="#7C3AED"
+    />
+  </View>
+  <Text style={styles.actionText}>Orbit AI</Text>
+</TouchableOpacity>
       </View>
 
       {/* 7-Day Spending Chart */}
@@ -454,10 +710,7 @@ export default function Dashboard() {
                     style={[
                       styles.progressFill,
                       {
-                        width: `${Math.min(
-                          Number(goal.progress || 0),
-                          100
-                        )}%`,
+                        width: `${Math.min(Number(goal.progress || 0), 100)}%`,
                       },
                     ]}
                   />
@@ -481,16 +734,79 @@ export default function Dashboard() {
         )}
       </View>
 
+      {/* Search Bar */}
+      {recentTransactions.length > 0 && (
+        <View style={styles.searchContainer}>
+          <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search transactions..."
+            placeholderTextColor="#CBD5E1"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <MaterialCommunityIcons name="close" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Filter Tabs */}
+      {recentTransactions.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterTabs}
+        >
+          {(["all", "sent", "received", "bills", "others"] as const).map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.filterTab,
+                filterType === type && styles.filterTabActive,
+              ]}
+              onPress={() => setFilterType(type)}
+            >
+              <Text
+                style={[
+                  styles.filterTabText,
+                  filterType === type && styles.filterTabTextActive,
+                ]}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 20 }} color="#0F172A" />
+        <View style={{ marginTop: 8 }}>
+          <SkeletonTx />
+          <SkeletonTx />
+          <SkeletonTx />
+        </View>
       ) : recentTransactions.length === 0 ? (
         <View style={styles.emptyCard}>
           <MaterialCommunityIcons name="history" size={40} color="#CBD5E1" />
           <Text style={styles.emptyText}>No transactions yet</Text>
+          <Text style={styles.emptySubText}>
+            Fund your wallet or send money to see activity here.
+          </Text>
+        </View>
+      ) : getFilteredTransactions().length === 0 ? (
+        <View style={styles.emptyCard}>
+          <MaterialCommunityIcons name="magnify" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyText}>No results found</Text>
+          <Text style={styles.emptySubText}>
+            Try adjusting your search or filters.
+          </Text>
         </View>
       ) : (
         <View style={styles.txList}>
-          {recentTransactions.map(renderTransaction)}
+          {getFilteredTransactions().map(renderTransaction)}
         </View>
       )}
     </ScrollView>
@@ -516,7 +832,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  
   logoutButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -547,16 +862,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#DC2626",
   },
-  greeting: {
-    fontSize: 16,
-    color: "#64748B",
-  },
-  username: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 24,
-  },
   balanceCard: {
     backgroundColor: "#0F172A",
     borderRadius: 20,
@@ -572,6 +877,95 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     marginTop: 8,
+  },
+  insightCard: {
+    backgroundColor: "#FFF7ED",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+  },
+  insightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 8,
+  },
+  insightLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#C2410C",
+  },
+  insightTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
+  },
+  insightMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#475569",
+  },
+  suggestionCard: {
+    backgroundColor: "#ECFDF5",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  suggestionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F766E",
+  },
+  cashflowCard: {
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
+  cashflowWarning: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  cashflowCritical: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
+  cashflowLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  suggestionActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 16,
+  },
+  acceptBtn: {
+    backgroundColor: "#0D9488",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  acceptText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  dismissBtn: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  dismissText: {
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: "600",
   },
   snapshotCard: {
     backgroundColor: "#FFFFFF",
@@ -757,16 +1151,31 @@ const styles = StyleSheet.create({
   },
   txInfo: {
     flex: 1,
+    marginRight: 8,
   },
   txTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#0F172A",
   },
+  txMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
   txDate: {
     fontSize: 12,
     color: "#94A3B8",
-    marginTop: 2,
   },
   txAmount: {
     fontSize: 14,
@@ -783,5 +1192,96 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: "#94A3B8",
     fontSize: 15,
+  },
+  emptySubText: {
+    marginTop: 8,
+    color: "#94A3B8",
+    fontSize: 12,
+    textAlign: "center",
+  },
+  skeletonCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  skeletonLine: {
+    height: 12,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skeletonLineShort: {
+    height: 12,
+    width: "55%",
+    backgroundColor: "#E2E8F0",
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skeletonLineMedium: {
+    height: 12,
+    width: "80%",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 6,
+  },
+  skeletonTxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  skeletonCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E2E8F0",
+    marginRight: 12,
+  },
+  skeletonTxLines: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  filterTabs: {
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  filterTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  filterTabActive: {
+    backgroundColor: "#0F172A",
+    borderColor: "#0F172A",
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  filterTabTextActive: {
+    color: "#FFFFFF",
   },
 });

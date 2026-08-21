@@ -24,32 +24,31 @@ export default function LoginScreen() {
 
     try {
       const res = await axiosClient.post("login/", {
-  username,
-  password,
-});
+        username,
+        password,
+      });
 
       await login(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
     } catch (error: any) {
-  if (axios.isAxiosError(error)) {
-    console.log("Login API failed:", {
-  message: error.message,
-  code: error.code,
-  status: error.response?.status,
-  data: error.response?.data,
-  url: error.config?.url,
-  method: error.config?.method,
-});
-  } else {
-    console.error("Unexpected login error:", error);
-  }
+      console.log("FULL LOGIN ERROR:", error);
 
-  setError(
-    error.response?.data?.error ||
-    error.response?.data?.detail ||
-    "Unable to log in. Please try again."
-  );
-}
+      let message = "Unable to log in. Please try again.";
+
+      if (error.response) {
+        // Server responded with an error
+        message = error.response.data?.error
+          || error.response.data?.detail
+          || JSON.stringify(error.response.data);
+      } else if (error.request) {
+        // No response received (network problem)
+        message = "Network error. Cannot reach the server.";
+      } else {
+        message = error.message || message;
+      }
+
+      setError(message);
+    }
   };
 
   return (
@@ -97,10 +96,10 @@ export default function LoginScreen() {
           Login
         </Button>
         <Link href="/(auth)/register" asChild>
-  <Button mode="text" style={{ marginTop: 16 }}>
-    Don't have an account? Register
-  </Button>
-</Link>
+          <Button mode="text" style={{ marginTop: 16 }}>
+            Don't have an account? Register
+          </Button>
+        </Link>
       </View>
     </KeyboardAvoidingView>
   );

@@ -22,6 +22,31 @@ type Transaction = {
   created_at?: string;
   description?: string;
   note?: string;
+  category?: string;
+};
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  income: { bg: "#DCFCE7", text: "#16A34A" },
+  transfer_received: { bg: "#DCFCE7", text: "#16A34A" },
+  transfer_sent: { bg: "#FEE2E2", text: "#DC2626" },
+  withdraw: { bg: "#FFEDD5", text: "#EA580C" },
+  airtime: { bg: "#DBEAFE", text: "#2563EB" },
+  data: { bg: "#DBEAFE", text: "#2563EB" },
+  electricity: { bg: "#F3E8FF", text: "#7C3AED" },
+  cable: { bg: "#F3E8FF", text: "#7C3AED" },
+  bills: { bg: "#F3E8FF", text: "#7C3AED" },
+  food: { bg: "#FEF3C7", text: "#D97706" },
+  transport: { bg: "#E0E7FF", text: "#4F46E5" },
+  shopping: { bg: "#FCE7F3", text: "#DB2777" },
+  savings: { bg: "#CCFBF1", text: "#0D9488" },
+  other: { bg: "#F1F5F9", text: "#64748B" },
+};
+
+const formatCategory = (cat?: string) => {
+  if (!cat) return "Other";
+  return cat
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 export default function HistoryScreen() {
@@ -56,6 +81,7 @@ export default function HistoryScreen() {
   const renderItem = ({ item }: { item: Transaction }) => {
     const type = (item.type || item.transaction_type || "").toLowerCase();
     const description = (item.description || item.note || "").toLowerCase();
+    const category = (item.category || "other").toLowerCase();
 
     const isCredit =
       type === "credit" ||
@@ -66,6 +92,8 @@ export default function HistoryScreen() {
       description.includes("received") ||
       description.includes("wallet funding") ||
       description.includes("funded");
+
+    const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
 
     return (
       <TouchableOpacity
@@ -97,11 +125,19 @@ export default function HistoryScreen() {
                 item.type ||
                 "Transaction"}
             </Text>
-            <Text style={styles.date}>
-              {item.created_at
-                ? new Date(item.created_at).toLocaleDateString()
-                : "—"}
-            </Text>
+
+            <View style={styles.metaRow}>
+              <View style={[styles.badge, { backgroundColor: colors.bg }]}>
+                <Text style={[styles.badgeText, { color: colors.text }]}>
+                  {formatCategory(category)}
+                </Text>
+              </View>
+              <Text style={styles.date}>
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString()
+                  : "—"}
+              </Text>
+            </View>
           </View>
 
           <Text
@@ -206,16 +242,31 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
+    marginRight: 8,
   },
   title: {
     fontSize: 15,
     fontWeight: "600",
     color: "#0F172A",
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
   date: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#94A3B8",
-    marginTop: 2,
   },
   amount: {
     fontSize: 15,
