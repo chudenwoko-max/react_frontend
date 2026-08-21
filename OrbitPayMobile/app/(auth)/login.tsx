@@ -13,8 +13,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [show2FA, setShow2FA] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [userId, setUserId] = useState<number | null>(null);
 
-    const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!username || !password) {
       setError("Please fill in all fields");
       return;
@@ -32,6 +35,15 @@ export default function LoginScreen() {
         device_fingerprint: fingerprint,
       });
 
+      // Check if 2FA is required
+      if (res.data.requires_2fa) {
+        setUserId(res.data.user_id);
+        setShow2FA(true);
+        setLoading(false);
+        return;
+      }
+
+      // Normal login
       await login(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
     } catch (error: any) {
@@ -55,6 +67,32 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const handleVerify2FA = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      setError("Please enter the 6-digit code");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await axiosClient.post("2fa/verify-login/", {
+        user_id: userId,
+        code: otpCode,
+      });
+
+      await login(res.data.access, res.data.refresh);
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      setError(error.response?.data?.error || "Invalid authentication code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -83,6 +121,22 @@ export default function LoginScreen() {
           secureTextEntry
           style={styles.input}
         />
+        {show2FA && (
+          <>
+            <Text style={{ marginBottom: 12, color: "#64748B" }}>
+              Enter the 6-digit code from your authenticator app
+            </Text>
+            <TextInput
+              label="Authentication Code"
+              value={otpCode}
+              onChangeText={setOtpCode}
+              mode="outlined"
+              keyboardType="numeric"
+              maxLength={6}
+              style={styles.input}
+            />
+          </>
+        )}
 
         {error ? (
           <HelperText type="error" visible={true}>
@@ -92,12 +146,12 @@ export default function LoginScreen() {
 
         <Button
           mode="contained"
-          onPress={handleLogin}
+          onPress={show2FA ? handleVerify2FA : handleLogin}
           loading={loading}
           style={styles.button}
           contentStyle={{ paddingVertical: 6 }}
         >
-          Login
+          {show2FA ? "Verify Code" : "Login"}
         </Button>
         <Link href="/(auth)/register" asChild>
           <Button mode="text" style={{ marginTop: 16 }}>
