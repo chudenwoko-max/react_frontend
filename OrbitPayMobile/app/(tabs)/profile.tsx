@@ -22,10 +22,11 @@ export default function ProfileScreen() {
   }
 };
 
-  const menuItems = [
+    const menuItems = [
     { icon: "account-outline", label: "Edit Profile", onPress: () => router.push("/edit-profile") },
     { icon: "shield-check-outline", label: "Verify Identity (KYC)", onPress: () => router.push("/kyc") },
     { icon: "lock-outline", label: "Change PIN", onPress: () => router.push("/set-pin") },
+    { icon: "devices", label: "Active Sessions", onPress: () => router.push("/sessions") },
     { icon: "bank-outline", label: "Bank Account", onPress: () => router.push("/bank-account") },
     { icon: "credit-card-outline", label: "Virtual Cards", onPress: () => router.push("/virtual-cards") },
     { icon: "piggy-bank-outline", label: "Savings Goals", onPress: () => router.push("/savings") },
