@@ -6,23 +6,82 @@ const API_BASE_URL = "https://currency-cvt-fintech-1.onrender.com";
 
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
-  timeout: 15000,
+  timeout: 30000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Helper to get token (works on both web and mobile)
-const getToken = async () => {
+// Helpers
+const getToken = async (key: string) => {
   if (Platform.OS === "web") {
-    return localStorage.getItem("ACCESS_TOKEN");
+    return localStorage.getItem(key);
   }
-  return await SecureStore.getItemAsync("ACCESS_TOKEN");
+  return await SecureStore.getItemAsync(key);
 };
 
+const deleteToken = async (key: string) => {
+  if (Platform.OS === "web") {
+    localStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+};
+
+// Attach access token
 axiosClient.interceptors.request.use(async (config) => {
-  const token = await getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const token = await getToken("ACCESS_TOKEN");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (e) {
+    console.log("Error reading token:", e);
   }
   return config;
 });
+
+// Handle 401 + refresh
+axiosClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refresh = await getToken("REFRESH_TOKEN");
+
+        if (!refresh) {
+          await deleteToken("ACCESS_TOKEN");
+          await deleteToken("REFRESH_TOKEN");
+          return Promise.reject(error);
+        }
+
+        const res = await axios.post(`${API_BASE_URL}/api/token/refresh/`, {
+          refresh,
+        });
+
+        const newAccess = res.data.access;
+
+        if (Platform.OS === "web") {
+          localStorage.setItem("ACCESS_TOKEN", newAccess);
+        } else {
+          await SecureStore.setItemAsync("ACCESS_TOKEN", newAccess);
+        }
+
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        await deleteToken("ACCESS_TOKEN");
+        await deleteToken("REFRESH_TOKEN");
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default axiosClient;
