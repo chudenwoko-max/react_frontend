@@ -33,7 +33,7 @@ export default function VirtualCardsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Fund modal state
+  // Fund modal
   const [fundModalVisible, setFundModalVisible] = useState(false);
   const [selectedCard, setSelectedCard] = useState<VirtualCard | null>(null);
   const [fundAmount, setFundAmount] = useState("");
@@ -108,7 +108,7 @@ export default function VirtualCardsScreen() {
       });
 
       setFundModalVisible(false);
-      fetchCards(); // refresh balances
+      fetchCards();
     } catch (err: any) {
       Toast.show({
         type: "error",
@@ -120,15 +120,80 @@ export default function VirtualCardsScreen() {
     }
   };
 
+  const handleFreezeToggle = async (card: VirtualCard) => {
+    const isFrozen = card.status === "frozen";
+    const endpoint = isFrozen
+      ? `cards/${card.id}/unfreeze/`
+      : `cards/${card.id}/freeze/`;
+
+    try {
+      await axiosClient.post(endpoint);
+      Toast.show({
+        type: "success",
+        text1: isFrozen ? "Card Unfrozen" : "Card Frozen",
+        text2: isFrozen
+          ? "Your card is now active again"
+          : "Your card has been frozen",
+      });
+      fetchCards();
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Action Failed",
+        text2: err.response?.data?.error || "Something went wrong",
+      });
+    }
+  };
+
+  const handleTerminate = (card: VirtualCard) => {
+    Alert.alert(
+      "Terminate Card",
+      `Are you sure you want to permanently terminate the card ending with ${
+        card.last4 || card.card_number?.slice(-4)
+      }?\n\nAny remaining balance will be returned to your wallet.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Terminate",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axiosClient.post(`cards/${card.id}/terminate/`);
+              Toast.show({
+                type: "success",
+                text1: "Card Terminated",
+                text2: "The card has been permanently closed",
+              });
+              fetchCards();
+            } catch (err: any) {
+              Toast.show({
+                type: "error",
+                text1: "Failed",
+                text2: err.response?.data?.error || "Could not terminate card",
+              });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }: { item: VirtualCard }) => {
     const last4 = item.last4 || item.card_number?.slice(-4) || "••••";
-    const isFrozen = item.status === "frozen" || item.status === "inactive";
+    const isFrozen = item.status === "frozen";
+    const isTerminated = item.status === "terminated";
 
     return (
-      <View style={[styles.card, isFrozen && styles.frozenCard]}>
+      <View style={[styles.card, (isFrozen || isTerminated) && styles.frozenCard]}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardBrand}>OrbitPay Card</Text>
-          <Text style={styles.cardStatus}>
+          <Text
+            style={[
+              styles.cardStatus,
+              isFrozen && { color: "#F59E0B" },
+              isTerminated && { color: "#EF4444" },
+            ]}
+          >
             {item.status?.toUpperCase() || "ACTIVE"}
           </Text>
         </View>
@@ -151,16 +216,44 @@ export default function VirtualCardsScreen() {
           </View>
         </View>
 
-        {/* Fund Button */}
-        {!isFrozen && (
-          <TouchableOpacity
-            style={styles.fundButton}
-            onPress={() => openFundModal(item)}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="plus-circle" size={18} color="#fff" />
-            <Text style={styles.fundButtonText}>Fund Card</Text>
-          </TouchableOpacity>
+        {/* Action Buttons */}
+        {!isTerminated && (
+          <View style={styles.actionsRow}>
+            {!isFrozen && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.fundBtn]}
+                onPress={() => openFundModal(item)}
+              >
+                <MaterialCommunityIcons name="plus-circle" size={16} color="#fff" />
+                <Text style={styles.actionBtnText}>Fund</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                isFrozen ? styles.unfreezeBtn : styles.freezeBtn,
+              ]}
+              onPress={() => handleFreezeToggle(item)}
+            >
+              <MaterialCommunityIcons
+                name={isFrozen ? "lock-open-variant" : "lock"}
+                size={16}
+                color="#fff"
+              />
+              <Text style={styles.actionBtnText}>
+                {isFrozen ? "Unfreeze" : "Freeze"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.terminateBtn]}
+              onPress={() => handleTerminate(item)}
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={16} color="#fff" />
+              <Text style={styles.actionBtnText}>Terminate</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -219,7 +312,8 @@ export default function VirtualCardsScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Fund Virtual Card</Text>
             <Text style={styles.modalSubtitle}>
-              Card ending •••• {selectedCard?.last4 || selectedCard?.card_number?.slice(-4)}
+              Card ending ••••{" "}
+              {selectedCard?.last4 || selectedCard?.card_number?.slice(-4)}
             </Text>
 
             <TextInput
@@ -284,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   frozenCard: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   cardHeader: {
     flexDirection: "row",
@@ -329,19 +423,35 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 4,
   },
-  fundButton: {
+  actionsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#7C3AED",
     paddingVertical: 10,
     borderRadius: 10,
-    gap: 6,
+    gap: 4,
   },
-  fundButtonText: {
+  fundBtn: {
+    backgroundColor: "#7C3AED",
+  },
+  freezeBtn: {
+    backgroundColor: "#F59E0B",
+  },
+  unfreezeBtn: {
+    backgroundColor: "#10B981",
+  },
+  terminateBtn: {
+    backgroundColor: "#EF4444",
+  },
+  actionBtnText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 13,
   },
   empty: {
     alignItems: "center",
