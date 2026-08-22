@@ -15,54 +15,52 @@ export default function ConverterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleConvert = async () => {
-    if (!amount) {
-      setError("Enter an amount");
-      return;
-    }
+  if (!amount) {
+    setError("Enter an amount");
+    return;
+  }
 
-    setLoading(true);
-    setError("");
+  setLoading(true);
+  setError("");
 
-    try {
-      const res = await axiosClient.post("wallets/convert/", {
-        from_currency: fromCurrency,
-        to_currency: toCurrency,
-        amount,
-      });
+  try {
+    const res = await axiosClient.post("wallets/convert/", {
+      from_currency: fromCurrency,
+      to_currency: toCurrency,
+      amount,
+    });
 
-      const receivedAmount = res.data.amount_received;
+    const receivedAmount = res.data.amount_received;
 
-      // Success Toast
-      Toast.show({
-        type: "success",
-        text1: "Conversion Successful ✅",
-        text2: `${fromCurrency} ${Number(amount).toLocaleString()} → ${toCurrency} ${Number(receivedAmount).toLocaleString()}`,
-        visibilityTime: 3000,
-        position: "top",
-      });
+    Toast.show({
+      type: "success",
+      text1: "Conversion Successful ✅",
+      text2: `${fromCurrency} ${Number(amount).toLocaleString()} → ${toCurrency} ${Number(receivedAmount).toLocaleString()}`,
+      visibilityTime: 3000,
+      position: "top",
+    });
 
-      // Clear input
-      setAmount("");
+    setAmount("");
 
-      // Automatically return to homepage
-      setTimeout(() => {
-        router.replace("/"); // change to "/(tabs)" or "/(tabs)/home" if needed
-      }, 800);
+    // Go back to Dashboard
+    setTimeout(() => {
+      router.replace("/(tabs)");
+    }, 800);
 
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || "Conversion failed";
-      setError(errorMsg);
+  } catch (err: any) {
+    const errorMsg = err.response?.data?.error || "Conversion failed";
+    setError(errorMsg);
 
-      Toast.show({
-        type: "error",
-        text1: "Conversion Failed",
-        text2: errorMsg,
-        visibilityTime: 4000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    Toast.show({
+      type: "error",
+      text1: "Conversion Failed",
+      text2: errorMsg,
+      visibilityTime: 4000,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container}>
