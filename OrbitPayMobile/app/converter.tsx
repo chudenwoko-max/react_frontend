@@ -16,22 +16,40 @@ export default function ConverterScreen() {
       setError("Enter an amount");
       return;
     }
+
     setLoading(true);
     setError("");
+    setResult(null); // clear previous result
+
     try {
       const res = await axiosClient.post("wallets/convert/", {
         from_currency: fromCurrency,
         to_currency: toCurrency,
         amount,
       });
-      setResult(res.data.converted_amount || res.data.result || res.data.amount);
+
+      // Correct field from your backend response
+      const receivedAmount = res.data.amount_received;
+      const message = res.data.message || "Conversion successful";
+
+      setResult(receivedAmount);
+
+      // Show success message
+      Alert.alert(
+        "Success",
+        `${message}\n\nYou received ${toCurrency} ${receivedAmount}`,
+        [{ text: "OK" }]
+      );
+
+      // Optional: clear the amount input after success
+      // setAmount("");
+
     } catch (err: any) {
       setError(err.response?.data?.error || "Conversion failed");
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       <Text style={styles.title}>Currency Converter</Text>
