@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { TextInput, Button, HelperText } from "react-native-paper";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { TextInput, Button, HelperText, Menu } from "react-native-paper";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
-import axiosClient from "../src/api/axiosClient"; // ← adjust path if needed
+import axiosClient from "../src/api/axiosClient"; // adjust path if needed
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+const CURRENCIES = [
+  { code: "NGN", name: "Nigerian Naira", symbol: "₦" },
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+];
 
 export default function ConverterScreen() {
   const router = useRouter();
@@ -14,85 +22,128 @@ export default function ConverterScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Dropdown visibility
+  const [fromMenuVisible, setFromMenuVisible] = useState(false);
+  const [toMenuVisible, setToMenuVisible] = useState(false);
+
   const handleConvert = async () => {
-  if (!amount) {
-    setError("Enter an amount");
-    return;
-  }
+    if (!amount) {
+      setError("Enter an amount");
+      return;
+    }
 
-  setLoading(true);
-  setError("");
+    if (fromCurrency === toCurrency) {
+      setError("Cannot convert to the same currency");
+      return;
+    }
 
-  try {
-    const res = await axiosClient.post("wallets/convert/", {
-      from_currency: fromCurrency,
-      to_currency: toCurrency,
-      amount,
-    });
+    setLoading(true);
+    setError("");
 
-    const receivedAmount = res.data.amount_received;
+    try {
+      const res = await axiosClient.post("wallets/convert/", {
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        amount,
+      });
 
-    Toast.show({
-      type: "success",
-      text1: "Conversion Successful ✅",
-      text2: `${fromCurrency} ${Number(amount).toLocaleString()} → ${toCurrency} ${Number(receivedAmount).toLocaleString()}`,
-      visibilityTime: 3000,
-      position: "top",
-    });
+      const receivedAmount = res.data.amount_received;
 
-    setAmount("");
+      Toast.show({
+        type: "success",
+        text1: "Conversion Successful ✅",
+        text2: `${fromCurrency} ${Number(amount).toLocaleString()} → ${toCurrency} ${Number(receivedAmount).toLocaleString()}`,
+        visibilityTime: 3000,
+        position: "top",
+      });
 
-    // Go back to Dashboard
-    setTimeout(() => {
-      router.replace("/(tabs)");
-    }, 800);
+      setAmount("");
 
-  } catch (err: any) {
-    const errorMsg = err.response?.data?.error || "Conversion failed";
-    setError(errorMsg);
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 800);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || "Conversion failed";
+      setError(errorMsg);
 
-    Toast.show({
-      type: "error",
-      text1: "Conversion Failed",
-      text2: errorMsg,
-      visibilityTime: 4000,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      Toast.show({
+        type: "error",
+        text1: "Conversion Failed",
+        text2: errorMsg,
+        visibilityTime: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderCurrencySelector = (
+    label: string,
+    selected: string,
+    setSelected: (code: string) => void,
+    visible: boolean,
+    setVisible: (v: boolean) => void
+  ) => {
+    const current = CURRENCIES.find((c) => c.code === selected);
+
+    return (
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{label}</Text>
+
+        <Menu
+          visible={visible}
+          onDismiss={() => setVisible(false)}
+          anchor={
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.dropdownText}>
+                {current ? `${current.symbol} ${current.code} – ${current.name}` : "Select currency"}
+              </Text>
+              <MaterialCommunityIcons name="chevron-down" size={22} color="#64748B" />
+            </TouchableOpacity>
+          }
+        >
+          {CURRENCIES.map((currency) => (
+            <Menu.Item
+              key={currency.code}
+              onPress={() => {
+                setSelected(currency.code);
+                setVisible(false);
+              }}
+              title={`${currency.symbol}  ${currency.code} – ${currency.name}`}
+            />
+          ))}
+        </Menu>
+      </View>
+    );
+  };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.form}>
         <Text style={styles.title}>Currency Converter</Text>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>From:</Text>
-          <TextInput
-            value={fromCurrency}
-            onChangeText={setFromCurrency}
-            mode="outlined"
-            placeholder="e.g. NGN"
-            style={styles.input}
-            autoCapitalize="characters"
-          />
-        </View>
+        {renderCurrencySelector(
+          "From",
+          fromCurrency,
+          setFromCurrency,
+          fromMenuVisible,
+          setFromMenuVisible
+        )}
+
+        {renderCurrencySelector(
+          "To",
+          toCurrency,
+          setToCurrency,
+          toMenuVisible,
+          setToMenuVisible
+        )}
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>To:</Text>
-          <TextInput
-            value={toCurrency}
-            onChangeText={setToCurrency}
-            mode="outlined"
-            placeholder="e.g. USD"
-            style={styles.input}
-            autoCapitalize="characters"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Amount:</Text>
+          <Text style={styles.label}>Amount</Text>
           <TextInput
             value={amount}
             onChangeText={setAmount}
@@ -147,6 +198,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#64748B",
     fontWeight: "500",
+  },
+  dropdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: "#0F172A",
   },
   input: {
     backgroundColor: "#fff",
