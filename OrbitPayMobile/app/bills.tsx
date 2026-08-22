@@ -17,6 +17,8 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import axiosClient from "../src/api/axiosClient";
+import { useRouter } from "expo-router";
+
 
 type VirtualCard = {
   id: number;
@@ -43,6 +45,8 @@ export default function BillsScreen() {
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [loadingCards, setLoadingCards] = useState(true);
 
+  const router = useRouter(); // <-- This is where it's placed
+
   useEffect(() => {
     fetchCards();
   }, []);
@@ -64,95 +68,100 @@ export default function BillsScreen() {
     }
   };
 
-  const handlePay = async () => {
-    if (!amount || Number(amount) <= 0) {
-      setError("Please enter a valid amount");
-      return;
+ const handlePay = async () => {
+  if (!amount || Number(amount) <= 0) {
+    setError("Please enter a valid amount");
+    return;
+  }
+
+  if (paymentSource === "card" && !selectedCardId) {
+    setError("Please select a virtual card");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    let customer_id = "";
+    if (type === "airtime" || type === "data") {
+      if (!phone || !provider) {
+        setError("Phone number and network are required");
+        setLoading(false);
+        return;
+      }
+      customer_id = phone;
+    } else if (type === "electricity") {
+      if (!meter || !provider) {
+        setError("Meter number and provider are required");
+        setLoading(false);
+        return;
+      }
+      customer_id = meter;
+    } else if (type === "cable") {
+      if (!smartcard || !provider) {
+        setError("Smartcard number and provider are required");
+        setLoading(false);
+        return;
+      }
+      customer_id = smartcard;
     }
 
-    if (paymentSource === "card" && !selectedCardId) {
-      setError("Please select a virtual card");
-      return;
+    const payload: any = {
+      bill_type: type,
+      provider: provider.toUpperCase(),
+      amount: amount,
+      customer_id: customer_id,
+    };
+
+    if (type === "data" || type === "cable") {
+      payload.package_name = "";
+    }
+    if (type === "electricity") {
+      payload.meter_type = "prepaid";
     }
 
-    setLoading(true);
-    setError("");
-
-    try {
-      let customer_id = "";
-      if (type === "airtime" || type === "data") {
-        if (!phone || !provider) {
-          setError("Phone number and network are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = phone;
-      } else if (type === "electricity") {
-        if (!meter || !provider) {
-          setError("Meter number and provider are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = meter;
-      } else if (type === "cable") {
-        if (!smartcard || !provider) {
-          setError("Smartcard number and provider are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = smartcard;
-      }
-
-      const payload: any = {
-        bill_type: type,
-        provider: provider.toUpperCase(),
-        amount: amount,
-        customer_id: customer_id,
-      };
-
-      if (type === "data" || type === "cable") {
-        payload.package_name = "";
-      }
-      if (type === "electricity") {
-        payload.meter_type = "prepaid";
-      }
-
-      // Add card_id only if paying with virtual card
-      if (paymentSource === "card" && selectedCardId) {
-        payload.card_id = selectedCardId;
-      }
-
-      const res = await axiosClient.post("bills/pay/", payload);
-
-      Toast.show({
-        type: "success",
-        text1: "Payment Successful ✅",
-        text2: res.data.message || "Bill paid successfully",
-      });
-
-      // Clear form
-      setPhone("");
-      setAmount("");
-      setMeter("");
-      setSmartcard("");
-      setProvider("");
-      setSelectedCardId(null);
-    } catch (err: any) {
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
-        "Payment failed. Please try again.";
-      setError(message);
-
-      Toast.show({
-        type: "error",
-        text1: "Payment Failed",
-        text2: message,
-      });
-    } finally {
-      setLoading(false);
+    if (paymentSource === "card" && selectedCardId) {
+      payload.card_id = selectedCardId;
     }
-  };
+
+    const res = await axiosClient.post("bills/pay/", payload);
+
+    Toast.show({
+      type: "success",
+      text1: "Payment Successful ✅",
+      text2: res.data.message || "Bill paid successfully",
+    });
+
+    // Clear form
+    setPhone("");
+    setAmount("");
+    setMeter("");
+    setSmartcard("");
+    setProvider("");
+    setSelectedCardId(null);
+
+    // Redirect to Dashboard
+    setTimeout(() => {
+      router.replace("/(tabs)");
+    }, 800);
+
+  } catch (err: any) {
+    const message =
+      err.response?.data?.error ||
+      err.response?.data?.detail ||
+      "Payment failed. Please try again.";
+    setError(message);
+
+    Toast.show({
+      type: "error",
+      text1: "Payment Failed",
+      text2: message,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
