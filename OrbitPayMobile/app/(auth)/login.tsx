@@ -4,7 +4,6 @@ import { TextInput, Button, Text, HelperText } from "react-native-paper";
 import { Link, router } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
-import axios from "axios";
 import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
 
 export default function LoginScreen() {
@@ -92,7 +91,6 @@ export default function LoginScreen() {
     }
   };
 
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -121,6 +119,7 @@ export default function LoginScreen() {
           secureTextEntry
           style={styles.input}
         />
+
         {show2FA && (
           <>
             <Text style={{ marginBottom: 12, color: "#64748B" }}>
@@ -153,8 +152,17 @@ export default function LoginScreen() {
         >
           {show2FA ? "Verify Code" : "Login"}
         </Button>
+
+        <Button
+          mode="text"
+          onPress={() => router.push("/forgot-password")}
+          style={{ marginTop: 12 }}
+        >
+          Forgot Password?
+        </Button>
+
         <Link href="/(auth)/register" asChild>
-          <Button mode="text" style={{ marginTop: 16 }}>
+          <Button mode="text" style={{ marginTop: 4 }}>
             Don't have an account? Register
           </Button>
         </Link>
