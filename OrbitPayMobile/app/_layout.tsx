@@ -8,6 +8,7 @@ export default function RootLayout() {
     <AuthProvider>
       <PaperProvider>
         <Stack screenOptions={{ headerShown: false }} />
+        <Toast />
       </PaperProvider>
     </AuthProvider>
   );
