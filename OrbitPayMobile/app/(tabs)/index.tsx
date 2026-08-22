@@ -1,3 +1,5 @@
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { useEffect, useState } from "react";
 import {
   View,
@@ -285,9 +287,11 @@ export default function Dashboard() {
     setRefreshing(false);
   };
 
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
     loadData();
-  }, []);
+  }, [])
+);
 
   const onRefresh = () => {
     setRefreshing(true);
