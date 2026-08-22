@@ -1,63 +1,73 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, HelperText } from "react-native-paper";
-  import Toast from "react-native-toast-message";
-
-// Remove unused imports
-// import { Alert } from "react-native";
+import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
+import axiosClient from "../src/api/axiosClient"; // ← adjust path if needed
 
 export default function ConverterScreen() {
-  const [fromCurrency, setFromCurrency] = useState("USD");
-  const [toCurrency, setToCurrency] = useState("NGN");
+  const router = useRouter();
+
+  const [fromCurrency, setFromCurrency] = useState("NGN");
+  const [toCurrency, setToCurrency] = useState("USD");
   const [amount, setAmount] = useState("");
-  const [convertedAmount, setConvertedAmount] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // You can add any initialization code here if needed
-  }, []);
-const handleConvert = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid amount");
-    return;
-  }
+  const handleConvert = async () => {
+    if (!amount) {
+      setError("Enter an amount");
+      return;
+    }
 
-  setLoading(true);
-  setError("");
-  try {
-      const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
-      const data = await res.json();
+    setLoading(true);
+    setError("");
 
-      if (!data.rates[toCurrency]) {
-        throw new Error("Conversion rate not found");
-      }
+    try {
+      const res = await axiosClient.post("wallets/convert/", {
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        amount,
+      });
 
-      const rate = data.rates[toCurrency];
-      const converted = (parseFloat(amount) * rate).toFixed(2);
+      const receivedAmount = res.data.amount_received;
 
-      setConvertedAmount(converted);
-    Toast.show({
-      type: "success",
-        text1: "Conversion Successful",
-        text2: `${amount} ${fromCurrency} = ${converted} ${toCurrency}`,
-    });
-    } catch (error: any) {
-      setError(error.message || "Failed to convert currency");
-    Toast.show({
-      type: "error",
-        text1: "Conversion Error",
-        text2: error.message,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      // Success Toast
+      Toast.show({
+        type: "success",
+        text1: "Conversion Successful ✅",
+        text2: `${fromCurrency} ${Number(amount).toLocaleString()} → ${toCurrency} ${Number(receivedAmount).toLocaleString()}`,
+        visibilityTime: 3000,
+        position: "top",
+      });
+
+      // Clear input
+      setAmount("");
+
+      // Automatically return to homepage
+      setTimeout(() => {
+        router.replace("/"); // change to "/(tabs)" or "/(tabs)/home" if needed
+      }, 800);
+
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || "Conversion failed";
+      setError(errorMsg);
+
+      Toast.show({
+        type: "error",
+        text1: "Conversion Failed",
+        text2: errorMsg,
+        visibilityTime: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.form}>
-      <Text style={styles.title}>Currency Converter</Text>
+        <Text style={styles.title}>Currency Converter</Text>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>From:</Text>
@@ -65,8 +75,9 @@ const handleConvert = async () => {
             value={fromCurrency}
             onChangeText={setFromCurrency}
             mode="outlined"
-            placeholder="Select currency"
+            placeholder="e.g. NGN"
             style={styles.input}
+            autoCapitalize="characters"
           />
         </View>
 
@@ -76,8 +87,9 @@ const handleConvert = async () => {
             value={toCurrency}
             onChangeText={setToCurrency}
             mode="outlined"
-            placeholder="Select currency"
+            placeholder="e.g. USD"
             style={styles.input}
+            autoCapitalize="characters"
           />
         </View>
 
@@ -89,6 +101,7 @@ const handleConvert = async () => {
             mode="outlined"
             keyboardType="numeric"
             style={styles.input}
+            placeholder="Enter amount"
           />
         </View>
 
@@ -102,18 +115,11 @@ const handleConvert = async () => {
           mode="contained"
           onPress={handleConvert}
           disabled={loading}
+          loading={loading}
           style={styles.button}
         >
           {loading ? "Converting..." : "Convert"}
         </Button>
-
-        {convertedAmount && (
-          <View style={styles.result}>
-            <Text style={styles.resultText}>
-              {amount} {fromCurrency} = {convertedAmount} {toCurrency}
-            </Text>
-          </View>
-        )}
       </View>
     </ScrollView>
   );
@@ -134,6 +140,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 32,
+    fontSize: 22,
   },
   inputGroup: {
     marginBottom: 24,
@@ -141,6 +148,7 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 8,
     color: "#64748B",
+    fontWeight: "500",
   },
   input: {
     backgroundColor: "#fff",
@@ -148,16 +156,6 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 16,
     borderRadius: 10,
-  },
-  result: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    elevation: 2,
-  },
-  resultText: {
-    fontSize: 16,
-    color: "#1E293B",
+    paddingVertical: 6,
   },
 });
