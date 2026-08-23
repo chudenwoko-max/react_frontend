@@ -12,6 +12,7 @@ import {
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import Toast from 'react-native-toast-message'; // Correct import for Toast
 
 export default function WithdrawScreen() {
   const [amount, setAmount] = useState("");
@@ -50,15 +51,40 @@ export default function WithdrawScreen() {
   setError("");
 
   try {
-    const res = await axiosClient.post("wallet/withdraw/", {
-      amount,
-      pin,
+    // Step 1: Verify PIN → get temporary pin_token
+    const pinRes = await axiosClient.post("verify-pin/", {
+      pin: pin,
     });
 
-    window.alert(res.data.message || "Withdrawal successful!");
+    const pinToken = pinRes.data.pin_token;
+
+    if (!pinToken) {
+      setError("Failed to verify PIN");
+      setLoading(false);
+      return;
+    }
+
+    // Step 2: Call withdraw with the pin_token
+    const res = await axiosClient.post("withdraw/", {   // ← make sure this matches your backend URL
+      amount: amount,
+      pin_token: pinToken,
+    });
+
+    // Success
+    Toast.show({
+      type: "success",
+      text1: "Withdrawal Successful ✅",
+      text2: res.data.message || "Your withdrawal is being processed",
+    });
+
     setAmount("");
     setPin("");
-    router.back();
+
+    // Go back to Dashboard
+    setTimeout(() => {
+      router.replace("/(tabs)");
+    }, 800);
+
   } catch (err: any) {
     console.log("Withdraw error:", err.response?.data);
     const message =
@@ -66,11 +92,16 @@ export default function WithdrawScreen() {
       err.response?.data?.detail ||
       "Withdrawal failed. Please try again.";
     setError(message);
+
+    Toast.show({
+      type: "error",
+      text1: "Withdrawal Failed",
+      text2: message,
+    });
   } finally {
     setLoading(false);
   }
 };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
