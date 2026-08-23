@@ -1,28 +1,110 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  Switch,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { router } from "expo-router";
+import {
+  getBiometricStatus,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  authenticateWithBiometrics,
+  BiometricStatus,
+} from "../../src/utils/biometric"; // ← adjust path if needed
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
 
+  const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [loadingBiometric, setLoadingBiometric] = useState(true);
+
+  useEffect(() => {
+    loadBiometricSettings();
+  }, []);
+
+  const loadBiometricSettings = async () => {
+    try {
+      const status = await getBiometricStatus();
+      const enabled = await isBiometricEnabled();
+      setBiometricStatus(status);
+      setBiometricEnabledState(enabled);
+    } catch (e) {
+      console.log("Biometric load error:", e);
+    } finally {
+      setLoadingBiometric(false);
+    }
+  };
+
+  const handleToggleBiometric = async (value: boolean) => {
+    if (value) {
+      // Turning ON
+      if (!biometricStatus?.canUseBiometrics) {
+        Alert.alert(
+          "Not Available",
+          biometricStatus?.hasHardware
+            ? "Please enroll Face ID / Fingerprint in your device Settings first."
+            : "This device does not support biometrics."
+        );
+        return;
+      }
+
+      const result = await authenticateWithBiometrics(
+        `Confirm to enable ${biometricStatus.label} unlock`
+      );
+
+      if (!result.success) {
+        Alert.alert("Failed", result.error || "Could not enable biometric unlock");
+        return;
+      }
+
+      await setBiometricEnabled(true);
+      setBiometricEnabledState(true);
+      Alert.alert("Success", `${biometricStatus.label} unlock enabled`);
+    } else {
+      // Turning OFF
+      await setBiometricEnabled(false);
+      setBiometricEnabledState(false);
+    }
+  };
+
   const handleLogout = () => {
-  // Web-friendly confirmation
-  const confirmed = window.confirm("Are you sure you want to logout?");
+    const doLogout = () => {
+      logout()
+        .then(() => {
+          router.replace("/(auth)/login");
+        })
+        .catch((e) => {
+          console.log("Logout error:", e);
+          router.replace("/(auth)/login");
+        });
+    };
 
-  if (confirmed) {
-    logout()
-      .then(() => {
-        router.replace("/(auth)/login");
-      })
-      .catch((e) => {
-        console.log("Logout error:", e);
-        router.replace("/(auth)/login"); // force navigate even if error
-      });
-  }
-};
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Are you sure you want to logout?");
+      if (confirmed) doLogout();
+    } else {
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to logout?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Logout", style: "destructive", onPress: doLogout },
+        ]
+      );
+    }
+  };
 
-    const menuItems = [
+  const menuItems = [
     { icon: "account-outline", label: "Edit Profile", onPress: () => router.push("/edit-profile") },
     { icon: "shield-check-outline", label: "Verify Identity (KYC)", onPress: () => router.push("/kyc") },
     { icon: "lock-outline", label: "Change PIN", onPress: () => router.push("/set-pin") },
@@ -56,6 +138,41 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{user?.email || "No email"}</Text>
       </View>
 
+      {/* Biometric Unlock Card */}
+      <View style={styles.biometricCard}>
+        <View style={styles.biometricLeft}>
+          <MaterialCommunityIcons
+            name="fingerprint"
+            size={24}
+            color="#0F172A"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.biometricTitle}>
+              Unlock with {biometricStatus?.label || "Biometrics"}
+            </Text>
+            <Text style={styles.biometricSubtitle}>
+              {loadingBiometric
+                ? "Checking device..."
+                : biometricStatus?.canUseBiometrics
+                ? "Use fingerprint or face to unlock the app"
+                : "Not available on this device"}
+            </Text>
+          </View>
+        </View>
+
+        {loadingBiometric ? (
+          <ActivityIndicator size="small" color="#64748B" />
+        ) : (
+          <Switch
+            value={biometricEnabled}
+            onValueChange={handleToggleBiometric}
+            disabled={!biometricStatus?.canUseBiometrics}
+            trackColor={{ false: "#E2E8F0", true: "#0F172A" }}
+            thumbColor="#FFFFFF"
+          />
+        )}
+      </View>
+
       {/* Menu */}
       <View style={styles.menu}>
         {menuItems.map((item, index) => (
@@ -83,9 +200,9 @@ export default function ProfileScreen() {
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-  <MaterialCommunityIcons name="logout" size={20} color="#DC2626" />
-  <Text style={styles.logoutText}>Logout</Text>
-</TouchableOpacity>
+        <MaterialCommunityIcons name="logout" size={20} color="#DC2626" />
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -98,11 +215,11 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 40, // extra space at the bottom
+    paddingBottom: 40,
   },
   header: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 24,
   },
   avatar: {
     width: 80,
@@ -128,6 +245,38 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
+
+  // Biometric card
+  biometricCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  biometricLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+    marginRight: 12,
+  },
+  biometricTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  biometricSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 2,
+  },
+
   menu: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

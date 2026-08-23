@@ -1,25 +1,48 @@
 import { useRef, useState } from "react";
 import { Tabs, usePathname } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { TouchableOpacity, View, Text, StyleSheet, Platform } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
 import MoreSheet from "../../src/components/MoreSheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+import { useAuth } from "../../src/context/AuthContext";
+import { useBiometricLock } from "../../src/hooks/useBiometricLock";
+import BiometricLockScreen from "../../src/components/BiometricLockScreen";
+import PinModal from "../../src/components/PinModal"; // ← Import your existing PIN modal component here
 
 export default function TabsLayout() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
 
- const pathname = usePathname();
+  const { user, isLoading } = useAuth();
+  const isLoggedIn = !!user;
 
-// Strict check – only pure Home / Welcome page
-const isHomePage =
-  pathname === "/" ||
-  pathname === "/(tabs)" ||
-  pathname === "/(tabs)/" ||
-  pathname === "/(tabs)/index" ||
-  pathname.endsWith("/index");
+  const {
+    isLocked,
+    isChecking,
+    unlockWithBiometrics,
+    unlockManually,
+  } = useBiometricLock(isLoggedIn);
+
+  const pathname = usePathname();
+
+  // Strict check – only pure Home / Welcome page
+  const isHomePage =
+    pathname === "/" ||
+    pathname === "/(tabs)" ||
+    pathname === "/(tabs)/" ||
+    pathname === "/(tabs)/index" ||
+    pathname.endsWith("/index");
 
   const toggleSheet = () => {
     if (isSheetOpen) {
@@ -28,6 +51,25 @@ const isHomePage =
       bottomSheetRef.current?.expand();
     }
   };
+
+  // Loading state
+  if (isLoading || isChecking) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
+
+  // Biometric Lock Screen
+  if (isLoggedIn && isLocked) {
+    return (
+      <BiometricLockScreen
+        onUnlockWithBiometrics={unlockWithBiometrics}
+        onUsePin={() => setShowPinModal(true)}
+      />
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -113,6 +155,17 @@ const isHomePage =
         ref={bottomSheetRef}
         // @ts-ignore
         onChange={(index: number) => setIsSheetOpen(index >= 0)}
+      />
+
+      {/* ===== PIN Modal (connect your existing one) ===== */}
+      <PinModal
+        visible={showPinModal}
+        onSuccess={() => {
+          setShowPinModal(false);
+          unlockManually(); // ← unlocks the app
+        }}
+        onClose={() => setShowPinModal(false)}
+        title="Enter Transaction PIN to Unlock"
       />
     </GestureHandlerRootView>
   );

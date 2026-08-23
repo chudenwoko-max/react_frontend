@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import axiosClient from "../api/axiosClient";
+import { setBiometricEnabled } from "../utils/biometric"; // ← add this import
 
 type User = any;
 
@@ -71,6 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await deleteToken("ACCESS_TOKEN");
     await deleteToken("REFRESH_TOKEN");
+    // Clear biometric preference on logout
+    try {
+      await setBiometricEnabled(false);
+    } catch (e) {
+      console.log("Failed to clear biometric flag", e);
+    }
     setUser(null);
   };
 
