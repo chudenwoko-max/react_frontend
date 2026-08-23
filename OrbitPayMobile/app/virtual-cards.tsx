@@ -37,6 +37,7 @@ export default function VirtualCardsScreen() {
   const [fundModalVisible, setFundModalVisible] = useState(false);
   const [selectedCard, setSelectedCard] = useState<VirtualCard | null>(null);
   const [fundAmount, setFundAmount] = useState("");
+  const [fundPin, setFundPin] = useState("");
   const [funding, setFunding] = useState(false);
 
   const fetchCards = async () => {
@@ -86,6 +87,7 @@ export default function VirtualCardsScreen() {
   const openFundModal = (card: VirtualCard) => {
     setSelectedCard(card);
     setFundAmount("");
+    setFundPin("");
     setFundModalVisible(true);
   };
 
@@ -95,10 +97,24 @@ export default function VirtualCardsScreen() {
       return;
     }
 
+    if (!fundPin) {
+      Alert.alert("Error", "Please enter your transaction PIN");
+      return;
+    }
+
     setFunding(true);
     try {
+      // Step 1: Verify PIN
+      const pinRes = await axiosClient.post("verify-pin/", {
+        pin: fundPin,
+      });
+
+      const pinToken = pinRes.data.pin_token;
+
+      // Step 2: Fund the card
       await axiosClient.post(`cards/${selectedCard.id}/fund/`, {
         amount: fundAmount,
+        pin_token: pinToken,
       });
 
       Toast.show({
@@ -108,6 +124,8 @@ export default function VirtualCardsScreen() {
       });
 
       setFundModalVisible(false);
+      setFundAmount("");
+      setFundPin("");
       fetchCards();
     } catch (err: any) {
       Toast.show({
@@ -216,7 +234,6 @@ export default function VirtualCardsScreen() {
           </View>
         </View>
 
-        {/* Action Buttons */}
         {!isTerminated && (
           <View style={styles.actionsRow}>
             {!isFrozen && (
@@ -322,6 +339,16 @@ export default function VirtualCardsScreen() {
               keyboardType="numeric"
               value={fundAmount}
               onChangeText={setFundAmount}
+            />
+
+            <TextInput
+              style={styles.amountInput}
+              placeholder="Enter Transaction PIN"
+              keyboardType="numeric"
+              secureTextEntry
+              maxLength={4}
+              value={fundPin}
+              onChangeText={setFundPin}
             />
 
             <View style={styles.modalButtons}>
@@ -493,10 +520,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 14,
   },
   modalButtons: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 10,
   },
 });
