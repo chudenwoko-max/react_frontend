@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { TextInput, Button, HelperText, Menu } from "react-native-paper";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
-import axiosClient from "../src/api/axiosClient"; // adjust path if needed
+import axiosClient from "../src/api/axiosClient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const CURRENCIES = [
@@ -19,16 +19,21 @@ export default function ConverterScreen() {
   const [fromCurrency, setFromCurrency] = useState("NGN");
   const [toCurrency, setToCurrency] = useState("USD");
   const [amount, setAmount] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Dropdown visibility
   const [fromMenuVisible, setFromMenuVisible] = useState(false);
   const [toMenuVisible, setToMenuVisible] = useState(false);
 
   const handleConvert = async () => {
     if (!amount) {
       setError("Enter an amount");
+      return;
+    }
+
+    if (!pin) {
+      setError("Enter your transaction PIN");
       return;
     }
 
@@ -41,10 +46,25 @@ export default function ConverterScreen() {
     setError("");
 
     try {
+      // Step 1: Verify PIN
+      const pinRes = await axiosClient.post("verify-pin/", {
+        pin: pin,
+      });
+
+      const pinToken = pinRes.data.pin_token;
+
+      if (!pinToken) {
+        setError("Failed to verify PIN");
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Convert
       const res = await axiosClient.post("wallets/convert/", {
         from_currency: fromCurrency,
         to_currency: toCurrency,
         amount,
+        pin_token: pinToken,
       });
 
       const receivedAmount = res.data.amount_received;
@@ -58,6 +78,7 @@ export default function ConverterScreen() {
       });
 
       setAmount("");
+      setPin("");
 
       setTimeout(() => {
         router.replace("/(tabs)");
@@ -100,9 +121,15 @@ export default function ConverterScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.dropdownText}>
-                {current ? `${current.symbol} ${current.code} – ${current.name}` : "Select currency"}
+                {current
+                  ? `${current.symbol} ${current.code} – ${current.name}`
+                  : "Select currency"}
               </Text>
-              <MaterialCommunityIcons name="chevron-down" size={22} color="#64748B" />
+              <MaterialCommunityIcons
+                name="chevron-down"
+                size={22}
+                color="#64748B"
+              />
             </TouchableOpacity>
           }
         >
@@ -151,6 +178,20 @@ export default function ConverterScreen() {
             keyboardType="numeric"
             style={styles.input}
             placeholder="Enter amount"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Transaction PIN</Text>
+          <TextInput
+            value={pin}
+            onChangeText={setPin}
+            mode="outlined"
+            keyboardType="numeric"
+            secureTextEntry
+            style={styles.input}
+            placeholder="Enter 4-digit PIN"
+            maxLength={4}
           />
         </View>
 
