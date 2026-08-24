@@ -13,14 +13,15 @@ async function setupSslPinning() {
 
   try {
     await initializeSslPinning({
-      "currency-cvt-fintech-1.onrender.com": {
-        includeSubdomains: false,
-        publicKeyHashes: [
-          "fizfE9JVlzlRplEx7epXfqW9enrbLvwF/LU26XTPEG4=", // Leaf
-          "kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=", // Intermediate (backup)
-        ],
-      },
-    });
+  "currency-cvt-fintech-1.onrender.com": {
+    includeSubdomains: false,
+    publicKeyHashes: [
+      "fizfE9JVlzlRplEx7epXfqW9enrbLvwF/LU26XTPEG4=", // Leaf
+      "kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=", // Intermediate
+      "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=", // Intermediate (extra backup)
+    ],
+  },
+});
     console.log("✅ SSL Pinning initialized successfully");
   } catch (error) {
     console.warn("SSL Pinning initialization failed:", error);
