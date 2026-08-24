@@ -20,8 +20,7 @@
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Allow OrbitPay to use Face ID to unlock the app securely."
-      },
-      "networkInspector": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -46,7 +45,14 @@
           "faceIDPermission": "Allow OrbitPay to use Face ID / biometrics to unlock the app securely."
         }
       ],
-      "expo-build-properties"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "networkInspector": false
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {},
