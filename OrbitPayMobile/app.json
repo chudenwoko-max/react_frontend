@@ -17,7 +17,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.orbitpay.app",
-      "buildNumber": "1.0.0"
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow OrbitPay to use Face ID to unlock the app securely."
+      },
+      "networkInspector": false
     },
     "android": {
       "adaptiveIcon": {
@@ -35,7 +39,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow OrbitPay to use Face ID / biometrics to unlock the app securely."
+        }
+      ],
+      "expo-build-properties"
     ],
     "extra": {
       "router": {},
