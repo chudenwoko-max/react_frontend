@@ -139,39 +139,45 @@ export default function ProfileScreen() {
       </View>
 
       {/* Biometric Unlock Card */}
-      <View style={styles.biometricCard}>
-        <View style={styles.biometricLeft}>
-          <MaterialCommunityIcons
-            name="fingerprint"
-            size={24}
-            color="#0F172A"
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.biometricTitle}>
-              Unlock with {biometricStatus?.label || "Biometrics"}
-            </Text>
-            <Text style={styles.biometricSubtitle}>
-              {loadingBiometric
-                ? "Checking device..."
-                : biometricStatus?.canUseBiometrics
-                ? "Use fingerprint or face to unlock the app"
-                : "Not available on this device"}
-            </Text>
-          </View>
-        </View>
+<View style={styles.biometricCard}>
+  <View style={styles.biometricLeft}>
+    <MaterialCommunityIcons
+      name="fingerprint"
+      size={24}
+      color="#0F172A"
+    />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.biometricTitle}>
+        Unlock with {biometricStatus?.label || "Biometrics"}
+      </Text>
+      <Text style={styles.biometricSubtitle}>
+        {loadingBiometric
+          ? "Checking device..."
+          : Platform.OS === "web"
+          ? "Biometric unlock is only available on mobile devices"
+          : biometricStatus?.canUseBiometrics
+          ? "Use fingerprint or face to unlock the app"
+          : "Not available on this device"}
+      </Text>
+    </View>
+  </View>
 
-        {loadingBiometric ? (
-          <ActivityIndicator size="small" color="#64748B" />
-        ) : (
-          <Switch
-            value={biometricEnabled}
-            onValueChange={handleToggleBiometric}
-            disabled={!biometricStatus?.canUseBiometrics}
-            trackColor={{ false: "#E2E8F0", true: "#0F172A" }}
-            thumbColor="#FFFFFF"
-          />
-        )}
-      </View>
+  {loadingBiometric ? (
+    <ActivityIndicator size="small" color="#64748B" />
+  ) : Platform.OS === "web" ? (
+    <View style={styles.webBadge}>
+      <Text style={styles.webBadgeText}>Mobile only</Text>
+    </View>
+  ) : (
+    <Switch
+      value={biometricEnabled}
+      onValueChange={handleToggleBiometric}
+      disabled={!biometricStatus?.canUseBiometrics}
+      trackColor={{ false: "#E2E8F0", true: "#0F172A" }}
+      thumbColor="#FFFFFF"
+    />
+  )}
+</View>
 
       {/* Menu */}
       <View style={styles.menu}>
@@ -315,4 +321,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#DC2626",
   },
+  webBadge: {
+  backgroundColor: "#E2E8F0",
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 8,
+},
+webBadgeText: {
+  fontSize: 12,
+  color: "#64748B",
+  fontWeight: "600",
+},
 });
