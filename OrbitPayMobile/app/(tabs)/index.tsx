@@ -490,14 +490,7 @@ const filteredTransactions = useMemo(() => {
       </View>
 
       {/* Balance Card */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.cardLabel}>Total Balance</Text>
-        {loading ? (
-          <ActivityIndicator color="#fff" style={{ marginTop: 12 }} />
-        ) : (
-          <Text style={styles.balance}>{balance}</Text>
-        )}
-      </View>
+      <BalanceCard balance={balance} loading={loading} />
 
       {/* Orbit Insights & Smart Save - with Skeleton Loading */}
       {loading ? (
@@ -578,150 +571,16 @@ const filteredTransactions = useMemo(() => {
       )}
 
       {/* This Month Snapshot */}
-      <View style={styles.snapshotCard}>
-        <Text style={styles.snapshotTitle}>This Month</Text>
-        <View style={styles.snapshotRow}>
-          <View style={styles.snapshotItem}>
-            <Text style={styles.snapshotLabel}>Spent</Text>
-            <Text style={[styles.snapshotValue, { color: "#DC2626" }]}>
-              ₦{monthSpent.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.snapshotItem}>
-            <Text style={styles.snapshotLabel}>Received</Text>
-            <Text style={[styles.snapshotValue, { color: "#16A34A" }]}>
-              ₦
-              {monthReceived.toLocaleString("en-NG", {
-                minimumFractionDigits: 2,
-              })}
-            </Text>
-          </View>
-        </View>
-      </View>
+      <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
 
       {/* Multi-currency Wallets */}
-      <Text style={styles.sectionTitle}>My Wallets</Text>
-      <View style={styles.walletsGrid}>
-        {["NGN", "USD", "EUR", "GBP"].map((code) => {
-          const wallet = wallets.find(
-            (w) => w.currency_code === code || w.currency?.code === code
-          );
-          const balance = wallet ? Number(wallet.balance || 0) : 0;
-          const symbol =
-            code === "NGN"
-              ? "₦"
-              : code === "USD"
-                ? "$"
-                : code === "EUR"
-                  ? "€"
-                  : "£";
-
-          return (
-            <TouchableOpacity
-              key={code}
-              style={styles.walletCard}
-              onPress={() => router.push("/(tabs)/wallet")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.walletCode}>{code}</Text>
-              <Text style={styles.walletBalance}>
-                {symbol}
-                {balance.toLocaleString("en-NG", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <WalletsGrid wallets={wallets} />
 
       {/* Quick Actions */}
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/send")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#E0F2FE" }]}>
-            <MaterialCommunityIcons name="send" size={24} color="#0284C7" />
-          </View>
-          <Text style={styles.actionText}>Send</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/fund")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#DCFCE7" }]}>
-            <MaterialCommunityIcons name="plus" size={24} color="#16A34A" />
-          </View>
-          <Text style={styles.actionText}>Fund</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/withdraw")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
-            <MaterialCommunityIcons
-              name="bank-transfer-out"
-              size={24}
-              color="#DC2626"
-            />
-          </View>
-          <Text style={styles.actionText}>Withdraw</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/history")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
-            <MaterialCommunityIcons name="history" size={24} color="#7C3AED" />
-          </View>
-          <Text style={styles.actionText}>History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/orbit-ai")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
-            <MaterialCommunityIcons
-              name="robot-happy-outline"
-              size={24}
-              color="#7C3AED"
-            />
-          </View>
-          <Text style={styles.actionText}>Orbit AI</Text>
-        </TouchableOpacity>
-      </View>
+      <QuickActions />
 
       {/* 7-Day Spending Chart */}
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Spending • Last 7 days</Text>
-        <View style={styles.chartContainer}>
-          {weeklyData.map((value, index) => {
-            const max = Math.max(...weeklyData, 1);
-            const height = Math.max((value / max) * 80, 4);
-            const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
-            const todayIndex = new Date().getDay();
-            const labelIndex = (todayIndex - 6 + index + 7) % 7;
-
-            return (
-              <View key={index} style={styles.barWrapper}>
-                <View style={[styles.bar, { height }]} />
-                <Text style={styles.barLabel}>{dayLabels[labelIndex]}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
+      <WeeklyChart weeklyData={weeklyData} />
       {/* Savings Goals */}
       {savingsGoals.length > 0 && (
         <>
