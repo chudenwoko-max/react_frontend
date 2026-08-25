@@ -1,6 +1,7 @@
+// ========== REPLACE the import section at the TOP of app/(tabs)/index.tsx ==========
+
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -85,6 +86,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
   const [cashflowAlert, setCashflowAlert] = useState<any>(null);
+  const isFirstLoad = useRef(true);
 
   const fetchSavingsSuggestion = async () => {
     try {
@@ -121,6 +123,7 @@ export default function Dashboard() {
   const fetchBalance = async () => {
     try {
       const res = await axiosClient.get("wallet/balance/");
+      console.log("BALANCE API RESPONSE →", res.data);   
       const amount = res.data.balance ?? 0;
       setBalance(
         Number(amount).toLocaleString("en-NG", {
@@ -158,6 +161,7 @@ export default function Dashboard() {
   const fetchWallets = async () => {
     try {
       const res = await axiosClient.get("wallets/");
+      console.log("WALLETS API RESPONSE →", res.data); 
       const data = Array.isArray(res.data) ? res.data : [];
       setWallets(data);
     } catch (error) {
@@ -289,7 +293,13 @@ export default function Dashboard() {
 
   useFocusEffect(
   useCallback(() => {
-    loadData();
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      loadData();
+    } else {
+      // On return to screen: only refresh the most important data
+      Promise.all([fetchBalance(), fetchUnreadCount(), fetchWallets()]);
+    }
   }, [])
 );
 
@@ -309,120 +319,132 @@ export default function Dashboard() {
     }
   };
 
-  const getFilteredTransactions = () => {
-    let filtered = recentTransactions;
+  // ========== REPLACE the entire getFilteredTransactions function ==========
+// Location: search for → const getFilteredTransactions = () => {
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (tx) =>
-          (tx.description || "").toLowerCase().includes(query) ||
-          (tx.note || "").toLowerCase().includes(query) ||
-          (tx.category || "").toLowerCase().includes(query)
-      );
-    }
+const filteredTransactions = useMemo(() => {
+  let filtered = recentTransactions;
 
-    // Apply type filter
-    if (filterType !== "all") {
-      filtered = filtered.filter((tx) => {
-        const type = (tx.type || tx.transaction_type || "").toLowerCase();
-        const desc = (tx.description || tx.note || "").toLowerCase();
-        const category = (tx.category || "").toLowerCase();
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (tx) =>
+        (tx.description || "").toLowerCase().includes(query) ||
+        (tx.note || "").toLowerCase().includes(query) ||
+        (tx.category || "").toLowerCase().includes(query)
+    );
+  }
 
-        const isCredit =
-          type === "credit" ||
-          type === "fund" ||
-          type === "receive" ||
-          type === "funding" ||
-          type === "referral_bonus" ||
-          desc.includes("received") ||
-          desc.includes("wallet funding") ||
-          desc.includes("funded");
+  if (filterType !== "all") {
+    filtered = filtered.filter((tx) => {
+      const type = (tx.type || tx.transaction_type || "").toLowerCase();
+      const desc = (tx.description || tx.note || "").toLowerCase();
+      const category = (tx.category || "").toLowerCase();
 
-        if (filterType === "sent") return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw";
-        if (filterType === "received") return isCredit;
-        if (filterType === "bills") return desc.includes("bill") || ["electricity", "cable", "data", "airtime"].includes(category);
-        if (filterType === "others") return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw" && !["electricity", "cable", "data", "airtime"].includes(category);
-        return true;
-      });
-    }
+      const isCredit =
+        type === "credit" ||
+        type === "fund" ||
+        type === "receive" ||
+        type === "funding" ||
+        type === "referral_bonus" ||
+        desc.includes("received") ||
+        desc.includes("wallet funding") ||
+        desc.includes("funded");
 
-    return filtered;
-  };
+      if (filterType === "sent")
+        return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw";
+      if (filterType === "received") return isCredit;
+      if (filterType === "bills")
+        return (
+          desc.includes("bill") ||
+          ["electricity", "cable", "data", "airtime"].includes(category)
+        );
+      if (filterType === "others")
+        return (
+          !isCredit &&
+          !desc.includes("bill") &&
+          !desc.includes("withdraw") &&
+          type !== "withdraw" &&
+          !["electricity", "cable", "data", "airtime"].includes(category)
+        );
+      return true;
+    });
+  }
 
-  const renderTransaction = (item: Transaction) => {
-    const type = (item.type || item.transaction_type || "").toLowerCase();
-    const description = (item.description || item.note || "").toLowerCase();
-    const category = (item.category || "other").toLowerCase();
+  return filtered;
+}, [recentTransactions, searchQuery, filterType]);
 
-    const isCredit =
-      type === "credit" ||
-      type === "fund" ||
-      type === "receive" ||
-      type === "funding" ||
-      type === "referral_bonus" ||
-      description.includes("received") ||
-      description.includes("wallet funding") ||
-      description.includes("funded");
+  const renderTransaction = useCallback((item: Transaction) => {
+  const type = (item.type || item.transaction_type || "").toLowerCase();
+  const description = (item.description || item.note || "").toLowerCase();
+  const category = (item.category || "other").toLowerCase();
 
-    const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
+  const isCredit =
+    type === "credit" ||
+    type === "fund" ||
+    type === "receive" ||
+    type === "funding" ||
+    type === "referral_bonus" ||
+    description.includes("received") ||
+    description.includes("wallet funding") ||
+    description.includes("funded");
 
-    return (
-      <TouchableOpacity
-        key={item.id || item.reference_id}
-        style={styles.txCard}
-        onPress={() =>
-          router.push(`/transaction/${item.id || item.reference_id}`)
-        }
-        activeOpacity={0.7}
+  const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
+
+  return (
+    <TouchableOpacity
+      key={item.id || item.reference_id}
+      style={styles.txCard}
+      onPress={() =>
+        router.push(`/transaction/${item.id || item.reference_id}`)
+      }
+      activeOpacity={0.7}
+    >
+      <View
+        style={[
+          styles.txIcon,
+          { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" },
+        ]}
       >
-        <View
-          style={[
-            styles.txIcon,
-            { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" },
-          ]}
-        >
-          <MaterialCommunityIcons
-            name={isCredit ? "arrow-down" : "arrow-up"}
-            size={18}
-            color={isCredit ? "#16A34A" : "#DC2626"}
-          />
-        </View>
-        <View style={styles.txInfo}>
-          <Text style={styles.txTitle} numberOfLines={1}>
-            {item.description || item.note || item.type || "Transaction"}
-          </Text>
+        <MaterialCommunityIcons
+          name={isCredit ? "arrow-down" : "arrow-up"}
+          size={18}
+          color={isCredit ? "#16A34A" : "#DC2626"}
+        />
+      </View>
+      <View style={styles.txInfo}>
+        <Text style={styles.txTitle} numberOfLines={1}>
+          {item.description || item.note || item.type || "Transaction"}
+        </Text>
 
-          <View style={styles.txMetaRow}>
-            <View style={[styles.categoryBadge, { backgroundColor: colors.bg }]}>
-              <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
-                {formatCategory(category)}
-              </Text>
-            </View>
-            <Text style={styles.txDate}>
-              {item.created_at
-                ? new Date(item.created_at).toLocaleDateString()
-                : "—"}
+        <View style={styles.txMetaRow}>
+          <View style={[styles.categoryBadge, { backgroundColor: colors.bg }]}>
+            <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
+              {formatCategory(category)}
             </Text>
           </View>
+          <Text style={styles.txDate}>
+            {item.created_at
+              ? new Date(item.created_at).toLocaleDateString()
+              : "—"}
+          </Text>
         </View>
+      </View>
 
-        <Text
-          style={[
-            styles.txAmount,
-            { color: isCredit ? "#16A34A" : "#DC2626" },
-          ]}
-        >
-          {isCredit ? "+" : "-"}₦
-          {Number(item.amount).toLocaleString("en-NG", {
-            minimumFractionDigits: 2,
-          })}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
+      <Text
+        style={[
+          styles.txAmount,
+          { color: isCredit ? "#16A34A" : "#DC2626" },
+        ]}
+      >
+        {isCredit ? "+" : "-"}₦
+        {Number(item.amount).toLocaleString("en-NG", {
+          minimumFractionDigits: 2,
+        })}
+      </Text>
+    </TouchableOpacity>
+  );
+}, []);
   return (
     <ScrollView
       style={styles.container}
@@ -806,7 +828,7 @@ export default function Dashboard() {
             Fund your wallet or send money to see activity here.
           </Text>
         </View>
-      ) : getFilteredTransactions().length === 0 ? (
+      ) : filteredTransactions.length === 0 ? (
         <View style={styles.emptyCard}>
           <MaterialCommunityIcons name="magnify" size={40} color="#CBD5E1" />
           <Text style={styles.emptyText}>No results found</Text>
@@ -816,7 +838,7 @@ export default function Dashboard() {
         </View>
       ) : (
         <View style={styles.txList}>
-          {getFilteredTransactions().map(renderTransaction)}
+          {filteredTransactions.map(renderTransaction)}
         </View>
       )}
     </ScrollView>
