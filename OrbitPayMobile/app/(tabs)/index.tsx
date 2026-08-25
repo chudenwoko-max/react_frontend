@@ -16,6 +16,15 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import { router } from "expo-router";
+// ========== INSERT near the top of app/(tabs)/index.tsx (after other imports) ==========
+
+import {
+  BalanceCard,
+  MonthSnapshot,
+  WalletsGrid,
+  QuickActions,
+  WeeklyChart,
+} from "../../src/components/dashboard/DashboardSections";
 
 type Transaction = {
   id?: number;
