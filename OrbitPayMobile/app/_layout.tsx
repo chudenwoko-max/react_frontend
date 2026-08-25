@@ -6,6 +6,15 @@ import { PaperProvider } from "react-native-paper";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 import { initializeSslPinning } from "react-native-ssl-public-key-pinning";
+import * as Sentry from "@sentry/react-native";
+
+Sentry.init({
+  dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
+  tracesSampleRate: 0.2,
+  enableAutoSessionTracking: true,
+  environment: __DEV__ ? "development" : "production",
+  debug: __DEV__,
+});
 
 async function setupSslPinning() {
   // SSL Pinning only works on native (iOS / Android)
@@ -13,22 +22,22 @@ async function setupSslPinning() {
 
   try {
     await initializeSslPinning({
-  "currency-cvt-fintech-1.onrender.com": {
-    includeSubdomains: false,
-    publicKeyHashes: [
-      "fizfE9JVlzlRplEx7epXfqW9enrbLvwF/LU26XTPEG4=", // Leaf
-      "kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=", // Intermediate
-      "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=", // Intermediate (extra backup)
-    ],
-  },
-});
+      "currency-cvt-fintech-1.onrender.com": {
+        includeSubdomains: false,
+        publicKeyHashes: [
+          "fizfE9JVlzlRplEx7epXfqW9enrbLvwF/LU26XTPEG4=", // Leaf
+          "kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=", // Intermediate
+          "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=", // Intermediate (extra backup)
+        ],
+      },
+    });
     console.log("✅ SSL Pinning initialized successfully");
   } catch (error) {
     console.warn("SSL Pinning initialization failed:", error);
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     setupSslPinning();
   }, []);
@@ -44,3 +53,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

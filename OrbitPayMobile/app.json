@@ -52,7 +52,8 @@
             "networkInspector": false
           }
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "extra": {
       "router": {},
