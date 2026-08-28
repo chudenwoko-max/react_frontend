@@ -2,17 +2,18 @@ import { Platform } from "react-native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import api from "../api/axiosClient";
- // <-- change this path to your API client
+import axiosClient from "../api/axiosClient";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
@@ -26,6 +27,7 @@ async function ensureAndroidChannel() {
 }
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  if (Platform.OS === "web") return null;
   if (!Device.isDevice) return null;
 
   await ensureAndroidChannel();
@@ -48,7 +50,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   const tokenRes = await Notifications.getExpoPushTokenAsync({ projectId });
   const token = tokenRes.data;
 
-  await api.post("/api/devices/register/", {
+  await axiosClient.post("devices/register/", {
     token,
     platform: Platform.OS,
     device_name: `${Device.manufacturer ?? ""} ${Device.modelName ?? ""}`.trim(),
@@ -58,10 +60,11 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 }
 
 export async function unregisterPushToken(token?: string | null) {
+  if (Platform.OS === "web") return;
   try {
-    await api.post("/api/devices/unregister/", token ? { token } : {});
+    await axiosClient.post("devices/unregister/", token ? { token } : {});
   } catch {
-    // ignore on logout
+    // ignore logout failures
   }
 }
 

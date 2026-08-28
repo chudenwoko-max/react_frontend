@@ -40,12 +40,13 @@ async function setupSslPinning() {
     console.warn("SSL Pinning initialization failed:", error);
   }
 }
-
 function PushBootstrap() {
-  const auth = useAuth() as { isLoggedIn?: boolean; user?: unknown; token?: string };
-  const isLoggedIn = Boolean(auth?.isLoggedIn ?? auth?.user ?? auth?.token);
+  const auth = useAuth() as { user?: unknown };
+  const isLoggedIn = Boolean(auth?.user);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
+
     Notifications.getLastNotificationResponseAsync().then((res) => {
       if (!res) return;
       const data = res.notification.request.content.data as Record<string, any>;
@@ -54,6 +55,7 @@ function PushBootstrap() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!isLoggedIn) return;
 
     registerForPushNotificationsAsync();
