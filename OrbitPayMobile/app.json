@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F0F1A"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.orbitpay.app",
@@ -35,6 +33,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       "expo-font",
@@ -53,8 +52,19 @@
           }
         }
       ],
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+
+      
+      [
+        "expo-notifications",
+        {
+          "color": "#4F46E5",
+          "defaultChannel": "orbitpay-default",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ]
     ],
+
     "extra": {
       "router": {},
       "eas": {
