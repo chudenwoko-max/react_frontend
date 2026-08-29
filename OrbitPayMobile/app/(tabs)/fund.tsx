@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   AppState,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
@@ -161,24 +162,40 @@ export default function FundWalletScreen() {
     }
   };
 
-  const handleCancelPending = () => {
-    Alert.alert(
-      "Start new payment?",
-      "This abandons the current Paystack checkout. Use this only if you did not complete payment.",
-      [
-        { text: "Keep waiting", style: "cancel" },
-        {
-          text: "Start new",
-          style: "destructive",
-          onPress: async () => {
-            await AsyncStorage.multiRemove([PENDING_REF_KEY, PENDING_AMOUNT_KEY]);
-            setReference("");
-            setStatusMessage("");
-          },
-        },
-      ]
-    );
-  };
+  const clearPendingLocal = async () => {
+  await AsyncStorage.multiRemove([
+    PENDING_REF_KEY,
+    PENDING_AMOUNT_KEY,
+    "pending_funding_url",
+  ]);
+  setReference("");
+  setCheckoutUrl("");
+  setStatusMessage("");
+};
+
+
+  const handleCancelPending = async () => {
+  const message =
+    "This abandons the current Paystack checkout. Use this only if you did not complete payment.";
+
+  let confirmed = false;
+
+  if (Platform.OS === "web") {
+    confirmed = window.confirm(`Start new payment?\n\n${message}`);
+  } else {
+    confirmed = await new Promise((resolve) => {
+      Alert.alert("Start new payment?", message, [
+        { text: "Keep waiting", style: "cancel", onPress: () => resolve(false) },
+        { text: "Start new", style: "destructive", onPress: () => resolve(true) },
+      ]);
+    });
+  }
+
+  if (!confirmed) return;
+
+  await clearPendingLocal();
+};
+
 
   return (
     <View style={styles.container}>
