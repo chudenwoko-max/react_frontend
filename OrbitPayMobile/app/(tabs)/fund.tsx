@@ -173,8 +173,7 @@ export default function FundWalletScreen() {
   setStatusMessage("");
 };
 
-
-  const handleCancelPending = async () => {
+const handleCancelPending = async () => {
   const message =
     "This abandons the current Paystack checkout. Use this only if you did not complete payment.";
 
@@ -192,6 +191,12 @@ export default function FundWalletScreen() {
   }
 
   if (!confirmed) return;
+
+  try {
+    await axiosClient.post("wallet/fund/cancel/", { reference });
+  } catch (e) {
+    console.log("Cancel pending error:", e);
+  }
 
   await clearPendingLocal();
 };
