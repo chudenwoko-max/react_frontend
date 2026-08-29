@@ -26,12 +26,30 @@ export default function FundWalletScreen() {
 
   const hasPending = Boolean(reference);
 
-  useEffect(() => {
+      useEffect(() => {
     const loadPending = async () => {
-      const pendingRef = await AsyncStorage.getItem(PENDING_REF_KEY);
-      const pendingAmount = await AsyncStorage.getItem(PENDING_AMOUNT_KEY);
-      if (pendingRef) setReference(pendingRef);
-      if (pendingAmount) setAmount(pendingAmount);
+      try {
+        const res = await axiosClient.get("wallet/fund/pending/");
+        const pending = res.data?.pending;
+        if (pending?.reference) {
+          setReference(pending.reference);
+          if (pending.amount) setAmount(String(pending.amount));
+          await AsyncStorage.setItem(PENDING_REF_KEY, pending.reference);
+          if (pending.amount) {
+            await AsyncStorage.setItem(PENDING_AMOUNT_KEY, String(pending.amount));
+          }
+          return;
+        }
+
+        await AsyncStorage.multiRemove([PENDING_REF_KEY, PENDING_AMOUNT_KEY]);
+        setReference("");
+      } catch (e) {
+        console.log("Pending funding fetch error:", e);
+        const pendingRef = await AsyncStorage.getItem(PENDING_REF_KEY);
+        const pendingAmount = await AsyncStorage.getItem(PENDING_AMOUNT_KEY);
+        if (pendingRef) setReference(pendingRef);
+        if (pendingAmount) setAmount(pendingAmount);
+      }
     };
     loadPending();
   }, []);
