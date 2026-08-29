@@ -2,6 +2,10 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { singleFlight } from "./singleFlight";
+import { DeviceEventEmitter } from "react-native";
+
+export const API_UNREACHABLE = "orbitpay:api-unreachable";
+export const API_REACHABLE = "orbitpay:api-reachable";
 
 const BASE_URL = "https://currency-cvt-fintech-1.onrender.com/api/";
 
@@ -83,7 +87,10 @@ function shouldRetry(error: AxiosError) {
 // ---------------- RESPONSE INTERCEPTOR ----------------
 
 axiosClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    DeviceEventEmitter.emit(API_REACHABLE);
+    return res;
+  },
 
   async (error: AxiosError) => {
     const original = error.config as InternalAxiosRequestConfig & {
@@ -91,8 +98,19 @@ axiosClient.interceptors.response.use(
       _retry401?: boolean;
     };
 
+    // ---- API Reachability Signals ----
+    const noResponse = !error.response;
+    const timedOut = error.code === "ECONNABORTED";
+    const status = error.response?.status;
+
+    if (noResponse || timedOut || (status && status >= 500)) {
+      DeviceEventEmitter.emit(API_UNREACHABLE);
+    } else if (status && status < 500) {
+      DeviceEventEmitter.emit(API_REACHABLE);
+    }
+
     // ---- 401 → Refresh token ----
-    if (error.response?.status === 401 && original && !original._retry401) {
+    if (status === 401 && original && !original._retry401) {
       original._retry401 = true;
 
       try {
@@ -128,6 +146,7 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // ---------------- SINGLE-FLIGHT FOR GET ----------------
 

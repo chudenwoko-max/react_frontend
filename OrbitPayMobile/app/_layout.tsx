@@ -13,6 +13,8 @@ import {
   getNotificationRoute,
 } from "../src/notifications/push";
 import { refreshFinancialsFromPush } from "../src/notifications/refreshOnPush";
+import { ConnectivityProvider } from "../src/network/connectivity";
+import OfflineBanner from "../src/components/OfflineBanner";
 
 Sentry.init({
   dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
@@ -86,15 +88,18 @@ function RootLayout() {
     setupSslPinning();
   }, []);
 
-  return (
+    return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <PaperProvider>
-          <PushBootstrap />
-          <Stack screenOptions={{ headerShown: false }} />
-          <Toast />
-        </PaperProvider>
-      </AuthProvider>
+      <ConnectivityProvider>
+        <AuthProvider>
+          <PaperProvider>
+            <OfflineBanner />
+            <PushBootstrap />
+            <Stack screenOptions={{ headerShown: false }} />
+            <Toast />
+          </PaperProvider>
+        </AuthProvider>
+      </ConnectivityProvider>
     </GestureHandlerRootView>
   );
 }
