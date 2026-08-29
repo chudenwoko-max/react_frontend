@@ -127,59 +127,64 @@ export default function FundWalletScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Fund Wallet</Text>
-      <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
+  <View style={styles.container}>
+    <Text style={styles.title}>Fund Wallet</Text>
+    <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
 
-      <Text style={styles.label}>Amount (₦)</Text>
-      <TextInput
-        style={[styles.input, hasPending && styles.inputLocked]}
-        placeholder="e.g. 5000"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={amount}
-        editable={!hasPending}
-        onChangeText={setAmount}
-      />
+    <Text style={styles.label}>Amount (₦)</Text>
+    <TextInput
+      style={[styles.input, hasPending && styles.inputLocked]}
+      placeholder="e.g. 5000"
+      placeholderTextColor="#888"
+      keyboardType="numeric"
+      value={amount}
+      editable={!hasPending}
+      onChangeText={setAmount}
+    />
 
-      {!hasPending ? (
+    {!hasPending ? (
+      <TouchableOpacity
+        style={[styles.button, loading && styles.disabled]}
+        onPress={handleInitialize}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Proceed to Payment</Text>
+        )}
+      </TouchableOpacity>
+    ) : (
+      <View style={styles.verifySection}>
+        <Text style={styles.instruction}>
+          Complete payment on Paystack. This screen will refresh when you return.
+          If the balance does not update, tap Refresh.
+        </Text>
+
         <TouchableOpacity
-          style={[styles.button, loading && styles.disabled]}
-          onPress={handleInitialize}
+          style={[styles.verifyButton, loading && styles.disabled]}
+          onPress={() => runVerify(reference)}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Proceed to Payment</Text>
+            <Text style={styles.buttonText}>Payment not showing? Refresh</Text>
           )}
         </TouchableOpacity>
-      ) : (
-        <View style={styles.verifySection}>
-          <Text style={styles.instruction}>
-            Paystack checkout started for ₦{amount || "—"}. Complete payment,
-            then return here. We will verify automatically.
-          </Text>
 
-          <TouchableOpacity
-            style={[styles.verifyButton, loading && styles.disabled]}
-            onPress={() => runVerify(reference)}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Verify Payment</Text>
-            )}
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={handleCancelPending}
+          disabled={loading}
+        >
+          <Text style={styles.linkText}>Didn't pay? Start new payment</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+  </View>
+);
 
-          <TouchableOpacity style={styles.linkButton} onPress={handleCancelPending} disabled={loading}>
-            <Text style={styles.linkText}>Didn't pay? Start new payment</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
