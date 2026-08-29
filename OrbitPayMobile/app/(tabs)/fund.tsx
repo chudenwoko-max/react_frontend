@@ -59,29 +59,26 @@ export default function FundWalletScreen() {
     verifyingRef.current = true;
     setLoading(true);
     try {
-      const res = await axiosClient.get("wallet/fund/verify/", {
-        params: { reference: ref.trim() },
-      });
-      const data = res.data;
-
-      await AsyncStorage.multiRemove([PENDING_REF_KEY, PENDING_AMOUNT_KEY]);
-      setReference("");
-
-      router.replace({
-        pathname: "/payment-success",
-        params: {
-          amount: String(data.amount || amount || "0"),
-          new_balance: String(data.new_balance || "0"),
-          reference: String(data.reference || ref),
-        },
-      });
-    } catch (error: any) {
-      Alert.alert(
-        "Verification Failed",
-        error?.response?.data?.error ||
-          "Payment not confirmed yet. If you already paid, tap Verify again."
-      );
-    } finally {
+  const res = await axiosClient.get("wallet/fund/verify/", {
+    params: { reference },
+  });
+  // success → navigate to success screen
+  router.replace({
+    pathname: "/payment-success",
+    params: {
+      amount: String(res.data.amount),
+      new_balance: String(res.data.new_balance),
+      reference: String(res.data.reference),
+    },
+  });
+} catch (error: any) {
+  const msg =
+    error?.response?.data?.error ||
+    error?.response?.data?.detail ||
+    "Payment verification failed.";
+  Alert.alert("Verification Failed", msg);
+}
+ finally {
       verifyingRef.current = false;
       setLoading(false);
     }

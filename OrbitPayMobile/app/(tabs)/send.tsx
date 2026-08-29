@@ -12,6 +12,8 @@ import {
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
+import { getOrCreateReferenceId, clearReferenceId } from "../../src/utils/idempotency";
+
 
 const HIGH_VALUE_THRESHOLD = 50000;
 
@@ -26,94 +28,104 @@ export default function SendScreen() {
   const [isHighValue, setIsHighValue] = useState(false);
 
   const handleSend = async () => {
-    if (!recipient || !amount || !pin) {
-      setError("Please fill in recipient, amount and PIN");
-      return;
+  if (!recipient || !amount || !pin) {
+    setError("Please fill in recipient, amount and PIN");
+    return;
+  }
+
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount) || numericAmount <= 0) {
+    setError("Please enter a valid amount");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    // 1. Always get a normal pin_token first
+    const tokenRes = await axiosClient.post("create-pin/", { pin });
+    const pinToken = tokenRes.data.pin_token;
+
+    if (!pinToken) {
+      throw new Error("Could not get PIN token");
     }
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      setError("Please enter a valid amount");
-      return;
+    let highValueToken = null;
+
+    // 2. If amount ≥ 50,000 → request high-value confirmation
+    if (numericAmount >= HIGH_VALUE_THRESHOLD) {
+      setIsHighValue(true);
+
+      const confirmRes = await axiosClient.post(
+        "send-money/high-value-confirm/",
+        { amount: numericAmount, recipient }
+      );
+
+      highValueToken = confirmRes.data.high_value_token;
+
+      const confirmed = await new Promise((resolve) => {
+        Alert.alert(
+          "High Value Transfer",
+          `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+            { text: "Confirm", onPress: () => resolve(true) },
+          ]
+        );
+      });
+
+      if (!confirmed) {
+        setLoading(false);
+        return;
+      }
     }
 
-    setLoading(true);
-    setError("");
+    // ⭐ 3. IDEMPOTENCY — Generate reference_id BEFORE sending
+    const operationKey = `send:${recipient}:${numericAmount}`;
+    const reference_id = await getOrCreateReferenceId(operationKey);
 
-    try {
-      // 1. Always get a normal pin_token first
-      const tokenRes = await axiosClient.post("create-pin/", { pin });
-      const pinToken = tokenRes.data.pin_token;
+    // 4. Build payload
+    const payload: any = {
+      recipient,
+      amount: numericAmount,
+      pin,
+      pin_token: pinToken,
+      note: note || "",
+      reference_id, // ⭐ attach idempotency key
+    };
 
-      if (!pinToken) {
-        throw new Error("Could not get PIN token");
-      }
-
-      let highValueToken = null;
-
-      // 2. If amount ≥ 50,000 → request high-value confirmation
-      if (numericAmount >= HIGH_VALUE_THRESHOLD) {
-        setIsHighValue(true);
-
-        const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
-          amount: numericAmount,
-          recipient,
-        });
-
-        highValueToken = confirmRes.data.high_value_token;
-
-        // Optional: show extra confirmation to user
-        const confirmed = await new Promise((resolve) => {
-          Alert.alert(
-            "High Value Transfer",
-            `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
-            [
-              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-              { text: "Confirm", onPress: () => resolve(true) },
-            ]
-          );
-        });
-
-        if (!confirmed) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Send the money
-      const payload: any = {
-        recipient,
-        amount: numericAmount,
-        pin,
-        pin_token: pinToken,
-        note: note || "",
-      };
-
-      if (highValueToken) {
-        payload.high_value_token = highValueToken;
-      }
-
-      const res = await axiosClient.post("send-money/", payload);
-
-      Alert.alert("Success", res.data.message || "Money sent successfully!");
-
-      setRecipient("");
-      setAmount("");
-      setPin("");
-      setNote("");
-      router.replace("/(tabs)");
-    } catch (err: any) {
-      console.log("Send error:", err.response?.data);
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
-        "Failed to send money. Please try again.";
-      setError(message);
-    } finally {
-      setLoading(false);
-      setIsHighValue(false);
+    if (highValueToken) {
+      payload.high_value_token = highValueToken;
     }
-  };
+
+    // 5. Send the money
+    const res = await axiosClient.post("send-money/", payload);
+
+    // ⭐ Clear idempotency key ONLY on success
+    await clearReferenceId(operationKey);
+
+    Alert.alert("Success", res.data.message || "Money sent successfully!");
+
+    setRecipient("");
+    setAmount("");
+    setPin("");
+    setNote("");
+    router.replace("/(tabs)");
+  } catch (err: any) {
+    console.log("Send error:", err.response?.data);
+
+    // ⭐ Do NOT clear reference_id here — retry must reuse it
+    const message =
+      err.response?.data?.error ||
+      err.response?.data?.detail ||
+      "Failed to send money. Please try again.";
+    setError(message);
+  } finally {
+    setLoading(false);
+    setIsHighValue(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView

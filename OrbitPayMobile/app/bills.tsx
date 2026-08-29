@@ -18,6 +18,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import axiosClient from "../src/api/axiosClient";
 import { useRouter } from "expo-router";
+import { getOrCreateReferenceId, clearReferenceId } from "../src/utils/idempotency";
+
+
+
 
 
 type VirtualCard = {
@@ -84,6 +88,7 @@ export default function BillsScreen() {
 
   try {
     let customer_id = "";
+
     if (type === "airtime" || type === "data") {
       if (!phone || !provider) {
         setError("Phone number and network are required");
@@ -107,11 +112,17 @@ export default function BillsScreen() {
       customer_id = smartcard;
     }
 
+    // ⭐ IDEMPOTENCY KEY
+    const numericAmount = Number(amount);
+    const operationKey = `bills:${type}:${provider}:${customer_id}:${numericAmount}`;
+    const reference_id = await getOrCreateReferenceId(operationKey);
+
     const payload: any = {
       bill_type: type,
       provider: provider.toUpperCase(),
-      amount: amount,
-      customer_id: customer_id,
+      amount: numericAmount,
+      customer_id,
+      reference_id, // ⭐ attach idempotency key
     };
 
     if (type === "data" || type === "cable") {
@@ -125,7 +136,11 @@ export default function BillsScreen() {
       payload.card_id = selectedCardId;
     }
 
+    // ⭐ BILL PAYMENT REQUEST
     const res = await axiosClient.post("bills/pay/", payload);
+
+    // ⭐ Clear idempotency key ONLY on success
+    await clearReferenceId(operationKey);
 
     Toast.show({
       type: "success",
@@ -141,12 +156,12 @@ export default function BillsScreen() {
     setProvider("");
     setSelectedCardId(null);
 
-    // Redirect to Dashboard
     setTimeout(() => {
       router.replace("/(tabs)");
     }, 800);
 
   } catch (err: any) {
+    // ⭐ DO NOT clear reference_id — retry must reuse it
     const message =
       err.response?.data?.error ||
       err.response?.data?.detail ||
@@ -162,6 +177,7 @@ export default function BillsScreen() {
     setLoading(false);
   }
 };
+
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
