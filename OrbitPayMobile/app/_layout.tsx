@@ -12,6 +12,7 @@ import {
   registerForPushNotificationsAsync,
   getNotificationRoute,
 } from "../src/notifications/push";
+import { refreshFinancialsFromPush } from "../src/notifications/refreshOnPush";
 
 Sentry.init({
   dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
@@ -40,6 +41,7 @@ async function setupSslPinning() {
     console.warn("SSL Pinning initialization failed:", error);
   }
 }
+
 function PushBootstrap() {
   const auth = useAuth() as { user?: unknown };
   const isLoggedIn = Boolean(auth?.user);
@@ -60,8 +62,12 @@ function PushBootstrap() {
 
     registerForPushNotificationsAsync();
 
-    const received = Notifications.addNotificationReceivedListener(() => {});
+    const received = Notifications.addNotificationReceivedListener(() => {
+      refreshFinancialsFromPush();
+    });
+
     const response = Notifications.addNotificationResponseReceivedListener((res) => {
+      refreshFinancialsFromPush();
       const data = res.notification.request.content.data as Record<string, any>;
       router.push(getNotificationRoute(data) as any);
     });

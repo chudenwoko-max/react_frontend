@@ -21,6 +21,10 @@ import {
   WeeklyChart,
 } from "../../src/components/dashboard/DashboardSections";
 import { unregisterPushToken } from "../../src/notifications/push";
+import { useEffect } from "react";
+import { DeviceEventEmitter } from "react-native";
+import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
+
 
 type Transaction = {
   id?: number;
@@ -80,6 +84,30 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+  const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, (payload: any) => {
+    if (payload?.unreadCount != null) {
+      setUnreadCount(Number(payload.unreadCount) || 0);
+    }
+    if (payload?.balance != null) {
+      setBalance(
+        Number(payload.balance).toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 2,
+        })
+      );
+    }
+
+    // Refresh from backend (single-flight prevents duplicates)
+    fetchUnreadCount();
+    fetchBalance();
+  });
+
+  return () => sub.remove();
+}, []);
+
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [monthSpent, setMonthSpent] = useState(0);
   const [monthReceived, setMonthReceived] = useState(0);
