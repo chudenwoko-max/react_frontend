@@ -30,10 +30,12 @@ export default function NotificationsScreen() {
   const fetchNotifications = async () => {
     try {
       const res = await axiosClient.get("notifications/");
+
       const data =
         res.data.notifications ||
         res.data.results ||
         (Array.isArray(res.data) ? res.data : []);
+
       setNotifications(data);
     } catch (error) {
       console.log("Notifications error:", error);
@@ -99,9 +101,11 @@ export default function NotificationsScreen() {
           <Text style={[styles.title, !isRead && styles.unreadText]}>
             {item.title || "Notification"}
           </Text>
+
           <Text style={styles.message} numberOfLines={2}>
             {item.message || item.body || ""}
           </Text>
+
           <Text style={styles.date}>
             {item.created_at
               ? new Date(item.created_at).toLocaleString()
@@ -124,6 +128,7 @@ export default function NotificationsScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>Notifications</Text>
+
         {notifications.length > 0 && (
           <TouchableOpacity onPress={markAllAsRead}>
             <Text style={styles.markAll}>Mark all as read</Text>
@@ -140,20 +145,21 @@ export default function NotificationsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListEmptyComponent={
-  <View style={styles.empty}>
-    <View style={styles.emptyIconCircle}>
-      <MaterialCommunityIcons
-        name="bell-off-outline"
-        size={40}
-        color="#94A3B8"
-      />
-    </View>
-    <Text style={styles.emptyTitle}>No notifications yet</Text>
-    <Text style={styles.emptySubtitle}>
-      You’ll see important updates here — money requests, transfers, withdrawals and more.
-    </Text>
-  </View>
-}
+          <View style={styles.empty}>
+            <View style={styles.emptyIconCircle}>
+              <MaterialCommunityIcons
+                name="bell-off-outline"
+                size={40}
+                color="#94A3B8"
+              />
+            </View>
+            <Text style={styles.emptyTitle}>No notifications yet</Text>
+            <Text style={styles.emptySubtitle}>
+              You’ll see important updates here — money requests, transfers,
+              withdrawals and more.
+            </Text>
+          </View>
+        }
       />
     </View>
   );
@@ -230,31 +236,30 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     marginTop: 6,
   },
-  
   empty: {
-  alignItems: "center",
-  marginTop: 80,
-  paddingHorizontal: 30,
-},
-emptyIconCircle: {
-  width: 80,
-  height: 80,
-  borderRadius: 40,
-  backgroundColor: "#F1F5F9",
-  justifyContent: "center",
-  alignItems: "center",
-  marginBottom: 20,
-},
-emptyTitle: {
-  fontSize: 18,
-  fontWeight: "600",
-  color: "#0F172A",
-  marginBottom: 8,
-},
-emptySubtitle: {
-  fontSize: 14,
-  color: "#64748B",
-  textAlign: "center",
-  lineHeight: 20,
-},
+    alignItems: "center",
+    marginTop: 80,
+    paddingHorizontal: 30,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 20,
+  },
 });
