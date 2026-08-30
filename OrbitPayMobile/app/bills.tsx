@@ -18,11 +18,10 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import axiosClient from "../src/api/axiosClient";
 import { useRouter } from "expo-router";
-import { getOrCreateReferenceId, clearReferenceId } from "../src/utils/idempotency";
-
-
-
-
+import {
+  getOrCreateReferenceId,
+  clearReferenceId,
+} from "../src/utils/idempotency";
 
 type VirtualCard = {
   id: number;
@@ -43,13 +42,13 @@ export default function BillsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Payment source
-  const [paymentSource, setPaymentSource] = useState<"wallet" | "card">("wallet");
+  const [paymentSource, setPaymentSource] =
+    useState<"wallet" | "card">("wallet");
   const [cards, setCards] = useState<VirtualCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [loadingCards, setLoadingCards] = useState(true);
 
-  const router = useRouter(); // <-- This is where it's placed
+  const router = useRouter();
 
   useEffect(() => {
     fetchCards();
@@ -58,12 +57,15 @@ export default function BillsScreen() {
   const fetchCards = async () => {
     try {
       const res = await axiosClient.get("cards/");
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      // Only active NGN cards
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data.results || [];
+
       const activeCards = data.filter(
         (c: VirtualCard) =>
           c.status === "active" && (c.currency === "NGN" || !c.currency)
       );
+
       setCards(activeCards);
     } catch (err) {
       console.log("Failed to load cards", err);
@@ -72,112 +74,118 @@ export default function BillsScreen() {
     }
   };
 
- const handlePay = async () => {
-  if (!amount || Number(amount) <= 0) {
-    setError("Please enter a valid amount");
-    return;
-  }
+  const handlePay = async () => {
+    if (loading) return;
 
-  if (paymentSource === "card" && !selectedCardId) {
-    setError("Please select a virtual card");
-    return;
-  }
+    // Basic amount validation
+    if (!amount || Number(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
 
-  setLoading(true);
-  setError("");
+    // Card validation
+    if (paymentSource === "card" && !selectedCardId) {
+      setError("Please select a virtual card");
+      return;
+    }
 
-  try {
-    let customer_id = "";
+    setLoading(true);
+    setError("");
 
-    if (type === "airtime" || type === "data") {
-      if (!phone || !provider) {
-        setError("Phone number and network are required");
-        setLoading(false);
-        return;
+    try {
+      let customer_id = "";
+
+      // Customer ID logic
+      if (type === "airtime" || type === "data") {
+        if (!phone || !provider) {
+          setError("Phone number and network are required");
+          setLoading(false);
+          return;
+        }
+        customer_id = phone;
+      } else if (type === "electricity") {
+        if (!meter || !provider) {
+          setError("Meter number and provider are required");
+          setLoading(false);
+          return;
+        }
+        customer_id = meter;
+      } else if (type === "cable") {
+        if (!smartcard || !provider) {
+          setError("Smartcard number and provider are required");
+          setLoading(false);
+          return;
+        }
+        customer_id = smartcard;
       }
-      customer_id = phone;
-    } else if (type === "electricity") {
-      if (!meter || !provider) {
-        setError("Meter number and provider are required");
-        setLoading(false);
-        return;
+
+      // ⭐ IDEMPOTENCY KEY
+      const numericAmount = Number(amount);
+      const operationKey = `bills:${type}:${provider}:${customer_id}:${numericAmount}`;
+
+      const reference_id = await getOrCreateReferenceId(operationKey);
+
+      // ⭐ Build payload
+      const payload: any = {
+        bill_type: type,
+        provider: provider.toUpperCase(),
+        amount: numericAmount,
+        customer_id,
+        reference_id,
+      };
+
+      if (type === "data" || type === "cable") {
+        payload.package_name = "";
       }
-      customer_id = meter;
-    } else if (type === "cable") {
-      if (!smartcard || !provider) {
-        setError("Smartcard number and provider are required");
-        setLoading(false);
-        return;
+
+      if (type === "electricity") {
+        payload.meter_type = "prepaid";
       }
-      customer_id = smartcard;
+
+      if (paymentSource === "card" && selectedCardId) {
+        payload.card_id = selectedCardId;
+      }
+
+      // ⭐ BILL PAYMENT REQUEST
+      const res = await axiosClient.post("bills/pay/", payload);
+
+      // Clear idempotency key ONLY on success
+      await clearReferenceId(operationKey);
+
+      Toast.show({
+        type: "success",
+        text1: "Payment Successful",
+        text2: res.data.message || "Bill paid successfully",
+      });
+
+      // Reset form
+      setPhone("");
+      setAmount("");
+      setMeter("");
+      setSmartcard("");
+      setProvider("");
+      setSelectedCardId(null);
+
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 800);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Payment failed. Please try again.";
+
+      setError(message);
+
+      Toast.show({
+        type: "error",
+        text1: "Payment Failed",
+        text2: message,
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // ⭐ IDEMPOTENCY KEY
-    const numericAmount = Number(amount);
-    const operationKey = `bills:${type}:${provider}:${customer_id}:${numericAmount}`;
-    const reference_id = await getOrCreateReferenceId(operationKey);
-
-    const payload: any = {
-      bill_type: type,
-      provider: provider.toUpperCase(),
-      amount: numericAmount,
-      customer_id,
-      reference_id, // ⭐ attach idempotency key
-    };
-
-    if (type === "data" || type === "cable") {
-      payload.package_name = "";
-    }
-    if (type === "electricity") {
-      payload.meter_type = "prepaid";
-    }
-
-    if (paymentSource === "card" && selectedCardId) {
-      payload.card_id = selectedCardId;
-    }
-
-    // ⭐ BILL PAYMENT REQUEST
-    const res = await axiosClient.post("bills/pay/", payload);
-
-    // ⭐ Clear idempotency key ONLY on success
-    await clearReferenceId(operationKey);
-
-    Toast.show({
-      type: "success",
-      text1: "Payment Successful ✅",
-      text2: res.data.message || "Bill paid successfully",
-    });
-
-    // Clear form
-    setPhone("");
-    setAmount("");
-    setMeter("");
-    setSmartcard("");
-    setProvider("");
-    setSelectedCardId(null);
-
-    setTimeout(() => {
-      router.replace("/(tabs)");
-    }, 800);
-
-  } catch (err: any) {
-    // ⭐ DO NOT clear reference_id — retry must reuse it
-    const message =
-      err.response?.data?.error ||
-      err.response?.data?.detail ||
-      "Payment failed. Please try again.";
-    setError(message);
-
-    Toast.show({
-      type: "error",
-      text1: "Payment Failed",
-      text2: message,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
@@ -262,9 +270,9 @@ export default function BillsScreen() {
         style={styles.input}
       />
 
-      {/* ===== Payment Source Selector ===== */}
       <Text style={styles.sectionLabel}>Pay with</Text>
 
+      {/* Wallet */}
       <TouchableOpacity
         style={[
           styles.sourceCard,
@@ -299,6 +307,7 @@ export default function BillsScreen() {
         />
       </TouchableOpacity>
 
+      {/* Cards */}
       {loadingCards ? (
         <ActivityIndicator style={{ marginVertical: 12 }} />
       ) : cards.length > 0 ? (
@@ -368,6 +377,7 @@ export default function BillsScreen() {
         mode="contained"
         onPress={handlePay}
         loading={loading}
+        disabled={loading}
         style={styles.button}
       >
         Pay Now
