@@ -22,6 +22,10 @@ import {
   getOrCreateReferenceId,
   clearReferenceId,
 } from "../src/utils/idempotency";
+import {
+  requireTransactionGuard,
+  BILL_GUARD_AMOUNT,
+} from "../src/security/transactionGuard";
 
 type VirtualCard = {
   id: number;
@@ -82,6 +86,10 @@ export default function BillsScreen() {
       setError("Please enter a valid amount");
       return;
     }
+
+    // ⭐ Transaction Guard — prevents accidental large bill payments
+    const guard = await requireTransactionGuard(Number(amount), BILL_GUARD_AMOUNT);
+    if (!guard.ok) return;
 
     // Card validation
     if (paymentSource === "card" && !selectedCardId) {

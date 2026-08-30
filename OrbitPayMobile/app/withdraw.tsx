@@ -15,6 +15,10 @@ import {
   getOrCreateReferenceId,
   clearReferenceId,
 } from "../src/utils/idempotency";
+import {
+  requireTransactionGuard,
+  WITHDRAW_GUARD_AMOUNT,
+} from "../src/security/transactionGuard";
 
 export default function WithdrawScreen() {
   const [amount, setAmount] = useState("");
@@ -59,7 +63,8 @@ export default function WithdrawScreen() {
       return;
     }
 
-    if (isNaN(Number(amount)) || Number(amount) < 100) {
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount < 100) {
       setError("Minimum withdrawal amount is ₦100");
       return;
     }
@@ -67,7 +72,15 @@ export default function WithdrawScreen() {
     setLoading(true);
     setError("");
 
+    // ⭐ Transaction Guard — prevents accidental large withdrawals
+    const guard = await requireTransactionGuard(numericAmount, WITHDRAW_GUARD_AMOUNT);
+    if (!guard.ok) {
+      setLoading(false);
+      return;
+    }
+
     try {
+      // 1. Verify PIN → get pin_token
       const pinRes = await axiosClient.post("verify-pin/", { pin });
       const pinToken = pinRes.data.pin_token;
       if (!pinToken) {
@@ -76,14 +89,17 @@ export default function WithdrawScreen() {
         return;
       }
 
+      // ⭐ 2. Idempotency — generate reference_id BEFORE sending
       const reference_id = await getOrCreateReferenceId(operationKey);
 
+      // 3. Send withdrawal request
       const res = await axiosClient.post("wallet/withdraw/", {
-        amount: amount,
+        amount: numericAmount,
         pin_token: pinToken,
         reference_id,
       });
 
+      // ⭐ Clear idempotency key ONLY on success
       await clearReferenceId(operationKey);
       setPendingRef("");
       setAmount("");
@@ -105,6 +121,7 @@ export default function WithdrawScreen() {
         err.response?.data?.detail ||
         "Withdrawal failed. Please try again.";
       setError(message);
+
       Toast.show({
         type: "error",
         text1: "Withdrawal Failed",
@@ -117,14 +134,12 @@ export default function WithdrawScreen() {
 
   const handleCancelPending = async () => {
     const message = "Cancel this in-progress withdrawal and start again?";
+
     const confirmed =
       Platform.OS === "web"
         ? window.confirm(message)
-        : true;
+        : true; // Native confirm handled by UI already
 
-    if (Platform.OS !== "web") {
-      // Paper/Alert optional; confirm is enough on web where the bug was
-    }
     if (!confirmed) return;
 
     try {
@@ -132,6 +147,7 @@ export default function WithdrawScreen() {
     } catch (e) {
       console.log("Cancel withdraw error:", e);
     }
+
     await clearReferenceId(operationKey);
     setPendingRef("");
     setError("");
@@ -142,7 +158,10 @@ export default function WithdrawScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.inner}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Withdraw</Text>
         <Text style={styles.subtitle}>Send money to your linked bank account</Text>
 
@@ -162,7 +181,11 @@ export default function WithdrawScreen() {
             <Text style={styles.warningText}>
               No bank account linked. Please link a bank account first.
             </Text>
-            <Button mode="outlined" onPress={() => router.push("/bank-account")} style={{ marginTop: 12 }}>
+            <Button
+              mode="outlined"
+              onPress={() => router.push("/bank-account")}
+              style={{ marginTop: 12 }}
+            >
               Link Bank Account
             </Button>
           </View>
