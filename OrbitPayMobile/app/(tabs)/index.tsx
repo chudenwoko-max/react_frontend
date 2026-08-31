@@ -281,19 +281,20 @@ const fetchWeeklySpend = async () => {
     }
   };
 
-  const fetchLatestInsight = async () => {
+    const fetchLatestInsight = async () => {
     try {
       const res = await axiosClient.get("insights/latest/");
       const weekly = res.data?.weekly || null;
-      setWeeklyInsight(weekly);
-
-      if (weekly?.id && weekly.is_read === false) {
-        try {
-          await axiosClient.post(`insights/${weekly.id}/read/`);
-        } catch (e) {
-          console.log("Mark insight read error:", e);
-        }
+      if (!weekly) {
+        setWeeklyInsight(null);
+        return;
       }
+      setWeeklyInsight({
+        title: weekly.title || "Orbit Insight · This week",
+        message: weekly.body || weekly.message || "",
+        save_reason: weekly.save_reason || "",
+        suggested_save: weekly.suggested_save,
+      });
     } catch (error) {
       console.log("Insight error:", error);
       setWeeklyInsight(null);
@@ -338,6 +339,7 @@ const fetchWeeklySpend = async () => {
         fetchUnreadCount(),
         fetchWallets(),
         fetchWeeklySpend(),  // ← add this
+        fetchLatestInsight(),
       ]);
     }
   }, [])
@@ -502,38 +504,51 @@ const fetchWeeklySpend = async () => {
       </>
     ) : (
       <>
-        {weeklyInsight && (
-          <View style={styles.insightCard}>
-            <View style={styles.insightHeader}>
-              <MaterialCommunityIcons name="lightbulb-on-outline" size={20} color="#F59E0B" />
-              <Text style={styles.insightLabel}>Orbit Insight · This week</Text>
-            </View>
-            <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
-            <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
-          </View>
-        )}
+        {weeklyInsight?.message ? (
+  <View style={styles.insightCard}>
+    <View style={styles.insightHeader}>
+      <MaterialCommunityIcons
+        name="lightbulb-on-outline"
+        size={20}
+        color="#F59E0B"
+      />
+      <Text style={styles.insightLabel}>Orbit Insight · This week</Text>
+    </View>
 
-        {savingsSuggestion && (
+    <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
+    <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+  </View>
+) : null}
+
+
+                {(weeklyInsight?.save_reason || savingsSuggestion) && (
           <View style={styles.suggestionCard}>
             <View style={styles.insightHeader}>
               <MaterialCommunityIcons name="piggy-bank-outline" size={20} color="#0D9488" />
               <Text style={styles.suggestionLabel}>Smart Save</Text>
             </View>
             <Text style={styles.insightTitle}>
-              Save ₦{Number(savingsSuggestion.suggested_amount).toLocaleString()} weekly
+              {weeklyInsight?.suggested_save
+                ? `Save ₦${Number(weeklyInsight.suggested_save).toLocaleString()} weekly`
+                : savingsSuggestion
+                ? `Save ₦${Number(savingsSuggestion.suggested_amount).toLocaleString()} weekly`
+                : "Smart Save"}
             </Text>
-            <Text style={styles.insightMessage}>{savingsSuggestion.reason}</Text>
-            <View style={styles.suggestionActions}>
-              <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
-                <Text style={styles.acceptText}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
-                <Text style={styles.dismissText}>Dismiss</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.insightMessage}>
+              {weeklyInsight?.save_reason || savingsSuggestion?.reason}
+            </Text>
+            {savingsSuggestion?.id ? (
+              <View style={styles.suggestionActions}>
+                <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
+                  <Text style={styles.acceptText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
+                  <Text style={styles.dismissText}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         )}
-
         {cashflowAlert && (
           <View
             style={[
