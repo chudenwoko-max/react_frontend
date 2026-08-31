@@ -105,11 +105,31 @@ export default function WithdrawScreen() {
       setAmount("");
       setPin("");
 
-      Toast.show({
-        type: "success",
-        text1: res.data?.idempotent ? "Already processed" : "Withdrawal Successful",
-        text2: res.data.message || "Your withdrawal is being processed",
-      });
+      const status = res.data?.status;
+
+let text1 = "";
+let text2 = "";
+
+if (status === "pending" || status === "processing") {
+  text1 = "Sending to your bank…";
+  text2 = "Your withdrawal is being processed";
+} else if (status === "success") {
+  text1 = "Sent";
+  text2 = "Your withdrawal has been sent to your bank";
+} else if (status === "failed" || status === "reversed") {
+  text1 = "Returned to wallet";
+  text2 = "The withdrawal failed and the money was returned";
+} else {
+  text1 = "Withdrawal updated";
+  text2 = "Status: " + status;
+}
+
+Toast.show({
+  type: status === "failed" || status === "reversed" ? "error" : "success",
+  text1,
+  text2,
+});
+
 
       setTimeout(() => {
         router.replace("/(tabs)");
@@ -123,10 +143,11 @@ export default function WithdrawScreen() {
       setError(message);
 
       Toast.show({
-        type: "error",
-        text1: "Withdrawal Failed",
-        text2: message,
-      });
+  type: "error",
+  text1: "Withdrawal Failed",
+  text2: message,
+});
+
     } finally {
       setLoading(false);
     }
