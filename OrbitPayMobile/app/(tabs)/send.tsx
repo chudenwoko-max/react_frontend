@@ -20,6 +20,7 @@ import {
   requireTransactionGuard,
   SEND_GUARD_AMOUNT,
 } from "../../src/security/transactionGuard";
+import Toast from "react-native-toast-message";
 
 const HIGH_VALUE_THRESHOLD = 50000;
 
@@ -124,13 +125,30 @@ export default function SendScreen() {
       // ⭐ Clear idempotency key ONLY on success
       await clearReferenceId(operationKey);
 
-      Alert.alert("Success", res.data.message || "Money sent successfully!");
+      // ⭐ Success toast (web) or alert (native)
+      const message = res.data.message || "Money sent successfully.";
 
+      if (Platform.OS === "web") {
+        Toast.show({
+          type: "success",
+          text1: res.data?.idempotent ? "Already processed" : "Transfer successful",
+          text2: message,
+        });
+      } else {
+        Alert.alert("Success", message);
+      }
+
+      // Reset form
       setRecipient("");
       setAmount("");
       setPin("");
       setNote("");
-      router.replace("/(tabs)");
+
+      // ⭐ Delay navigation so toast stays visible
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 600);
+
     } catch (err: any) {
       console.log("Send error:", err.response?.data);
 
