@@ -95,7 +95,7 @@ function RootLayout() {
         <AuthProvider>
           <PaperProvider>
             <OfflineBanner />
-            <FrozenBanner />   // ⭐ INSERT HERE
+            <FrozenBanner />   
             <PushBootstrap />
             <Stack screenOptions={{ headerShown: false }} />
             <Toast />
