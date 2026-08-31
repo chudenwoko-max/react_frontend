@@ -281,17 +281,6 @@ const fetchWeeklySpend = async () => {
     }
   };
 
-  const fetchWeeklySpending = async () => {
-    try {
-      const res = await axiosClient.get("analytics/weekly-spending/");
-      const days = res.data.weekly_spending || [];
-      setWeeklyData(days.map((d: any) => Number(d.amount) || 0));
-    } catch (error) {
-      console.log("Weekly spending error:", error);
-      setWeeklyData([0, 0, 0, 0, 0, 0, 0]);
-    }
-  };
-
   const fetchLatestInsight = async () => {
     try {
       const res = await axiosClient.get("insights/latest/");
@@ -329,7 +318,6 @@ const fetchWeeklySpend = async () => {
       fetchRecentTransactions(),
       fetchSavingsGoals(),
       fetchWallets(),
-      fetchWeeklySpending(),
       fetchLatestInsight(),
       fetchSavingsSuggestion(),
       fetchCashflowAlert(),
