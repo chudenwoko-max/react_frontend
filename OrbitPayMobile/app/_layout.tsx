@@ -15,6 +15,8 @@ import {
 import { refreshFinancialsFromPush } from "../src/notifications/refreshOnPush";
 import { ConnectivityProvider } from "../src/network/connectivity";
 import OfflineBanner from "../src/components/OfflineBanner";
+import FrozenBanner from "../src/components/FrozenBanner";
+
 
 Sentry.init({
   dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
@@ -82,18 +84,18 @@ function PushBootstrap() {
 
   return null;
 }
-
 function RootLayout() {
   useEffect(() => {
     setupSslPinning();
   }, []);
 
-    return (
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ConnectivityProvider>
         <AuthProvider>
           <PaperProvider>
             <OfflineBanner />
+            <FrozenBanner />   // ⭐ INSERT HERE
             <PushBootstrap />
             <Stack screenOptions={{ headerShown: false }} />
             <Toast />
@@ -103,5 +105,6 @@ function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
 
 export default Sentry.wrap(RootLayout);
