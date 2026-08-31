@@ -68,30 +68,35 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchPage = async (nextPage: number, replace: boolean) => {
-    const res = await axiosClient.get("transactions/", {
-      params: {
-        page: nextPage,
-        page_size: PAGE_SIZE,
-        search: searchQuery.trim() || undefined,
-      },
-    });
+  const fetchPage = async (replace: boolean) => {
+    try {
+      const res = await axiosClient.get("transactions/", {
+        params: {
+          page_size: PAGE_SIZE,
+          search: searchQuery.trim() || undefined,
+          cursor: replace ? undefined : nextCursor || undefined,
+        },
+      });
 
-    const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-    const next =
-      Boolean(res.data.next) ||
-      (Array.isArray(res.data) ? false : data.length === PAGE_SIZE);
+      const data = res.data.results || [];
+      const cursor = res.data.next_cursor || null;
 
-    setItems((prev) => (replace ? data : [...prev, ...data]));
-    setPage(nextPage);
-    setHasNext(next);
+      setItems((prev) => (replace ? data : [...prev, ...data]));
+      setNextCursor(cursor);
+      setHasNext(Boolean(res.data.has_next && cursor));
+    } catch (e) {
+      console.log("History fetch error:", e);
+      setItems([]);
+      setHasNext(false);
+    }
   };
 
   const loadFirst = async () => {
     try {
       setLoading(true);
-      await fetchPage(1, true);
+      await fetchPage(true);
     } catch (e) {
       console.log("History load error:", e);
       setItems([]);
@@ -117,7 +122,7 @@ export default function HistoryScreen() {
     if (!hasNext || loadingMore || loading) return;
     try {
       setLoadingMore(true);
-      await fetchPage(page + 1, false);
+      await fetchPage(false);
     } catch (e) {
       console.log("History page error:", e);
     } finally {
@@ -139,10 +144,7 @@ export default function HistoryScreen() {
         }
       >
         <View
-          style={[
-            styles.txIcon,
-            { backgroundColor: credit ? "#DCFCE7" : "#FEE2E2" },
-          ]}
+          style={[styles.txIcon, { backgroundColor: credit ? "#DCFCE7" : "#FEE2E2" }]}
         >
           <MaterialCommunityIcons
             name={credit ? "arrow-down" : "arrow-up"}
@@ -176,10 +178,7 @@ export default function HistoryScreen() {
         </View>
 
         <Text
-          style={[
-            styles.txAmount,
-            { color: credit ? "#16A34A" : "#DC2626" },
-          ]}
+          style={[styles.txAmount, { color: credit ? "#16A34A" : "#DC2626" }]}
         >
           {credit ? "+" : "-"}₦
           {Number(item.amount).toLocaleString("en-NG", {
