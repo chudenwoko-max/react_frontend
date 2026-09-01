@@ -1,290 +1,128 @@
-import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  DeviceEventEmitter,
-} from "react-native";
-import { TextInput, Button, HelperText } from "react-native-paper";
+import { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
-import Toast from "react-native-toast-message";
-import {
-  getOrCreateReferenceId,
-  clearReferenceId,
-} from "../src/utils/idempotency";
-import {
-  requireTransactionGuard,
-  WITHDRAW_GUARD_AMOUNT,
-} from "../src/security/transactionGuard";
+import { DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
-export default function WithdrawScreen() {
-  const [amount, setAmount] = useState("");
-  const [pin, setPin] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [bankAccount, setBankAccount] = useState<any>(null);
-  const [error, setError] = useState("");
-  const [pendingRef, setPendingRef] = useState("");
+export default function WithdrawPausedScreen() {
+  const [pending, setPending] = useState<{
+    reference: string;
+    amount: string;
+    status: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
-  const hasPending = Boolean(pendingRef);
-
-  useEffect(() => {
-    const boot = async () => {
-      try {
-        const res = await axiosClient.get("bank/account/");
-        setBankAccount(res.data);
-      } catch {
-        setBankAccount(null);
-      }
-
-      try {
-        const pendingRes = await axiosClient.get("wallet/withdraw/pending/");
-        const pending = pendingRes.data?.pending;
-        if (pending?.reference) {
-          setPendingRef(pending.reference);
-          if (pending.amount) setAmount(String(pending.amount));
-        }
-      } catch (e) {
-        console.log("Pending withdraw fetch error:", e);
-      }
-    };
-    boot();
-  }, []);
-
-  const operationKey = `withdraw:${amount}`;
-
-  const handleWithdraw = async () => {
-    if (hasPending || loading) return;
-
-    if (!amount || !pin) {
-      setError("Please enter amount and PIN");
-      return;
-    }
-
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount < 100) {
-      setError("Minimum withdrawal amount is ₦100");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    // ⭐ Transaction Guard — prevents accidental large withdrawals
-    const guard = await requireTransactionGuard(numericAmount, WITHDRAW_GUARD_AMOUNT);
-    if (!guard.ok) {
-      setLoading(false);
-      return;
-    }
-
+  const loadPending = async () => {
     try {
-      // 1. Verify PIN → get pin_token
-      const pinRes = await axiosClient.post("verify-pin/", { pin });
-      const pinToken = pinRes.data.pin_token;
-      if (!pinToken) {
-        setError("Failed to verify PIN");
-        setLoading(false);
-        return;
-      }
-
-      // ⭐ 2. Idempotency — generate reference_id BEFORE sending
-      const reference_id = await getOrCreateReferenceId(operationKey);
-
-      // 3. Send withdrawal request
-      const res = await axiosClient.post("wallet/withdraw/", {
-        amount: numericAmount,
-        pin_token: pinToken,
-        reference_id,
-      });
-
-      // ⭐ Clear idempotency key ONLY on success
-      await clearReferenceId(operationKey);
-      setPendingRef("");
-      setAmount("");
-      setPin("");
-
-      const status = res.data?.status;
-
-let text1 = "";
-let text2 = "";
-
-if (status === "pending" || status === "processing") {
-  text1 = "Sending to your bank…";
-  text2 = "Your withdrawal is being processed";
-} else if (status === "success") {
-  text1 = "Sent";
-  text2 = "Your withdrawal has been sent to your bank";
-} else if (status === "failed" || status === "reversed") {
-  text1 = "Returned to wallet";
-  text2 = "The withdrawal failed and the money was returned";
-} else {
-  text1 = "Withdrawal updated";
-  text2 = "Status: " + status;
-}
-
-Toast.show({
-  type: status === "failed" || status === "reversed" ? "error" : "success",
-  text1,
-  text2,
-});
-
-
-      setTimeout(() => {
-        router.replace("/(tabs)");
-      }, 800);
-    } catch (err: any) {
-      console.log("Withdraw error:", err.response?.data);
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
-        "Withdrawal failed. Please try again.";
-      setError(message);
-
-      Toast.show({
-  type: "error",
-  text1: "Withdrawal Failed",
-  text2: message,
-});
-
+      const res = await axiosClient.get("wallet/snapshot/", { params: { range: "7d" } });
+      setPending(res.data?.pending_withdraw || null);
+    } catch {
+      setPending(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancelPending = async () => {
-    const message = "Cancel this in-progress withdrawal and start again?";
+  useEffect(() => {
+    loadPending();
+  }, []);
 
-    const confirmed =
-      Platform.OS === "web"
-        ? window.confirm(message)
-        : true; // Native confirm handled by UI already
-
-    if (!confirmed) return;
-
+  const cancelPending = async () => {
+    if (!pending?.reference) return;
+    setCancelling(true);
     try {
-      await axiosClient.post("wallet/withdraw/cancel/", { reference: pendingRef });
+      await axiosClient.post("wallet/withdraw/cancel/", {
+        reference_id: pending.reference,
+      });
+      setPending(null);
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
     } catch (e) {
       console.log("Cancel withdraw error:", e);
+    } finally {
+      setCancelling(false);
     }
-
-    await clearReferenceId(operationKey);
-    setPendingRef("");
-    setError("");
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.inner}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Withdraw</Text>
-        <Text style={styles.subtitle}>Send money to your linked bank account</Text>
+    <View style={styles.container}>
+      <MaterialCommunityIcons name="bank-off-outline" size={48} color="#94A3B8" />
+      <Text style={styles.title}>Withdrawals paused</Text>
+      <Text style={styles.body}>
+        Bank payouts are unavailable on this Paystack account. Your NGN wallet
+        still works for in-app sends and funding.
+      </Text>
 
-        {bankAccount ? (
-          <View style={styles.bankCard}>
-            <Text style={styles.bankLabel}>Withdrawing to</Text>
-            <Text style={styles.bankName}>
-              {bankAccount.account_name || bankAccount.accountName}
-            </Text>
-            <Text style={styles.bankDetails}>
-              {bankAccount.bank_name || bankAccount.bankName} •{" "}
-              {bankAccount.account_number || bankAccount.accountNumber}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.warningCard}>
-            <Text style={styles.warningText}>
-              No bank account linked. Please link a bank account first.
-            </Text>
-            <Button
-              mode="outlined"
-              onPress={() => router.push("/bank-account")}
-              style={{ marginTop: 12 }}
-            >
-              Link Bank Account
-            </Button>
-          </View>
-        )}
-
-        <TextInput
-          label="Amount (NGN)"
-          value={amount}
-          onChangeText={setAmount}
-          mode="outlined"
-          keyboardType="numeric"
-          style={styles.input}
-          disabled={!bankAccount || hasPending}
-        />
-
-        <TextInput
-          label="Transaction PIN"
-          value={pin}
-          onChangeText={setPin}
-          mode="outlined"
-          secureTextEntry
-          keyboardType="numeric"
-          style={styles.input}
-          disabled={!bankAccount || hasPending}
-        />
-
-        {hasPending ? (
-          <HelperText type="info" visible>
-            A withdrawal is already in progress for this amount. Wait for it to finish or cancel.
-          </HelperText>
-        ) : null}
-
-        {error ? (
-          <HelperText type="error" visible>
-            {error}
-          </HelperText>
-        ) : null}
-
-        {!hasPending ? (
-          <Button
-            mode="contained"
-            onPress={handleWithdraw}
-            loading={loading}
-            disabled={!bankAccount || loading}
-            style={styles.button}
-            contentStyle={{ paddingVertical: 6 }}
+      {loading ? (
+        <ActivityIndicator color="#0F172A" style={{ marginTop: 24 }} />
+      ) : pending ? (
+        <View style={styles.pendingCard}>
+          <Text style={styles.pendingTitle}>On hold</Text>
+          <Text style={styles.pendingBody}>
+            ₦{Number(pending.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}{" "}
+            ({pending.status})
+          </Text>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={cancelPending}
+            disabled={cancelling}
           >
-            Withdraw
-          </Button>
-        ) : (
-          <Button
-            mode="outlined"
-            onPress={handleCancelPending}
-            disabled={loading}
-            style={styles.button}
-          >
-            Cancel and start new
-          </Button>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={styles.cancelText}>
+              {cancelling ? "Cancelling…" : "Cancel and refund"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <TouchableOpacity style={styles.homeBtn} onPress={() => router.replace("/(tabs)")}>
+        <Text style={styles.homeText}>Back to Home</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  inner: { padding: 20, paddingTop: 60 },
-  title: { fontSize: 26, fontWeight: "700", color: "#0F172A", marginBottom: 6 },
-  subtitle: { fontSize: 15, color: "#64748B", marginBottom: 24 },
-  bankCard: { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, marginBottom: 20 },
-  bankLabel: { fontSize: 13, color: "#64748B" },
-  bankName: { fontSize: 17, fontWeight: "600", color: "#0F172A", marginTop: 4 },
-  bankDetails: { fontSize: 14, color: "#64748B", marginTop: 2 },
-  warningCard: { backgroundColor: "#FEF3C7", borderRadius: 14, padding: 16, marginBottom: 20 },
-  warningText: { color: "#92400E", fontSize: 14 },
-  input: { marginBottom: 14 },
-  button: { marginTop: 8, borderRadius: 10 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    padding: 24,
+    paddingTop: 80,
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  body: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  pendingCard: {
+    marginTop: 28,
+    width: "100%",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  pendingTitle: { fontSize: 16, fontWeight: "700", color: "#92400E", marginBottom: 6 },
+  pendingBody: { fontSize: 14, color: "#78350F", marginBottom: 12 },
+  cancelBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "#0F172A",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  cancelText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+  homeBtn: { marginTop: 32, padding: 12 },
+  homeText: { fontSize: 16, fontWeight: "600", color: "#0284C7" },
 });
