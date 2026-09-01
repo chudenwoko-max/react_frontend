@@ -86,14 +86,16 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-  const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
-    fetchUnreadCount();
-    fetchBalance();
-    fetchWallets();
-    fetchWeeklySpend();   // ← add this
-  });
-  return () => sub.remove();
-}, []);
+    const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
+      fetchUnreadCount();
+      fetchBalance();
+      fetchWallets();
+      fetchWeeklySpend();
+      fetchSnapshot("7d");
+      fetchSnapshot("30d");
+    });
+    return () => sub.remove();
+  }, []);
 
 
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
@@ -232,54 +234,24 @@ const fetchWeeklySpend = async () => {
   };
 
   const fetchRecentTransactions = async () => {
-    try {
-      const res = await axiosClient.get("transactions/", {
-        params: { page: 1, page_size: 8 },
-      });
+  try {
+    const res = await axiosClient.get("transactions/", {
+      params: { page: 1, page_size: 8 },
+    });
 
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      setRecentTransactions(data);
+    const data = Array.isArray(res.data)
+      ? res.data
+      : res.data.results || [];
 
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+    // Only update the recent list — no monthly calculations here
+    setRecentTransactions(data);
 
-      let spent = 0;
-      let received = 0;
+  } catch (error) {
+    console.log("Recent transactions error:", error);
+    setRecentTransactions([]);
+  }
+};
 
-      data.forEach((tx: any) => {
-        if (!tx.created_at) return;
-
-        const amount = Number(tx.amount) || 0;
-        const type = (tx.type || tx.transaction_type || "").toLowerCase();
-        const desc = (tx.description || tx.note || "").toLowerCase();
-
-        const isCredit =
-          type === "credit" ||
-          type === "fund" ||
-          type === "receive" ||
-          type === "funding" ||
-          type === "referral_bonus" ||
-          desc.includes("received") ||
-          desc.includes("wallet funding") ||
-          desc.includes("funded");
-
-        const txDate = new Date(tx.created_at);
-        if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
-          if (isCredit) received += amount;
-          else spent += amount;
-        }
-      });
-
-      setMonthSpent(spent);
-      setMonthReceived(received);
-    } catch (error) {
-      console.log("Recent transactions error:", error);
-      setRecentTransactions([]);
-      setMonthSpent(0);
-      setMonthReceived(0);
-    }
-  };
 
     const fetchLatestInsight = async () => {
     try {
@@ -298,6 +270,36 @@ const fetchWeeklySpend = async () => {
     } catch (error) {
       console.log("Insight error:", error);
       setWeeklyInsight(null);
+    }
+  };
+
+    const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
+    try {
+      const res = await axiosClient.get("wallet/snapshot/", { params: { range } });
+      const data = res.data || {};
+      setWeeklyData(
+        Array.isArray(data.daily)
+          ? data.daily.map((d: { spend?: number }) => Number(d.spend) || 0)
+          : [0, 0, 0, 0, 0, 0, 0]
+      );
+      if (range === "30d") {
+        setMonthSpent(Number(data.spend) || 0);
+        setMonthReceived(Number(data.received) || 0);
+      }
+      if (range === "7d" && data) {
+        setWeeklyInsight({
+          title: "Orbit Insight · This week",
+          message: `You spent ₦${Number(data.spend || 0).toLocaleString("en-NG", {
+            minimumFractionDigits: 2,
+          })} in the last 7 days.`,
+          save_reason: `Wallet balance ₦${Number(data.balance || 0).toLocaleString(
+            "en-NG",
+            { minimumFractionDigits: 2 }
+          )}.`,
+        });
+      }
+    } catch (e) {
+      console.log("Snapshot error:", e);
     }
   };
 
@@ -322,37 +324,43 @@ const fetchWeeklySpend = async () => {
       fetchLatestInsight(),
       fetchSavingsSuggestion(),
       fetchCashflowAlert(),
+      fetchSnapshot("7d"),
+      fetchSnapshot("30d"),
     ]);
     setLoading(false);
     setRefreshing(false);
   };
 
   useFocusEffect(
-  useCallback(() => {
-    if (isFirstLoad.current) {
-      isFirstLoad.current = false;
-      loadData();            // existing dashboard loader
-      fetchWeeklySpend();    // ← add this
-    } else {
-      Promise.all([
-        fetchBalance(),
-        fetchUnreadCount(),
-        fetchWallets(),
-        fetchWeeklySpend(),  // ← add this
-        fetchLatestInsight(),
-      ]);
-    }
-  }, [])
-);
+    useCallback(() => {
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+        loadData();
+fetchWeeklySpend();
+fetchSnapshot("7d");
+fetchSnapshot("30d");
 
+      } else {
+        Promise.all([
+          fetchBalance(),
+          fetchUnreadCount(),
+          fetchWallets(),
+          fetchWeeklySpend(),
+          fetchLatestInsight(),
+        ]);
+      }
+    }, [])
+  );
 
   const onRefresh = async () => {
-  setRefreshing(true);
-  await loadData();          // your existing dashboard loader
-  await fetchWeeklySpend();  // ← add this
-  setRefreshing(false);
-};
+    setRefreshing(true);
+    await loadData();
+await fetchWeeklySpend();
+await fetchSnapshot("7d");
+await fetchSnapshot("30d");
 
+    setRefreshing(false);
+  };
 
   const handleLogout = async () => {
     try {
