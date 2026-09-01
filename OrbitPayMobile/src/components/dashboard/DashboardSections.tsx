@@ -70,36 +70,29 @@ export const WalletsGrid = memo(function WalletsGrid({
 }: {
   wallets: any[];
 }) {
+  const wallet = wallets.find(
+    (w) => w.currency_code === "NGN" || w.currency?.code === "NGN"
+  );
+  const balance = wallet ? Number(wallet.balance || 0) : 0;
+
   return (
     <>
-      <Text style={styles.sectionTitle}>My Wallets</Text>
+      <Text style={styles.sectionTitle}>My Wallet</Text>
       <View style={styles.walletsGrid}>
-        {["NGN", "USD", "EUR", "GBP"].map((code) => {
-          const wallet = wallets.find(
-            (w) => w.currency_code === code || w.currency?.code === code
-          );
-          const balance = wallet ? Number(wallet.balance || 0) : 0;
-          const symbol =
-            code === "NGN" ? "₦" : code === "USD" ? "$" : code === "EUR" ? "€" : "£";
-
-          return (
-            <TouchableOpacity
-              key={code}
-              style={styles.walletCard}
-              onPress={() => router.push("/(tabs)/wallet")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.walletCode}>{code}</Text>
-              <Text style={styles.walletBalance}>
-                {symbol}
-                {balance.toLocaleString("en-NG", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <TouchableOpacity
+          style={[styles.walletCard, { width: "100%" }]}
+          onPress={() => router.push("/(tabs)/wallet")}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.walletCode}>NGN</Text>
+          <Text style={styles.walletBalance}>
+            ₦
+            {balance.toLocaleString("en-NG", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </Text>
+        </TouchableOpacity>
       </View>
     </>
   );
@@ -131,18 +124,15 @@ export const QuickActions = memo(function QuickActions() {
           <Text style={styles.actionText}>Fund</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push("/withdraw")}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#FEE2E2" }]}>
+                <TouchableOpacity style={styles.actionButton} activeOpacity={1} disabled>
+          <View style={[styles.iconCircle, { backgroundColor: "#F1F5F9" }]}>
             <MaterialCommunityIcons
               name="bank-transfer-out"
               size={24}
-              color="#DC2626"
+              color="#94A3B8"
             />
           </View>
-          <Text style={styles.actionText}>Withdraw</Text>
+          <Text style={[styles.actionText, { color: "#94A3B8" }]}>Soon</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
