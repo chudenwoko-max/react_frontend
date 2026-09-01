@@ -24,13 +24,16 @@ import Toast from "react-native-toast-message";
 import { DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
 
-DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-
 const HIGH_VALUE_THRESHOLD = 50000;
 
 export default function SendScreen() {
   const { selectedUser } = useLocalSearchParams<{ selectedUser?: string }>();
+  const [sendMode, setSendMode] = useState<"user" | "bank">("user");
   const [recipient, setRecipient] = useState(selectedUser || "");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [amount, setAmount] = useState("");
   const [pin, setPin] = useState("");
   const [note, setNote] = useState("");
@@ -38,9 +41,30 @@ export default function SendScreen() {
   const [error, setError] = useState("");
   const [isHighValue, setIsHighValue] = useState(false);
 
+  const resolveBank = async () => {
+    if (!accountNumber || !bankCode) return;
+    try {
+      const res = await axiosClient.get("banks/resolve/", {
+        params: { account_number: accountNumber, bank_code: bankCode },
+      });
+      const name = res.data?.data?.account_name || res.data?.account_name;
+      if (name) setAccountName(name);
+    } catch {
+      setAccountName("");
+    }
+  };
+
   const handleSend = async () => {
-    if (!recipient || !amount || !pin) {
+    if (!amount || !pin) {
+      setError("Please fill in amount and PIN");
+      return;
+    }
+    if (sendMode === "user" && !recipient) {
       setError("Please fill in recipient, amount and PIN");
+      return;
+    }
+    if (sendMode === "bank" && (!accountNumber || !bankCode)) {
+      setError("Please fill in bank code and account number");
       return;
     }
 
@@ -50,7 +74,6 @@ export default function SendScreen() {
       return;
     }
 
-    // ⭐ Transaction Guard — prevents accidental large transfers
     const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
     if (!guard.ok) return;
 
@@ -58,30 +81,21 @@ export default function SendScreen() {
     setError("");
 
     try {
-      // 1. PIN token
       const tokenRes = await axiosClient.post("create-pin/", { pin });
       const pinToken = tokenRes.data.pin_token;
-
-      if (!pinToken) {
-        throw new Error("Could not get PIN token");
-      }
+      if (!pinToken) throw new Error("Could not get PIN token");
 
       let highValueToken = null;
 
-      // 2. High-value confirmation
       if (numericAmount >= HIGH_VALUE_THRESHOLD) {
         setIsHighValue(true);
-
-        const confirmRes = await axiosClient.post(
-          "send-money/high-value-confirm/",
-          { amount: numericAmount, recipient }
-        );
-
+        const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
+          amount: numericAmount,
+          recipient: sendMode === "user" ? recipient : accountNumber,
+        });
         highValueToken = confirmRes.data.high_value_token;
 
-        // ⭐ Cross-platform confirmation (web + native)
         let confirmed = false;
-
         if (Platform.OS === "web") {
           confirmed = window.confirm(
             `You are about to send ₦${numericAmount.toLocaleString()}. Confirm this is correct.`
@@ -98,70 +112,81 @@ export default function SendScreen() {
             );
           });
         }
-
         if (!confirmed) {
           setLoading(false);
           return;
         }
       }
 
-      // ⭐ 3. Idempotency — generate reference_id BEFORE sending
-      const operationKey = `send:${recipient}:${numericAmount}`;
+      const operationKey =
+        sendMode === "user"
+          ? `send:user:${recipient}:${numericAmount}`
+          : `send:bank:${bankCode}:${accountNumber}:${numericAmount}`;
       const reference_id = await getOrCreateReferenceId(operationKey);
 
-      // 4. Build payload
-      const payload: any = {
-        recipient,
-        amount: numericAmount,
-        pin,
-        pin_token: pinToken,
-        note: note || "",
-        reference_id,
-      };
+      const payload: any =
+        sendMode === "user"
+          ? {
+              destination: "user",
+              recipient,
+              amount: numericAmount,
+              pin,
+              pin_token: pinToken,
+              note: note || "",
+              description: note || "Money Transfer",
+              reference_id,
+            }
+          : {
+              destination: "bank",
+              account_number: accountNumber,
+              bank_code: bankCode,
+              account_name: accountName || "Beneficiary",
+              bank_name: bankName || bankCode,
+              amount: numericAmount,
+              pin,
+              pin_token: pinToken,
+              note: note || "",
+              description: note || "Bank transfer",
+              reference_id,
+            };
 
-      if (highValueToken) {
-        payload.high_value_token = highValueToken;
-      }
+      if (highValueToken) payload.high_value_token = highValueToken;
 
-      // 5. Send money
       const res = await axiosClient.post("send-money/", payload);
 
-      // ⭐ Clear idempotency key ONLY on success
       await clearReferenceId(operationKey);
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
 
-      // ⭐ Success toast (web) or alert (native)
       const message = res.data.message || "Money sent successfully.";
-
       if (Platform.OS === "web") {
         Toast.show({
           type: "success",
-          text1: res.data?.idempotent ? "Already processed" : "Transfer successful",
+          text1: res.data?.idempotent ? "Already processed" : "Transfer submitted",
           text2: message,
         });
       } else {
         Alert.alert("Success", message);
       }
 
-      // Reset form
       setRecipient("");
+      setAccountNumber("");
+      setBankCode("");
+      setBankName("");
+      setAccountName("");
       setAmount("");
       setPin("");
       setNote("");
 
-      // ⭐ Delay navigation so toast stays visible
       setTimeout(() => {
         router.replace("/(tabs)");
       }, 600);
-
     } catch (err: any) {
       console.log("Send error:", err.response?.data);
-
-      // ⭐ Do NOT clear reference_id — retry must reuse it
       const message =
         err.response?.data?.error ||
         err.response?.data?.detail ||
         "Failed to send money. Please try again.";
-      setError(message);
+      setError(typeof message === "string" ? message : JSON.stringify(message));
     } finally {
       setLoading(false);
       setIsHighValue(false);
@@ -173,12 +198,32 @@ export default function SendScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView
-        contentContainerStyle={styles.inner}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Send Money</Text>
-        <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
+        <Text style={styles.subtitle}>
+          {sendMode === "user"
+            ? "Transfer to another OrbitPay user"
+            : "Transfer to any Nigerian bank account"}
+        </Text>
+
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[styles.modeBtn, sendMode === "user" && styles.modeBtnOn]}
+            onPress={() => setSendMode("user")}
+          >
+            <Text style={[styles.modeText, sendMode === "user" && styles.modeTextOn]}>
+              Orbit user
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, sendMode === "bank" && styles.modeBtnOn]}
+            onPress={() => setSendMode("bank")}
+          >
+            <Text style={[styles.modeText, sendMode === "bank" && styles.modeTextOn]}>
+              Bank account
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {Number(amount) >= HIGH_VALUE_THRESHOLD && (
           <View style={styles.warningBox}>
@@ -188,25 +233,60 @@ export default function SendScreen() {
           </View>
         )}
 
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/search-users",
-              params: { returnTo: "send" },
-            })
-          }
-          activeOpacity={0.7}
-        >
-          <View pointerEvents="none">
+        {sendMode === "user" ? (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/search-users",
+                params: { returnTo: "send" },
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <View pointerEvents="none">
+              <TextInput
+                label="Recipient Username"
+                value={recipient}
+                mode="outlined"
+                style={styles.input}
+                right={<TextInput.Icon icon="magnify" />}
+              />
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <>
             <TextInput
-              label="Recipient Username"
-              value={recipient}
+              label="Bank code (e.g. 058)"
+              value={bankCode}
+              onChangeText={setBankCode}
               mode="outlined"
               style={styles.input}
-              right={<TextInput.Icon icon="magnify" />}
             />
-          </View>
-        </TouchableOpacity>
+            <TextInput
+              label="Bank name (optional)"
+              value={bankName}
+              onChangeText={setBankName}
+              mode="outlined"
+              style={styles.input}
+            />
+            <TextInput
+              label="Account number"
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              onBlur={resolveBank}
+              mode="outlined"
+              keyboardType="numeric"
+              style={styles.input}
+            />
+            <TextInput
+              label="Account name"
+              value={accountName}
+              onChangeText={setAccountName}
+              mode="outlined"
+              style={styles.input}
+            />
+          </>
+        )}
 
         <TextInput
           label="Amount (NGN)"
@@ -216,7 +296,6 @@ export default function SendScreen() {
           keyboardType="numeric"
           style={styles.input}
         />
-
         <TextInput
           label="Transaction PIN"
           value={pin}
@@ -226,7 +305,6 @@ export default function SendScreen() {
           keyboardType="numeric"
           style={styles.input}
         />
-
         <TextInput
           label="Note (optional)"
           value={note}
@@ -236,7 +314,7 @@ export default function SendScreen() {
         />
 
         {error ? (
-          <HelperText type="error" visible={true}>
+          <HelperText type="error" visible>
             {error}
           </HelperText>
         ) : null}
@@ -249,9 +327,7 @@ export default function SendScreen() {
           style={styles.button}
           contentStyle={{ paddingVertical: 6 }}
         >
-          {Number(amount) >= HIGH_VALUE_THRESHOLD
-            ? "Confirm & Send"
-            : "Send Money"}
+          {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -259,32 +335,23 @@ export default function SendScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  inner: { padding: 20, paddingTop: 60 },
+  title: { fontSize: 26, fontWeight: "700", color: "#0F172A", marginBottom: 6 },
+  subtitle: { fontSize: 15, color: "#64748B", marginBottom: 16 },
+  modeRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  modeBtn: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  inner: {
-    padding: 20,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    marginBottom: 28,
-  },
-  input: {
-    marginBottom: 16,
-  },
-  button: {
-    marginTop: 12,
+    paddingVertical: 10,
     borderRadius: 10,
+    backgroundColor: "#E2E8F0",
+    alignItems: "center",
   },
+  modeBtnOn: { backgroundColor: "#0F172A" },
+  modeText: { fontWeight: "600", color: "#475569" },
+  modeTextOn: { color: "#FFFFFF" },
+  input: { marginBottom: 16 },
+  button: { marginTop: 12, borderRadius: 10 },
   warningBox: {
     backgroundColor: "#FEF3C7",
     borderRadius: 10,
