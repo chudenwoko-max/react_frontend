@@ -1,76 +1,55 @@
-import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, Alert } from "react-native";
-import { Button, TextInput, HelperText } from "react-native-paper";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import axiosClient from "../src/api/axiosClient";
+import { router } from "expo-router";
 
 export default function ScheduledScreen() {
-  const [transfers, setTransfers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchTransfers = async () => {
-    try {
-      const res = await axiosClient.get("scheduled/");
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      setTransfers(data);
-    } catch {
-      setTransfers([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => { fetchTransfers(); }, []);
-
-  const cancelTransfer = async (id: number) => {
-    try {
-      await axiosClient.post(`scheduled/${id}/cancel/`);
-      fetchTransfers();
-    } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.error || "Failed");
-    }
-  };
-
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" /></View>;
-
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Scheduled Transfers</Text>
-      <FlatList
-        data={transfers}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTransfers(); }} />}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <MaterialCommunityIcons name="calendar-clock" size={48} color="#CBD5E1" />
-            <Text style={styles.emptyText}>No scheduled transfers</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.title}>{item.recipient_username || item.recipient}</Text>
-            <Text style={styles.amount}>₦{Number(item.amount).toLocaleString()}</Text>
-            <Text style={styles.date}>{item.next_run || item.scheduled_date}</Text>
-            <Button mode="outlined" onPress={() => cancelTransfer(item.id)} style={{ marginTop: 10 }}>
-              Cancel
-            </Button>
-          </View>
-        )}
-      />
+      <MaterialCommunityIcons name="calendar-clock" size={48} color="#94A3B8" />
+      <Text style={styles.title}>Scheduled transfers paused</Text>
+      <Text style={styles.body}>
+        Repeating transfers are not running in production yet. Use Send for a
+        one-time OrbitPay transfer.
+      </Text>
+      <TouchableOpacity style={styles.btn} onPress={() => router.replace("/(tabs)/send")}>
+        <Text style={styles.btnText}>Go to Send</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+        <Text style={styles.link}>Back to Home</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC", paddingTop: 60, paddingHorizontal: 20 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { fontSize: 24, fontWeight: "700", marginBottom: 20, color: "#0F172A" },
-  card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  amount: { fontSize: 18, fontWeight: "700", marginTop: 4 },
-  date: { fontSize: 13, color: "#64748B", marginTop: 4 },
-  empty: { alignItems: "center", marginTop: 80 },
-  emptyText: { marginTop: 12, color: "#94A3B8" },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    padding: 24,
+    paddingTop: 80,
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  body: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  btn: {
+    marginTop: 28,
+    backgroundColor: "#0F172A",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  btnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
+  link: { marginTop: 16, color: "#0284C7", fontWeight: "600", fontSize: 15 },
 });
