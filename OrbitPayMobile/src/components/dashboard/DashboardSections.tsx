@@ -178,7 +178,9 @@ export const WeeklyChart = memo(function WeeklyChart({
   weeklyData,
 }: {
   weeklyData: number[];
-}) {
+}) 
+
+{
   const max = Math.max(...weeklyData, 1);
   const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
   const todayIndex = new Date().getDay();
@@ -199,6 +201,40 @@ export const WeeklyChart = memo(function WeeklyChart({
           );
         })}
       </View>
+    </View>
+  );
+});
+
+export const PendingWithdrawBanner = memo(function PendingWithdrawBanner({
+  pending,
+  onCancel,
+  cancelling,
+}: {
+  pending: {
+    reference: string;
+    amount: string;
+    status: string;
+  } | null;
+  onCancel: () => void;
+  cancelling?: boolean;
+}) {
+  if (!pending) return null;
+  return (
+    <View style={styles.pendingCard}>
+      <Text style={styles.pendingTitle}>Withdrawal in progress</Text>
+      <Text style={styles.pendingBody}>
+        ₦{Number(pending.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}{" "}
+        is on hold ({pending.status}). Cancel if Paystack did not queue it.
+      </Text>
+      <TouchableOpacity
+        style={styles.pendingBtn}
+        onPress={onCancel}
+        disabled={cancelling}
+      >
+        <Text style={styles.pendingBtnText}>
+          {cancelling ? "Cancelling…" : "Cancel and refund"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 });
@@ -339,4 +375,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#94A3B8",
   },
+
+    pendingCard: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  pendingTitle: { fontSize: 16, fontWeight: "700", color: "#92400E", marginBottom: 6 },
+  pendingBody: { fontSize: 14, color: "#78350F", lineHeight: 20, marginBottom: 12 },
+  pendingBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "#0F172A",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  pendingBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
 });

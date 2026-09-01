@@ -19,11 +19,13 @@ import {
   WalletsGrid,
   QuickActions,
   WeeklyChart,
+  PendingWithdrawBanner,
 } from "../../src/components/dashboard/DashboardSections";
 import { unregisterPushToken } from "../../src/notifications/push";
 import { useEffect } from "react";
 import { DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
+
 
 
 type Transaction = {
@@ -84,6 +86,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingWithdraw, setPendingWithdraw] = useState<any>(null);
+  const [cancellingWithdraw, setCancellingWithdraw] = useState(false);
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
@@ -282,6 +286,10 @@ const fetchWeeklySpend = async () => {
           ? data.daily.map((d: { spend?: number }) => Number(d.spend) || 0)
           : [0, 0, 0, 0, 0, 0, 0]
       );
+
+            if (range === "7d") {
+        setPendingWithdraw(data.pending_withdraw || null);
+      }
       if (range === "30d") {
         setMonthSpent(Number(data.spend) || 0);
         setMonthReceived(Number(data.received) || 0);
@@ -360,6 +368,22 @@ await fetchSnapshot("7d");
 await fetchSnapshot("30d");
 
     setRefreshing(false);
+  };
+
+    const cancelPendingWithdraw = async () => {
+    if (!pendingWithdraw?.reference) return;
+    setCancellingWithdraw(true);
+    try {
+      await axiosClient.post("wallet/withdraw/cancel/", {
+        reference_id: pendingWithdraw.reference,
+      });
+      setPendingWithdraw(null);
+      await Promise.all([fetchBalance(), fetchSnapshot("7d"), fetchSnapshot("30d")]);
+    } catch (e: any) {
+      console.log("Cancel withdraw error:", e?.response?.data);
+    } finally {
+      setCancellingWithdraw(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -504,6 +528,12 @@ await fetchSnapshot("30d");
     </View>
 
     <BalanceCard balance={balance} loading={loading} />
+
+        <PendingWithdrawBanner
+      pending={pendingWithdraw}
+      onCancel={cancelPendingWithdraw}
+      cancelling={cancellingWithdraw}
+    />
 
     {loading ? (
       <>
