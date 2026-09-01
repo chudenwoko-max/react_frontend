@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  DeviceEventEmitter,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
-import { DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 export default function WithdrawPausedScreen() {
@@ -30,7 +37,7 @@ export default function WithdrawPausedScreen() {
     loadPending();
   }, []);
 
-  const cancelPending = async () => {
+    const cancelPendingWithdraw = async () => {
     if (!pending?.reference) return;
     setCancelling(true);
     try {
@@ -39,13 +46,25 @@ export default function WithdrawPausedScreen() {
       });
       setPending(null);
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-    } catch (e) {
-      console.log("Cancel withdraw error:", e);
+      Alert.alert("Cancelled", "Withdrawal cancelled. Wallet refunded.");
+    } catch (e: any) {
+      const status = e?.response?.status;
+      const data = e?.response?.data;
+      if (status === 409) {
+        Alert.alert(
+          "Already queued",
+          data?.error || "Transfer already queued at Paystack. Wait for webhook."
+        );
+      } else {
+        Alert.alert(
+          "Cancel failed",
+          data?.error || "Could not cancel this withdrawal."
+        );
+      }
     } finally {
       setCancelling(false);
     }
   };
-
   return (
     <View style={styles.container}>
       <MaterialCommunityIcons name="bank-off-outline" size={48} color="#94A3B8" />
@@ -66,7 +85,7 @@ export default function WithdrawPausedScreen() {
           </Text>
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={cancelPending}
+            onPress={cancelPendingWithdraw}
             disabled={cancelling}
           >
             <Text style={styles.cancelText}>

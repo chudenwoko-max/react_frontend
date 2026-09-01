@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
@@ -370,7 +371,7 @@ await fetchSnapshot("30d");
     setRefreshing(false);
   };
 
-    const cancelPendingWithdraw = async () => {
+      const cancelPendingWithdraw = async () => {
     if (!pendingWithdraw?.reference) return;
     setCancellingWithdraw(true);
     try {
@@ -378,14 +379,31 @@ await fetchSnapshot("30d");
         reference_id: pendingWithdraw.reference,
       });
       setPendingWithdraw(null);
-      await Promise.all([fetchBalance(), fetchSnapshot("7d"), fetchSnapshot("30d")]);
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+      await Promise.all([
+        fetchBalance(),
+        fetchSnapshot("7d"),
+        fetchSnapshot("30d"),
+        fetchRecentTransactions(),
+      ]);
     } catch (e: any) {
-      console.log("Cancel withdraw error:", e?.response?.data);
+      const status = e?.response?.status;
+      const data = e?.response?.data;
+      if (status === 409) {
+        Alert.alert(
+          "Already queued",
+          data?.error || "Transfer already queued at Paystack. Wait for webhook."
+        );
+      } else {
+        Alert.alert(
+          "Cancel failed",
+          data?.error || "Could not cancel this withdrawal."
+        );
+      }
     } finally {
       setCancellingWithdraw(false);
     }
   };
-
   const handleLogout = async () => {
     try {
       await unregisterPushToken();
