@@ -126,6 +126,10 @@ export default function Dashboard() {
   "cable",
   "bills",
   "debit",
+  "bill_airtime",
+  "bill_data",
+  "bill_electricity",
+  "bill_cable",
 ]);
 
 function bucketWeeklySpend(rows: any[]) {
