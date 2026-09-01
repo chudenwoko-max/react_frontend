@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  DeviceEventEmitter,
 } from "react-native";
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router } from "expo-router";
@@ -19,6 +20,7 @@ import {
   requireTransactionGuard,
   WITHDRAW_GUARD_AMOUNT,
 } from "../src/security/transactionGuard";
+import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 export default function WithdrawScreen() {
   const [amount, setAmount] = useState("");
@@ -165,6 +167,7 @@ Toast.show({
 
     try {
       await axiosClient.post("wallet/withdraw/cancel/", { reference: pendingRef });
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
     } catch (e) {
       console.log("Cancel withdraw error:", e);
     }
