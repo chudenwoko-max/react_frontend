@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
@@ -41,7 +42,12 @@ export default function RequestMoneyScreen() {
         note: note || "",
       });
 
-      window.alert(res.data.message || "Money request sent successfully!");
+            const message = res.data.message || "Money request sent successfully!";
+      if (Platform.OS === "web") {
+        window.alert(message);
+      } else {
+        Alert.alert("Request sent", message);
+      }
 
       setFromUser("");
       setAmount("");
