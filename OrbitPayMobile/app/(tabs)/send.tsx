@@ -21,6 +21,10 @@ import {
   SEND_GUARD_AMOUNT,
 } from "../../src/security/transactionGuard";
 import Toast from "react-native-toast-message";
+import { DeviceEventEmitter } from "react-native";
+import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
+
+DeviceEventEmitter.emit(FINANCIALS_REFRESH);
 
 const HIGH_VALUE_THRESHOLD = 50000;
 
