@@ -26,6 +26,27 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  const loadNotifications = async (next?: string | null) => {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const res = await axiosClient.get("notifications/", {
+      params: { limit: 20, ...(next ? { cursor: next } : {}) },
+    });
+    const batch = res.data.results || [];
+    setItems((prev) => (next ? [...prev, ...batch] : batch));
+    setCursor(res.data.next_cursor ?? null);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  loadNotifications(null);
+}, []);
 
   const fetchNotifications = async () => {
     try {
