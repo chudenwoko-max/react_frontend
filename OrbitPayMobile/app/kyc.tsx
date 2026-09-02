@@ -49,7 +49,7 @@ export default function KycScreen() {
         bvn: bvn,
         id_number: idNumber || "",
       });
-
+      setStatus("pending");
       Alert.alert(
         "Submitted",
         "Your KYC documents have been submitted for review.",

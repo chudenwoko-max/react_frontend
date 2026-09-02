@@ -1,5 +1,5 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState, useMemo, useRef } from "react";
+import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  DeviceEventEmitter,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
@@ -23,11 +24,7 @@ import {
   PendingWithdrawBanner,
 } from "../../src/components/dashboard/DashboardSections";
 import { unregisterPushToken } from "../../src/notifications/push";
-import { useEffect } from "react";
-import { DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
-
-
 
 type Transaction = {
   id?: number;
@@ -87,8 +84,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-    const [pendingWithdraw, setPendingWithdraw] = useState<any>(null);
+  const [pendingWithdraw, setPendingWithdraw] = useState<any>(null);
   const [cancellingWithdraw, setCancellingWithdraw] = useState(false);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [monthSpent, setMonthSpent] = useState(0);
+  const [monthReceived, setMonthReceived] = useState(0);
+  const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [savingsGoals, setSavingsGoals] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [weeklyInsight, setWeeklyInsight] = useState<any>(null);
+  const [savingsSuggestion, setSavingsSuggestion] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
+  const [cashflowAlert, setCashflowAlert] = useState<any>(null);
+  const isFirstLoad = useRef(true);
+  const [kycStatus, setKycStatus] = useState("unverified");
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
@@ -102,65 +112,60 @@ export default function Dashboard() {
     return () => sub.remove();
   }, []);
 
-
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [monthSpent, setMonthSpent] = useState(0);
-  const [monthReceived, setMonthReceived] = useState(0);
-  const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
-  const [savingsGoals, setSavingsGoals] = useState<any[]>([]);
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [weeklyInsight, setWeeklyInsight] = useState<any>(null);
-  const [savingsSuggestion, setSavingsSuggestion] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
-  const [cashflowAlert, setCashflowAlert] = useState<any>(null);
-  const isFirstLoad = useRef(true);
+  useEffect(() => {
+    axiosClient
+      .get("kyc/")
+      .then((res) => {
+        setKycStatus(String(res.data.status || "unverified").toLowerCase());
+      })
+      .catch(() => setKycStatus("unverified"));
+  }, []);
 
   const SPEND_TYPES = new Set([
-  "transfer",
-  "transfer_sent",
-  "withdraw",
-  "airtime",
-  "data",
-  "electricity",
-  "cable",
-  "bills",
-  "debit",
-  "bill_airtime",
-  "bill_data",
-  "bill_electricity",
-  "bill_cable",
-]);
+    "transfer",
+    "transfer_sent",
+    "withdraw",
+    "airtime",
+    "data",
+    "electricity",
+    "cable",
+    "bills",
+    "debit",
+    "bill_airtime",
+    "bill_data",
+    "bill_electricity",
+    "bill_cable",
+  ]);
 
-function bucketWeeklySpend(rows: any[]) {
-  const buckets = [0, 0, 0, 0, 0, 0, 0];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  function bucketWeeklySpend(rows: any[]) {
+    const buckets = [0, 0, 0, 0, 0, 0, 0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  for (const tx of rows) {
-    const type = String(tx.type || tx.transaction_type || "").toLowerCase();
-    if (!SPEND_TYPES.has(type)) continue;
+    for (const tx of rows) {
+      const type = String(tx.type || tx.transaction_type || "").toLowerCase();
+      if (!SPEND_TYPES.has(type)) continue;
 
-    const d = new Date(tx.created_at);
-    d.setHours(0, 0, 0, 0);
-    const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
-    if (diff < 0 || diff > 6) continue;
-    buckets[6 - diff] += Number(tx.amount) || 0;
+      const d = new Date(tx.created_at);
+      d.setHours(0, 0, 0, 0);
+      const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
+      if (diff < 0 || diff > 6) continue;
+      buckets[6 - diff] += Number(tx.amount) || 0;
+    }
+    return buckets;
   }
-  return buckets;
-}
 
-const fetchWeeklySpend = async () => {
-  try {
-    const res = await axiosClient.get("transactions/", {
-      params: { date_range: "7days", page_size: 50 },
-    });
-    const rows = res.data.results || res.data || [];
-    setWeeklyData(bucketWeeklySpend(Array.isArray(rows) ? rows : []));
-  } catch (e) {
-    console.log("Weekly spend fetch error:", e);
-  }
-};
+  const fetchWeeklySpend = async () => {
+    try {
+      const res = await axiosClient.get("transactions/", {
+        params: { date_range: "7days", page_size: 50 },
+      });
+      const rows = res.data.results || res.data || [];
+      setWeeklyData(bucketWeeklySpend(Array.isArray(rows) ? rows : []));
+    } catch (e) {
+      console.log("Weekly spend fetch error:", e);
+    }
+  };
 
   const fetchSavingsSuggestion = async () => {
     try {
@@ -243,26 +248,24 @@ const fetchWeeklySpend = async () => {
   };
 
   const fetchRecentTransactions = async () => {
-  try {
-    const res = await axiosClient.get("transactions/", {
-      params: { page: 1, page_size: 8 },
-    });
+    try {
+      const res = await axiosClient.get("transactions/", {
+        params: { page: 1, page_size: 8 },
+      });
 
-    const data = Array.isArray(res.data)
-      ? res.data
-      : res.data.results || [];
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data.results || [];
 
-    // Only update the recent list — no monthly calculations here
-    setRecentTransactions(data);
+      // Only update the recent list — no monthly calculations here
+      setRecentTransactions(data);
+    } catch (error) {
+      console.log("Recent transactions error:", error);
+      setRecentTransactions([]);
+    }
+  };
 
-  } catch (error) {
-    console.log("Recent transactions error:", error);
-    setRecentTransactions([]);
-  }
-};
-
-
-    const fetchLatestInsight = async () => {
+  const fetchLatestInsight = async () => {
     try {
       const res = await axiosClient.get("insights/latest/");
       const weekly = res.data?.weekly || null;
@@ -282,7 +285,7 @@ const fetchWeeklySpend = async () => {
     }
   };
 
-    const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
+  const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
     try {
       const res = await axiosClient.get("wallet/snapshot/", { params: { range } });
       const data = res.data || {};
@@ -292,7 +295,7 @@ const fetchWeeklySpend = async () => {
           : [0, 0, 0, 0, 0, 0, 0]
       );
 
-            if (range === "7d") {
+      if (range === "7d") {
         setPendingWithdraw(data.pending_withdraw || null);
       }
       if (range === "30d") {
@@ -349,10 +352,9 @@ const fetchWeeklySpend = async () => {
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
         loadData();
-fetchWeeklySpend();
-fetchSnapshot("7d");
-fetchSnapshot("30d");
-
+        fetchWeeklySpend();
+        fetchSnapshot("7d");
+        fetchSnapshot("30d");
       } else {
         Promise.all([
           fetchBalance(),
@@ -368,14 +370,13 @@ fetchSnapshot("30d");
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
-await fetchWeeklySpend();
-await fetchSnapshot("7d");
-await fetchSnapshot("30d");
-
+    await fetchWeeklySpend();
+    await fetchSnapshot("7d");
+    await fetchSnapshot("30d");
     setRefreshing(false);
   };
 
-      const cancelPendingWithdraw = async () => {
+  const cancelPendingWithdraw = async () => {
     if (!pendingWithdraw?.reference) return;
     setCancellingWithdraw(true);
     try {
@@ -408,6 +409,7 @@ await fetchSnapshot("30d");
       setCancellingWithdraw(false);
     }
   };
+
   const handleLogout = async () => {
     try {
       await unregisterPushToken();
@@ -527,225 +529,246 @@ await fetchSnapshot("30d");
   }, []);
 
   return (
-  <ScrollView
-    style={styles.container}
-    contentContainerStyle={{ paddingBottom: 40 }}
-    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-  >
-    <View style={styles.headerRow}>
-      <View style={styles.headerRight}>
-        <TouchableOpacity onPress={() => router.push("/notifications")} style={styles.iconButton}>
-          <MaterialCommunityIcons name="bell-outline" size={24} color="#0F172A" />
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-
-    <BalanceCard balance={balance} loading={loading} />
-
-        <PendingWithdrawBanner
-      pending={pendingWithdraw}
-      onCancel={cancelPendingWithdraw}
-      cancelling={cancellingWithdraw}
-    />
-
-    {loading ? (
-      <>
-        <SkeletonCard />
-        <SkeletonCard />
-      </>
-    ) : (
-      <>
-        {weeklyInsight?.message ? (
-  <View style={styles.insightCard}>
-    <View style={styles.insightHeader}>
-      <MaterialCommunityIcons
-        name="lightbulb-on-outline"
-        size={20}
-        color="#F59E0B"
-      />
-      <Text style={styles.insightLabel}>Orbit Insight · This week</Text>
-    </View>
-
-    <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
-    <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
-  </View>
-) : null}
-
-
-                {(weeklyInsight?.save_reason || savingsSuggestion) && (
-          <View style={styles.suggestionCard}>
-            <View style={styles.insightHeader}>
-              <MaterialCommunityIcons name="piggy-bank-outline" size={20} color="#0D9488" />
-              <Text style={styles.suggestionLabel}>Smart Save</Text>
-            </View>
-            <Text style={styles.insightTitle}>
-              {weeklyInsight?.suggested_save
-                ? `Save ₦${Number(weeklyInsight.suggested_save).toLocaleString()} weekly`
-                : savingsSuggestion
-                ? `Save ₦${Number(savingsSuggestion.suggested_amount).toLocaleString()} weekly`
-                : "Smart Save"}
-            </Text>
-            <Text style={styles.insightMessage}>
-              {weeklyInsight?.save_reason || savingsSuggestion?.reason}
-            </Text>
-            {savingsSuggestion?.id ? (
-              <View style={styles.suggestionActions}>
-                <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
-                  <Text style={styles.acceptText}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
-                  <Text style={styles.dismissText}>Dismiss</Text>
-                </TouchableOpacity>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <View style={styles.headerRow}>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={() => router.push("/notifications")} style={styles.iconButton}>
+            <MaterialCommunityIcons name="bell-outline" size={24} color="#0F172A" />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
               </View>
-            ) : null}
-          </View>
-        )}
-        {cashflowAlert && (
-          <View
-            style={[
-              styles.cashflowCard,
-              cashflowAlert.status === "critical" ? styles.cashflowCritical : styles.cashflowWarning,
-            ]}
-          >
-            <View style={styles.insightHeader}>
-              <MaterialCommunityIcons
-                name="alert-circle-outline"
-                size={20}
-                color={cashflowAlert.status === "critical" ? "#DC2626" : "#D97706"}
-              />
-              <Text
-                style={[
-                  styles.cashflowLabel,
-                  { color: cashflowAlert.status === "critical" ? "#DC2626" : "#D97706" },
-                ]}
-              >
-                Cash Flow Alert
-              </Text>
-            </View>
-            <Text style={styles.insightTitle}>{cashflowAlert.title}</Text>
-            <Text style={styles.insightMessage}>{cashflowAlert.message}</Text>
-          </View>
-        )}
-      </>
-    )}
+            )}
+          </TouchableOpacity>
 
-    <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
-    <WalletsGrid wallets={wallets} />
-    <QuickActions />
-
-    {/* ⭐ WEEKLY CHART — now using real weeklyData */}
-    <WeeklyChart weeklyData={weeklyData} />
-
-    {savingsGoals.length > 0 && (
-      <>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Savings Goals</Text>
-          <TouchableOpacity onPress={() => router.push("/savings")}>
-            <Text style={styles.seeAll}>See all</Text>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 28 }}>
-          {savingsGoals.map((goal) => (
-            <View key={goal.id} style={styles.goalCard}>
-              <Text style={styles.goalTitle} numberOfLines={1}>
-                {goal.title}
-              </Text>
-              <Text style={styles.goalAmount}>
-                ₦{Number(goal.current_amount || 0).toLocaleString()} / ₦
-                {Number(goal.target_amount || 0).toLocaleString()}
-              </Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(Number(goal.progress || 0), 100)}%` },
-                  ]}
+      <BalanceCard balance={balance} loading={loading} />
+
+      <PendingWithdrawBanner
+        pending={pendingWithdraw}
+        onCancel={cancelPendingWithdraw}
+        cancelling={cancellingWithdraw}
+      />
+
+      {loading ? (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      ) : (
+        <>
+          {weeklyInsight?.message ? (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons
+                  name="lightbulb-on-outline"
+                  size={20}
+                  color="#F59E0B"
                 />
+                <Text style={styles.insightLabel}>Orbit Insight · This week</Text>
               </View>
-              <Text style={styles.goalProgress}>{Math.round(Number(goal.progress || 0))}%</Text>
-            </View>
-          ))}
-        </ScrollView>
-      </>
-    )}
 
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>Recent Activity</Text>
-      {recentTransactions.length > 0 && (
-        <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
-          <Text style={styles.seeAll}>See all</Text>
+              <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
+              <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+            </View>
+          ) : null}
+
+          {(weeklyInsight?.save_reason || savingsSuggestion) && (
+            <View style={styles.suggestionCard}>
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons name="piggy-bank-outline" size={20} color="#0D9488" />
+                <Text style={styles.suggestionLabel}>Smart Save</Text>
+              </View>
+              <Text style={styles.insightTitle}>
+                {weeklyInsight?.suggested_save
+                  ? `Save ₦${Number(weeklyInsight.suggested_save).toLocaleString()} weekly`
+                  : savingsSuggestion
+                  ? `Save ₦${Number(savingsSuggestion.suggested_amount).toLocaleString()} weekly`
+                  : "Smart Save"}
+              </Text>
+              <Text style={styles.insightMessage}>
+                {weeklyInsight?.save_reason || savingsSuggestion?.reason}
+              </Text>
+              {savingsSuggestion?.id ? (
+                <View style={styles.suggestionActions}>
+                  <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
+                    <Text style={styles.acceptText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
+                    <Text style={styles.dismissText}>Dismiss</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
+          )}
+          {cashflowAlert && (
+            <View
+              style={[
+                styles.cashflowCard,
+                cashflowAlert.status === "critical" ? styles.cashflowCritical : styles.cashflowWarning,
+              ]}
+            >
+              <View style={styles.insightHeader}>
+                <MaterialCommunityIcons
+                  name="alert-circle-outline"
+                  size={20}
+                  color={cashflowAlert.status === "critical" ? "#DC2626" : "#D97706"}
+                />
+                <Text
+                  style={[
+                    styles.cashflowLabel,
+                    { color: cashflowAlert.status === "critical" ? "#DC2626" : "#D97706" },
+                  ]}
+                >
+                  Cash Flow Alert
+                </Text>
+              </View>
+              <Text style={styles.insightTitle}>{cashflowAlert.title}</Text>
+              <Text style={styles.insightMessage}>{cashflowAlert.message}</Text>
+            </View>
+          )}
+        </>
+      )}
+
+      <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
+      <WalletsGrid wallets={wallets} />
+      <QuickActions />
+
+      {/* ⭐ WEEKLY CHART — now using real weeklyData */}
+      <WeeklyChart weeklyData={weeklyData} />
+
+      {savingsGoals.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Savings Goals</Text>
+            <TouchableOpacity onPress={() => router.push("/savings")}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 28 }}>
+            {savingsGoals.map((goal) => (
+              <View key={goal.id} style={styles.goalCard}>
+                <Text style={styles.goalTitle} numberOfLines={1}>
+                  {goal.title}
+                </Text>
+                <Text style={styles.goalAmount}>
+                  ₦{Number(goal.current_amount || 0).toLocaleString()} / ₦
+                  {Number(goal.target_amount || 0).toLocaleString()}
+                </Text>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${Math.min(Number(goal.progress || 0), 100)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.goalProgress}>{Math.round(Number(goal.progress || 0))}%</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </>
+      )}
+
+      {kycStatus !== "approved" && (
+        <TouchableOpacity
+          onPress={() => router.push("/kyc")}
+          style={{
+            backgroundColor: kycStatus === "rejected" ? "#FEE2E2" : "#F1F5F9",
+            padding: 14,
+            borderRadius: 12,
+            marginBottom: 16,
+          }}
+        >
+          <Text style={{ fontWeight: "700", color: "#0F172A" }}>
+            {kycStatus === "pending"
+              ? "KYC pending review"
+              : kycStatus === "rejected"
+              ? "KYC rejected — resubmit"
+              : "Verify identity"}
+          </Text>
+          <Text style={{ color: "#64748B", marginTop: 4 }}>
+            Required before live payouts. NGN send and fund still work.
+          </Text>
         </TouchableOpacity>
       )}
-    </View>
 
-    {recentTransactions.length > 0 && (
-      <View style={styles.searchContainer}>
-        <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search transactions..."
-          placeholderTextColor="#CBD5E1"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <MaterialCommunityIcons name="close" size={18} color="#94A3B8" />
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        {recentTransactions.length > 0 && (
+          <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
+            <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         )}
       </View>
-    )}
 
-    {recentTransactions.length > 0 && (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterTabs}>
-        {(["all", "sent", "received", "bills", "others"] as const).map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[styles.filterTab, filterType === type && styles.filterTabActive]}
-            onPress={() => setFilterType(type)}
-          >
-            <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive]}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    )}
+      {recentTransactions.length > 0 && (
+        <View style={styles.searchContainer}>
+          <MaterialCommunityIcons name="magnify" size={20} color="#94A3B8" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search transactions..."
+            placeholderTextColor="#CBD5E1"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <MaterialCommunityIcons name="close" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
-    {loading ? (
-      <View style={{ marginTop: 8 }}>
-        <SkeletonTx />
-        <SkeletonTx />
-        <SkeletonTx />
-      </View>
-    ) : recentTransactions.length === 0 ? (
-      <View style={styles.emptyCard}>
-        <MaterialCommunityIcons name="history" size={40} color="#CBD5E1" />
-        <Text style={styles.emptyText}>No transactions yet</Text>
-        <Text style={styles.emptySubText}>Fund your wallet or send money to see activity here.</Text>
-      </View>
-    ) : filteredTransactions.length === 0 ? (
-      <View style={styles.emptyCard}>
-        <MaterialCommunityIcons name="magnify" size={40} color="#CBD5E1" />
-        <Text style={styles.emptyText}>No results found</Text>
-        <Text style={styles.emptySubText}>Try adjusting your search or filters.</Text>
-      </View>
-    ) : (
-      <View style={styles.txList}>{filteredTransactions.map(renderTransaction)}</View>
-    )}
-  </ScrollView>
-);
+      {recentTransactions.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterTabs}>
+          {(["all", "sent", "received", "bills", "others"] as const).map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.filterTab, filterType === type && styles.filterTabActive]}
+              onPress={() => setFilterType(type)}
+            >
+              <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive]}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
+      {loading ? (
+        <View style={{ marginTop: 8 }}>
+          <SkeletonTx />
+          <SkeletonTx />
+          <SkeletonTx />
+        </View>
+      ) : recentTransactions.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <MaterialCommunityIcons name="history" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyText}>No transactions yet</Text>
+          <Text style={styles.emptySubText}>Fund your wallet or send money to see activity here.</Text>
+        </View>
+      ) : filteredTransactions.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <MaterialCommunityIcons name="magnify" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyText}>No results found</Text>
+          <Text style={styles.emptySubText}>Try adjusting your search or filters.</Text>
+        </View>
+      ) : (
+        <View style={styles.txList}>{filteredTransactions.map(renderTransaction)}</View>
+      )}
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
