@@ -14,7 +14,11 @@ import { router } from "expo-router";
 
 type Wallet = {
   id: number;
-  currency: {
+  currency_code?: string;
+  currency_name?: string;
+  symbol?: string;
+  live?: boolean;
+  currency?: {
     code: string;
     name?: string;
     symbol?: string;
@@ -52,11 +56,16 @@ export default function WalletScreen() {
   };
 
   const getCurrencyCode = (wallet: Wallet) => {
+    if (wallet.currency_code) return wallet.currency_code;
     if (typeof wallet.currency === "string") return wallet.currency;
     return wallet.currency?.code || "NGN";
   };
 
-  const getCurrencySymbol = (code: string) => {
+  const getCurrencySymbol = (wallet: Wallet, code: string) => {
+    if (wallet.symbol) return wallet.symbol;
+    if (typeof wallet.currency === "object" && wallet.currency?.symbol) {
+      return wallet.currency.symbol;
+    }
     switch (code) {
       case "NGN":
         return "₦";
@@ -73,10 +82,11 @@ export default function WalletScreen() {
 
   const renderItem = ({ item }: { item: Wallet }) => {
     const code = getCurrencyCode(item);
-    const symbol = getCurrencySymbol(code);
+    const symbol = getCurrencySymbol(item, code);
+    const live = item.live !== false && code === "NGN";
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, !live && styles.cardSoon]}>
         <View style={styles.row}>
           <View style={styles.left}>
             <View style={styles.currencyCircle}>
@@ -84,8 +94,12 @@ export default function WalletScreen() {
             </View>
             <View>
               <Text style={styles.currencyName}>{code} Wallet</Text>
-              {item.is_default && (
-                <Text style={styles.defaultBadge}>Default</Text>
+              {live ? (
+                item.is_default ? (
+                  <Text style={styles.defaultBadge}>Default</Text>
+                ) : null
+              ) : (
+                <Text style={styles.soonBadge}>Soon — not live</Text>
               )}
             </View>
           </View>
@@ -115,7 +129,9 @@ export default function WalletScreen() {
 
       <FlatList
         data={wallets}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        keyExtractor={(item) =>
+          item.id?.toString() || getCurrencyCode(item)
+        }
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
@@ -185,6 +201,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
   },
+  cardSoon: {
+    opacity: 0.55,
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -216,6 +235,11 @@ const styles = StyleSheet.create({
   defaultBadge: {
     fontSize: 12,
     color: "#16A34A",
+    marginTop: 2,
+  },
+  soonBadge: {
+    fontSize: 12,
+    color: "#64748B",
     marginTop: 2,
   },
   balance: {
