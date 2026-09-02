@@ -26,12 +26,13 @@ export default function BankAccountScreen() {
   const [showBankModal, setShowBankModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(""); // ← new for visible feedback
+    const [favorites, setFavorites] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+   const loadData = async () => {
     try {
       const bankRes = await axiosClient.get("bank/account/");
       const bank = bankRes.data;
@@ -48,6 +49,16 @@ export default function BankAccountScreen() {
 
       const banksRes = await axiosClient.get("banks/");
       setBanks(banksRes.data || []);
+
+      try {
+        const favRes = await axiosClient.get("favorites/");
+        const rows = Array.isArray(favRes.data)
+          ? favRes.data
+          : favRes.data.results || favRes.data.favorites || [];
+        setFavorites(rows);
+      } catch {
+        setFavorites([]);
+      }
     } catch (error) {
       console.log("Load bank error:", error);
       setCurrentBank(null);
@@ -122,141 +133,171 @@ export default function BankAccountScreen() {
       </View>
     );
   }
+return (
+  <View style={styles.container}>
+    <Text style={styles.title}>Bank Account</Text>
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bank Account</Text>
+    {/* VIEW MODE */}
+    {!isEditing && currentBank ? (
+      <View style={styles.currentCard}>
+        <Text style={styles.cardLabel}>Currently Linked</Text>
+        <Text style={styles.bankName}>{currentBank.bank_name}</Text>
+        <Text style={styles.accountNumber}>{currentBank.account_number}</Text>
+        {currentBank.account_name ? (
+          <Text style={styles.accountName}>{currentBank.account_name}</Text>
+        ) : null}
 
-      {/* VIEW MODE */}
-      {!isEditing && currentBank ? (
-        <View style={styles.currentCard}>
-          <Text style={styles.cardLabel}>Currently Linked</Text>
-          <Text style={styles.bankName}>{currentBank.bank_name}</Text>
-          <Text style={styles.accountNumber}>{currentBank.account_number}</Text>
-          {currentBank.account_name ? (
-            <Text style={styles.accountName}>{currentBank.account_name}</Text>
-          ) : null}
+        <Pressable
+          style={({ pressed }) => [
+            styles.changeButton,
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={startEditing}
+          hitSlop={12}
+        >
+          <Text style={styles.changeButtonText}>Change Bank Account</Text>
+        </Pressable>
+      </View>
+    ) : null}
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.changeButton,
-              pressed && { opacity: 0.75 },
-            ]}
-            onPress={startEditing}
-            hitSlop={12}
-          >
-            <Text style={styles.changeButtonText}>Change Bank Account</Text>
+    {/* EDIT / LINK MODE */}
+    {isEditing && (
+      <View style={styles.form}>
+        <Text style={styles.sectionTitle}>
+          {currentBank ? "Update Bank Account" : "Link Bank Account"}
+        </Text>
+
+        {/* Error message */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.label}>Select Bank</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.selector,
+            pressed && { opacity: 0.8 },
+          ]}
+          onPress={() => setShowBankModal(true)}
+          hitSlop={8}
+        >
+          <Text style={{ color: selectedBank ? "#fff" : "#888" }}>
+            {selectedBank ? selectedBank.name : "Choose your bank"}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#888" />
+        </Pressable>
+
+        <Text style={styles.label}>Account Number</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0123456789"
+          placeholderTextColor="#888"
+          keyboardType="number-pad"
+          maxLength={10}
+          value={accountNumber}
+          onChangeText={(text) => {
+            setAccountNumber(text);
+            setError("");
+          }}
+        />
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            loading && styles.disabled,
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>
+              {currentBank ? "Update Bank Account" : "Link Bank Account"}
+            </Text>
+          )}
+        </Pressable>
+
+        {currentBank && (
+          <Pressable style={styles.cancelButton} onPress={cancelEditing}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+        )}
+      </View>
+    )}
+
+    <Text style={{ fontSize: 16, fontWeight: "700", color: "#0F172A", marginTop: 24, marginBottom: 8 }}>
+      Saved recipients
+    </Text>
+    {favorites.length === 0 ? (
+      <Text style={{ color: "#64748B" }}>No saved recipients yet.</Text>
+    ) : (
+      favorites.map((f) => (
+        <View
+          key={f.id || f.pk}
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 8,
+            borderWidth: 1,
+            borderColor: "#E2E8F0",
+          }}
+        >
+          <Text style={{ fontWeight: "700", color: "#0F172A" }}>
+            {f.account_name || f.name || f.label || "Recipient"}
+          </Text>
+          <Text style={{ color: "#64748B", marginTop: 4 }}>
+            {f.bank_name || f.bank_code || ""}{" "}
+            {String(f.account_number || "").slice(-4)
+              ? `•••• ${String(f.account_number).slice(-4)}`
+              : ""}
+          </Text>
+        </View>
+      ))
+    )}
+
+    {/* Bank Selection Modal */}
+    <Modal
+      visible={showBankModal}
+      animationType="slide"
+      presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Select Bank</Text>
+          <Pressable onPress={() => setShowBankModal(false)} hitSlop={12}>
+            <Ionicons name="close" size={28} color="#fff" />
           </Pressable>
         </View>
-      ) : null}
 
-      {/* EDIT / LINK MODE */}
-      {isEditing && (
-        <View style={styles.form}>
-          <Text style={styles.sectionTitle}>
-            {currentBank ? "Update Bank Account" : "Link Bank Account"}
-          </Text>
-
-          {/* Error message */}
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <Text style={styles.label}>Select Bank</Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.selector,
-              pressed && { opacity: 0.8 },
-            ]}
-            onPress={() => setShowBankModal(true)}
-            hitSlop={8}
-          >
-            <Text style={{ color: selectedBank ? "#fff" : "#888" }}>
-              {selectedBank ? selectedBank.name : "Choose your bank"}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#888" />
-          </Pressable>
-
-          <Text style={styles.label}>Account Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="0123456789"
-            placeholderTextColor="#888"
-            keyboardType="number-pad"
-            maxLength={10}
-            value={accountNumber}
-            onChangeText={(text) => {
-              setAccountNumber(text);
-              setError("");
-            }}
-          />
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              loading && styles.disabled,
-              pressed && { opacity: 0.75 },
-            ]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {currentBank ? "Update Bank Account" : "Link Bank Account"}
-              </Text>
-            )}
-          </Pressable>
-
-          {currentBank && (
-            <Pressable style={styles.cancelButton} onPress={cancelEditing}>
-              <Text style={styles.cancelText}>Cancel</Text>
+        <FlatList
+          data={banks}
+          keyExtractor={(item, index) => `${item.code}-${index}`}
+          renderItem={({ item }) => (
+            <Pressable
+              style={({ pressed }) => [
+                styles.bankItem,
+                pressed && { backgroundColor: "#1E1E2F" },
+              ]}
+              onPress={() => {
+                setSelectedBank(item);
+                setShowBankModal(false);
+                setError("");
+              }}
+            >
+              <Text style={styles.bankItemText}>{item.name}</Text>
             </Pressable>
           )}
-        </View>
-      )}
-
-      {/* Bank Selection Modal */}
-      <Modal
-        visible={showBankModal}
-        animationType="slide"
-        presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Bank</Text>
-            <Pressable onPress={() => setShowBankModal(false)} hitSlop={12}>
-              <Ionicons name="close" size={28} color="#fff" />
-            </Pressable>
-          </View>
-
-          <FlatList
-            data={banks}
-            keyExtractor={(item, index) => `${item.code}-${index}`}
-            renderItem={({ item }) => (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.bankItem,
-                  pressed && { backgroundColor: "#1E1E2F" },
-                ]}
-                onPress={() => {
-                  setSelectedBank(item);
-                  setShowBankModal(false);
-                  setError("");
-                }}
-              >
-                <Text style={styles.bankItemText}>{item.name}</Text>
-              </Pressable>
-            )}
-            initialNumToRender={20}
-          />
-        </View>
-      </Modal>
-    </View>
-  );
+          initialNumToRender={20}
+        />
+      </View>
+    </Modal>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
