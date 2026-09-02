@@ -83,7 +83,7 @@ export default function WalletScreen() {
   const renderItem = ({ item }: { item: Wallet }) => {
     const code = getCurrencyCode(item);
     const symbol = getCurrencySymbol(item, code);
-    const live = item.live !== false && code === "NGN";
+        const live = item.live !== false;
 
     return (
       <View style={[styles.card, !live && styles.cardSoon]}>
