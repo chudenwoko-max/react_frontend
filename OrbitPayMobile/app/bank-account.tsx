@@ -154,7 +154,7 @@ export default function BankAccountScreen() {
 
   const removeFavorite = async (id: number) => {
     try {
-      await axiosClient.post(`favorites/${id}/remove/`);
+            await axiosClient.delete(`favorites/${id}/remove/`);
       setFavorites((prev) => prev.filter((f) => f.id !== id));
     } catch (e: any) {
       setFavError(e?.response?.data?.detail || "Could not remove");
