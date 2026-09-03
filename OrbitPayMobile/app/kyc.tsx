@@ -18,13 +18,16 @@ export default function KycScreen() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
+  const [limits, setLimits] = useState<any>(null);
   const [error, setError] = useState("");
+    
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const res = await axiosClient.get("kyc/");
         setStatus(res.data.status || res.data.kyc_status || null);
+        setLimits(res.data.limits || null);
       } catch (err) {
         console.log("KYC status error:", err);
       } finally {
@@ -86,6 +89,21 @@ export default function KycScreen() {
         <View style={styles.statusBox}>
           <Text style={styles.statusLabel}>Current Status</Text>
           <Text style={styles.statusValue}>{status.toUpperCase()}</Text>
+        </View>
+      )}
+
+            {limits && (
+        <View style={styles.statusBox}>
+          <Text style={styles.statusLabel}>Limits · {limits.label || "Basic"}</Text>
+          <Text style={styles.statusValue}>
+            ₦{Number(limits.single_send_ngn).toLocaleString()} per send
+          </Text>
+          <Text style={{ color: "#64748B", marginTop: 4 }}>
+            ₦{Number(limits.daily_send_ngn).toLocaleString()} per day
+          </Text>
+          <Text style={{ color: "#64748B", marginTop: 4 }}>
+            {limits.fx_enabled ? "FX convert enabled" : "FX convert after approval"}
+          </Text>
         </View>
       )}
 

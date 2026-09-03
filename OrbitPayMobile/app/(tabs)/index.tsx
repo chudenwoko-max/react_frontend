@@ -99,6 +99,7 @@ export default function Dashboard() {
   const [cashflowAlert, setCashflowAlert] = useState<any>(null);
   const isFirstLoad = useRef(true);
   const [kycStatus, setKycStatus] = useState("unverified");
+    const [kycLimits, setKycLimits] = useState<any>(null);
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
@@ -116,7 +117,8 @@ export default function Dashboard() {
     axiosClient
       .get("kyc/")
       .then((res) => {
-        setKycStatus(String(res.data.status || "unverified").toLowerCase());
+                setKycStatus(String(res.data.status || res.data.kyc_status || "unverified").toLowerCase());
+        setKycLimits(res.data.limits || null);
       })
       .catch(() => setKycStatus("unverified"));
   }, []);
@@ -699,6 +701,11 @@ export default function Dashboard() {
           </Text>
           <Text style={{ color: "#64748B", marginTop: 4 }}>
             Required before live payouts. NGN send and fund still work.
+                      {kycLimits ? (
+            <Text style={{ color: "#64748B", marginTop: 4 }}>
+              Limit ₦{Number(kycLimits.single_send_ngn).toLocaleString()} per send
+            </Text>
+          ) : null}
           </Text>
         </TouchableOpacity>
       )}
