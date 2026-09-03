@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
+import axiosClient from "../../src/api/axiosClient";
 import { router } from "expo-router";
 import {
   getBiometricStatus,
@@ -27,9 +28,23 @@ export default function ProfileScreen() {
   const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
   const [loadingBiometric, setLoadingBiometric] = useState(true);
+    const [kycStatus, setKycStatus] = useState("unverified");
+  const [kycLimits, setKycLimits] = useState<any>(null);
+
+
 
   useEffect(() => {
     loadBiometricSettings();
+  }, []);
+
+    useEffect(() => {
+    axiosClient
+      .get("kyc/")
+      .then((res) => {
+        setKycStatus(String(res.data.status || "unverified").toLowerCase());
+        setKycLimits(res.data.limits || null);
+      })
+      .catch(() => {});
   }, []);
 
   const loadBiometricSettings = async () => {
@@ -181,6 +196,32 @@ export default function ProfileScreen() {
     />
   )}
 </View>
+
+      <TouchableOpacity
+        onPress={() => router.push("/kyc")}
+        style={{
+          backgroundColor: "#F1F5F9",
+          borderRadius: 12,
+          padding: 14,
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ fontWeight: "700", color: "#0F172A" }}>
+          {kycStatus === "approved"
+            ? "Verified"
+            : kycStatus === "pending"
+            ? "KYC pending"
+            : kycStatus === "rejected"
+            ? "KYC rejected"
+            : "Verify identity"}
+        </Text>
+        {kycLimits ? (
+          <Text style={{ color: "#64748B", marginTop: 4 }}>
+            ₦{Number(kycLimits.single_send_ngn).toLocaleString()} per send · ₦
+            {Number(kycLimits.daily_send_ngn).toLocaleString()} / day
+          </Text>
+        ) : null}
+      </TouchableOpacity>
 
       {/* Menu */}
       <View style={styles.menu}>
