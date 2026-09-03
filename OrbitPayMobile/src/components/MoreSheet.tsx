@@ -17,6 +17,7 @@ const menuItems = [
   { icon: "calendar-clock", label: "Scheduled", route: "/scheduled", color: "#4F46E5" },
   { icon: "credit-card", label: "Virtual Cards", route: "/virtual-cards", color: "#0F172A" },
   { icon: "bank", label: "Bank Account", route: "/bank-account", color: "#059669" },
+  { icon: "earth", label: "Send abroad", route: "/send-corridor", color: "#0F172A" },
   { icon: "shield-check", label: "KYC", route: "/kyc", color: "#B45309" },
   { icon: "lock", label: "Set PIN", route: "/set-pin", color: "#BE185D" },
   { icon: "account-edit", label: "Edit Profile", route: "/edit-profile", color: "#1E40AF" },

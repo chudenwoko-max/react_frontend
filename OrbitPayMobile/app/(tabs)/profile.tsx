@@ -110,6 +110,8 @@ export default function ProfileScreen() {
     { icon: "lock-outline", label: "Change PIN", onPress: () => router.push("/set-pin") },
     { icon: "devices", label: "Active Sessions", onPress: () => router.push("/sessions") },
     { icon: "bank-outline", label: "Bank Account", onPress: () => router.push("/bank-account") },
+    { icon: "earth", label: "Send abroad", onPress: () => router.push("/send-corridor") },
+
     { icon: "credit-card-outline", label: "Virtual Cards", onPress: () => router.push("/virtual-cards") },
     { icon: "piggy-bank-outline", label: "Savings Goals", onPress: () => router.push("/savings") },
     { icon: "receipt", label: "Bill Payments", onPress: () => router.push("/bills") },
@@ -119,6 +121,7 @@ export default function ProfileScreen() {
     { icon: "headset", label: "Support", onPress: () => router.push("/support") },
     { icon: "bell-outline", label: "Notifications", onPress: () => router.push("/notifications") },
     { icon: "two-factor-authentication", label: "Two-Factor Auth", onPress: () => router.push("/two-factor") },
+       
   ];
 
   return (
