@@ -89,6 +89,19 @@ export default function TransactionDetailScreen() {
       ? "#D97706"
       : "#DC2626";
 
+        const currency = (
+    transaction.currency ||
+    transaction.currency_code ||
+    "NGN"
+  ).toUpperCase();
+  const symbol =
+    currency === "GBP" ? "£" : currency === "EUR" ? "€" : currency === "USD" ? "$" : "₦";
+  const isFx =
+    type === "convert" ||
+    description.includes("convert") ||
+    description.includes("fx ") ||
+    Boolean(transaction.simulated);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       {/* Back Button */}
@@ -121,7 +134,9 @@ export default function TransactionDetailScreen() {
             { color: isCredit ? "#16A34A" : "#DC2626" },
           ]}
         >
-          {isCredit ? "+" : "-"}₦
+          {isCredit ? "+" : "-"}{symbol}
+
+
           {Number(transaction.amount).toLocaleString("en-NG", {
             minimumFractionDigits: 2,
           })}
@@ -132,6 +147,12 @@ export default function TransactionDetailScreen() {
             {(transaction.status || "SUCCESS").toUpperCase()}
           </Text>
         </View>
+
+                {isFx ? (
+          <Text style={{ marginTop: 8, color: "#B45309", fontWeight: "700" }}>
+            SIMULATED
+          </Text>
+        ) : null}
       </View>
 
       {/* Details Card */}
@@ -155,6 +176,22 @@ export default function TransactionDetailScreen() {
           label="Description"
           value={transaction.description || transaction.note || "—"}
         />
+                {transaction.rate || transaction.exchange_rate ? (
+          <DetailRow
+            label="Rate"
+            value={String(transaction.rate || transaction.exchange_rate)}
+          />
+        ) : null}
+        {transaction.fee ? (
+          <DetailRow label="Fee" value={String(transaction.fee)} />
+        ) : null}
+        {transaction.from_currency && transaction.to_currency ? (
+          <DetailRow
+            label="Corridor"
+            value={`${transaction.from_currency} → ${transaction.to_currency}`}
+          />
+        ) : null}
+        <DetailRow label="Currency" value={currency} />
         <DetailRow
           label="Date"
           value={
