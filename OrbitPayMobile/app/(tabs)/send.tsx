@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,18 +24,39 @@ import {
 import Toast from "react-native-toast-message";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
 
+
 const HIGH_VALUE_THRESHOLD = 50000;
 
 export default function SendScreen() {
   const { selectedUser } = useLocalSearchParams<{ selectedUser?: string }>();
   const [sendMode] = useState<"user" | "bank">("user");
   const [recipient, setRecipient] = useState(selectedUser || "");
+    const [favorites, setFavorites] = useState<any[]>([]);
   const [amount, setAmount] = useState("");
   const [pin, setPin] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHighValue, setIsHighValue] = useState(false);
+
+    useEffect(() => {
+    axiosClient
+      .get("favorites/")
+      .then((res) => {
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : res.data.results || res.data.favorites || [];
+        setFavorites(rows);
+      })
+      .catch(() => setFavorites([]));
+  }, []);
+
+  const favHandle = (f: any) =>
+    f.recipient_username || f.username || f.recipient?.username || "";
+
+  const favLabel = (f: any) =>
+    f.nickname || favHandle(f) || "User";
+  
 
   const handleSend = async () => {
     if (sendMode === "bank") {
@@ -162,104 +183,129 @@ export default function SendScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Send Money</Text>
-        <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    style={styles.container}
+  >
+    <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+      <Text style={styles.title}>Send Money</Text>
+      <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
 
-        <View style={styles.modeRow}>
-          <TouchableOpacity
-            style={[styles.modeBtn, sendMode === "user" && styles.modeBtnOn]}
-            onPress={() => {}}
-          >
-            <Text style={[styles.modeText, sendMode === "user" && styles.modeTextOn]}>
-              Orbit user
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeBtn, { opacity: 0.5 }]}
-            disabled
-            onPress={() => {}}
-          >
-            <Text style={styles.modeText}>Bank account (Soon)</Text>
-          </TouchableOpacity>
-        </View>
-
-        {Number(amount) >= HIGH_VALUE_THRESHOLD && (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningText}>
-              High-value transfer (₦50,000+). Extra confirmation required.
-            </Text>
-          </View>
-        )}
-
+      <View style={styles.modeRow}>
         <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/search-users",
-              params: { returnTo: "send" },
-            })
-          }
-          activeOpacity={0.7}
+          style={[styles.modeBtn, sendMode === "user" && styles.modeBtnOn]}
+          onPress={() => {}}
         >
-          <View pointerEvents="none">
-            <TextInput
-              label="Recipient Username"
-              value={recipient}
-              mode="outlined"
-              style={styles.input}
-              right={<TextInput.Icon icon="magnify" />}
-            />
-          </View>
+          <Text style={[styles.modeText, sendMode === "user" && styles.modeTextOn]}>
+            Orbit user
+          </Text>
         </TouchableOpacity>
-
-        <TextInput
-          label="Amount (NGN)"
-          value={amount}
-          onChangeText={setAmount}
-          mode="outlined"
-          keyboardType="numeric"
-          style={styles.input}
-        />
-        <TextInput
-          label="Transaction PIN"
-          value={pin}
-          onChangeText={setPin}
-          mode="outlined"
-          secureTextEntry
-          keyboardType="numeric"
-          style={styles.input}
-        />
-        <TextInput
-          label="Note (optional)"
-          value={note}
-          onChangeText={setNote}
-          mode="outlined"
-          style={styles.input}
-        />
-
-        {error ? (
-          <HelperText type="error" visible>
-            {error}
-          </HelperText>
-        ) : null}
-
-        <Button
-          mode="contained"
-          onPress={handleSend}
-          loading={loading}
-          disabled={loading}
-          style={styles.button}
-          contentStyle={{ paddingVertical: 6 }}
+        <TouchableOpacity
+          style={[styles.modeBtn, { opacity: 0.5 }]}
+          disabled
+          onPress={() => {}}
         >
-          {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
-        </Button>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+          <Text style={styles.modeText}>Bank account (Soon)</Text>
+        </TouchableOpacity>
+      </View>
+
+      {Number(amount) >= HIGH_VALUE_THRESHOLD && (
+        <View style={styles.warningBox}>
+          <Text style={styles.warningText}>
+            High-value transfer (₦50,000+). Extra confirmation required.
+          </Text>
+        </View>
+      )}
+
+      {favorites.length > 0 && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: "#64748B", marginBottom: 8, fontWeight: "600" }}>
+            Favorites
+          </Text>
+          {favorites.map((f) => (
+            <TouchableOpacity
+              key={f.id || favHandle(f)}
+              onPress={() => setRecipient(favHandle(f))}
+              style={{
+                backgroundColor: "#E2E8F0",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 8,
+              }}
+            >
+              <Text style={{ fontWeight: "700", color: "#0F172A" }}>
+                {favLabel(f)}
+              </Text>
+              <Text style={{ color: "#64748B" }}>@{favHandle(f)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/search-users",
+            params: { returnTo: "send" },
+          })
+        }
+        activeOpacity={0.7}
+      >
+        <View pointerEvents="none">
+          <TextInput
+            label="Recipient Username"
+            value={recipient}
+            mode="outlined"
+            style={styles.input}
+            right={<TextInput.Icon icon="magnify" />}
+          />
+        </View>
+      </TouchableOpacity>
+
+      <TextInput
+        label="Amount (NGN)"
+        value={amount}
+        onChangeText={setAmount}
+        mode="outlined"
+        keyboardType="numeric"
+        style={styles.input}
+      />
+      <TextInput
+        label="Transaction PIN"
+        value={pin}
+        onChangeText={setPin}
+        mode="outlined"
+        secureTextEntry
+        keyboardType="numeric"
+        style={styles.input}
+      />
+      <TextInput
+        label="Note (optional)"
+        value={note}
+        onChangeText={setNote}
+        mode="outlined"
+        style={styles.input}
+      />
+
+      {error ? (
+        <HelperText type="error" visible>
+          {error}
+        </HelperText>
+      ) : null}
+
+      <Button
+        mode="contained"
+        onPress={handleSend}
+        loading={loading}
+        disabled={loading}
+        style={styles.button}
+        contentStyle={{ paddingVertical: 6 }}
+      >
+        {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
+      </Button>
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({
