@@ -42,9 +42,9 @@ export default function TransactionDetailScreen() {
   const copyReference = async () => {
     const ref = transaction?.reference_id || transaction?.reference || "";
     if (!ref) return;
-
     await Clipboard.setStringAsync(ref);
-    Alert.alert("Copied", "Reference ID copied to clipboard");
+    if (Platform.OS === "web") window.alert("Reference ID copied");
+    else Alert.alert("Copied", "Reference ID copied to clipboard");
   };
 
   if (loading) {
@@ -89,7 +89,7 @@ export default function TransactionDetailScreen() {
       ? "#D97706"
       : "#DC2626";
 
-        const currency = (
+  const currency = (
     transaction.currency ||
     transaction.currency_code ||
     "NGN"
@@ -104,12 +104,10 @@ export default function TransactionDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <MaterialCommunityIcons name="arrow-left" size={24} color="#0F172A" />
       </TouchableOpacity>
 
-      {/* Amount Card */}
       <View style={styles.amountCard}>
         <View
           style={[
@@ -134,9 +132,8 @@ export default function TransactionDetailScreen() {
             { color: isCredit ? "#16A34A" : "#DC2626" },
           ]}
         >
-          {isCredit ? "+" : "-"}{symbol}
-
-
+          {isCredit ? "+" : "-"}
+          {symbol}
           {Number(transaction.amount).toLocaleString("en-NG", {
             minimumFractionDigits: 2,
           })}
@@ -148,14 +145,11 @@ export default function TransactionDetailScreen() {
           </Text>
         </View>
 
-                {isFx ? (
-          <Text style={{ marginTop: 8, color: "#B45309", fontWeight: "700" }}>
-            SIMULATED
-          </Text>
-        ) : null}
+        <Text style={[styles.railTag, isFx ? styles.simTag : styles.liveTag]}>
+          {isFx ? "SIMULATED" : "LIVE · NGN RAIL"}
+        </Text>
       </View>
 
-      {/* Details Card */}
       <View style={styles.detailsCard}>
         <Text style={styles.sectionTitle}>Transaction Details</Text>
 
@@ -176,7 +170,12 @@ export default function TransactionDetailScreen() {
           label="Description"
           value={transaction.description || transaction.note || "—"}
         />
-                {transaction.rate || transaction.exchange_rate ? (
+        <DetailRow label="Currency" value={currency} />
+        <DetailRow
+          label="Rail"
+          value={isFx ? "Sandbox FX" : "OrbitPay NGN"}
+        />
+        {transaction.rate || transaction.exchange_rate ? (
           <DetailRow
             label="Rate"
             value={String(transaction.rate || transaction.exchange_rate)}
@@ -191,7 +190,6 @@ export default function TransactionDetailScreen() {
             value={`${transaction.from_currency} → ${transaction.to_currency}`}
           />
         ) : null}
-        <DetailRow label="Currency" value={currency} />
         <DetailRow
           label="Date"
           value={
@@ -203,7 +201,6 @@ export default function TransactionDetailScreen() {
               : "—"
           }
         />
-
         {transaction.recipient_username && (
           <DetailRow label="Recipient" value={transaction.recipient_username} />
         )}
@@ -242,24 +239,15 @@ function DetailRow({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  inner: {
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  inner: { padding: 20, paddingTop: 60, paddingBottom: 40 },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
-  backButton: {
-    marginBottom: 16,
-  },
+  backButton: { marginBottom: 16 },
   amountCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -275,30 +263,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  amountLabel: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 4,
-  },
-  amount: {
-    fontSize: 34,
-    fontWeight: "700",
-  },
+  amountLabel: { fontSize: 14, color: "#64748B", marginBottom: 4 },
+  amount: { fontSize: 34, fontWeight: "700" },
   statusBadge: {
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 20,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  detailsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-  },
+  statusText: { fontSize: 12, fontWeight: "700" },
+  railTag: { marginTop: 10, fontWeight: "700", fontSize: 12 },
+  liveTag: { color: "#15803D" },
+  simTag: { color: "#B45309" },
+  detailsCard: { backgroundColor: "#FFFFFF", borderRadius: 20, padding: 20 },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -313,11 +290,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  label: {
-    fontSize: 14,
-    color: "#64748B",
-    flex: 1,
-  },
+  label: { fontSize: 14, color: "#64748B", flex: 1 },
   valueRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -330,23 +303,8 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     textAlign: "right",
   },
-  copyBtn: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#64748B",
-    marginTop: 12,
-  },
-  backBtn: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  backLink: {
-    color: "#0284C7",
-    fontWeight: "600",
-    fontSize: 15,
-  },
+  copyBtn: { marginLeft: 8, padding: 4 },
+  errorText: { fontSize: 16, color: "#64748B", marginTop: 12 },
+  backBtn: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 20 },
+  backLink: { color: "#0284C7", fontWeight: "600", fontSize: 15 },
 });
