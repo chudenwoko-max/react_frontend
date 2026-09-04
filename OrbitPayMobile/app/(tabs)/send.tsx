@@ -38,18 +38,29 @@ export default function SendScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHighValue, setIsHighValue] = useState(false);
+    const [remainingToday, setRemainingToday] = useState<string | null>(null);
+  const [singleLimit, setSingleLimit] = useState<string | null>(null);
 
     useEffect(() => {
-    axiosClient
-      .get("favorites/")
-      .then((res) => {
-        const rows = Array.isArray(res.data)
-          ? res.data
-          : res.data.results || res.data.favorites || [];
-        setFavorites(rows);
-      })
-      .catch(() => setFavorites([]));
-  }, []);
+  axiosClient
+    .get("favorites/")
+    .then((res) => {
+      const rows = Array.isArray(res.data)
+        ? res.data
+        : res.data.results || res.data.favorites || [];
+      setFavorites(rows);
+    })
+    .catch(() => setFavorites([]));
+
+  axiosClient
+    .get("kyc/")
+    .then((res) => {
+      setRemainingToday(res.data.remaining_today || null);
+      setSingleLimit(res.data.limits?.single_send_ngn || null);
+    })
+    .catch(() => {});
+}, []);
+
 
   const favHandle = (f: any) =>
     f.recipient_username || f.username || f.recipient?.username || "";
@@ -190,6 +201,15 @@ export default function SendScreen() {
     <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Send Money</Text>
       <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
+
+              {singleLimit ? (
+          <Text style={{ color: "#64748B", marginBottom: 12 }}>
+            Limit ₦{Number(singleLimit).toLocaleString()} per send
+            {remainingToday != null
+              ? ` · ₦${Number(remainingToday).toLocaleString()} left today`
+              : ""}
+          </Text>
+        ) : null}
 
       <View style={styles.modeRow}>
         <TouchableOpacity
