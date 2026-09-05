@@ -59,6 +59,11 @@ export default function SendScreen() {
       setSingleLimit(res.data.limits?.single_send_ngn || null);
     })
     .catch(() => {});
+
+      axiosClient.get("kyc/").then((res) => {
+      setRemainingToday(res.data.remaining_today || null);
+      setSingleLimit(res.data.limits?.single_send_ngn || null);
+    }).catch(() => {});
 }, []);
 
 
