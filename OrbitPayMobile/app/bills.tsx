@@ -51,11 +51,20 @@ export default function BillsScreen() {
   const [cards, setCards] = useState<VirtualCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [loadingCards, setLoadingCards] = useState(true);
+    const [remainingToday, setRemainingToday] = useState<string | null>(null);
+  const [singleLimit, setSingleLimit] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
     fetchCards();
+  }, []);
+
+    useEffect(() => {
+    axiosClient.get("kyc/").then((res) => {
+      setRemainingToday(res.data.remaining_today || null);
+      setSingleLimit(res.data.limits?.single_send_ngn || null);
+    }).catch(() => {});
   }, []);
 
   const fetchCards = async () => {
@@ -277,7 +286,14 @@ export default function BillsScreen() {
         keyboardType="numeric"
         style={styles.input}
       />
-
+      {singleLimit ? (
+        <Text style={{ color: "#64748B", marginBottom: 12 }}>
+          Limit ₦{Number(singleLimit).toLocaleString()} per payment
+          {remainingToday != null
+            ? ` · ₦${Number(remainingToday).toLocaleString()} left today`
+            : ""}
+        </Text>
+      ) : null}
       <Text style={styles.sectionLabel}>Pay with</Text>
 
       {/* Wallet */}
