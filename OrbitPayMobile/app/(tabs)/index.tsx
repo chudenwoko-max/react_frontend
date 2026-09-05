@@ -287,24 +287,23 @@ export default function Dashboard() {
     }
   };
 
-  const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
+    const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
     try {
       const res = await axiosClient.get("wallet/snapshot/", { params: { range } });
       const data = res.data || {};
-      setWeeklyData(
-        Array.isArray(data.daily)
-          ? data.daily.map((d: { spend?: number }) => Number(d.spend) || 0)
-          : [0, 0, 0, 0, 0, 0, 0]
-      );
 
       if (range === "7d") {
+        const daily = Array.isArray(data.daily) ? data.daily : [];
+        const spends = daily
+          .slice()
+          .sort((a: any, b: any) =>
+            String(a.date || "").localeCompare(String(b.date || ""))
+          )
+          .slice(-7)
+          .map((d: { spend?: number }) => Number(d.spend) || 0);
+        while (spends.length < 7) spends.unshift(0);
+        setWeeklyData(spends);
         setPendingWithdraw(data.pending_withdraw || null);
-      }
-      if (range === "30d") {
-        setMonthSpent(Number(data.spend) || 0);
-        setMonthReceived(Number(data.received) || 0);
-      }
-      if (range === "7d" && data) {
         setWeeklyInsight({
           title: "Orbit Insight · This week",
           message: `You spent ₦${Number(data.spend || 0).toLocaleString("en-NG", {
@@ -315,6 +314,11 @@ export default function Dashboard() {
             { minimumFractionDigits: 2 }
           )}.`,
         });
+      }
+
+      if (range === "30d") {
+        setMonthSpent(Number(data.spend) || 0);
+        setMonthReceived(Number(data.received) || 0);
       }
     } catch (e) {
       console.log("Snapshot error:", e);
