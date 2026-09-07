@@ -3,7 +3,10 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import axiosClient from "../api/axiosClient";
 import { setBiometricEnabled } from "../utils/biometric";
-import { unregisterPushToken } from "../notifications/push";
+import {
+  registerForPushNotificationsAsync,
+  unregisterPushToken,
+} from "../notifications/push";
 
 type User = any;
 
@@ -65,8 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (access: string, refresh: string) => {
     await saveToken("ACCESS_TOKEN", access);
     await saveToken("REFRESH_TOKEN", refresh);
+
     const res = await axiosClient.get("profile/");
     setUser(res.data);
+
+    // ⭐ Fire-and-forget push registration
+    registerForPushNotificationsAsync().catch((e) =>
+      console.log("Failed to register push token", e)
+    );
   };
 
   const logout = async () => {
