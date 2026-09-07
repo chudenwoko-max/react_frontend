@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -56,58 +57,44 @@ export default function SessionsScreen() {
     fetchSessions();
   };
 
-  const revokeSession = async (session: Session) => {
+    const revokeSession = async (session: Session) => {
     if (session.is_current) {
-      // ⭐ Do not revoke current session — logout instead
-      Alert.alert(
-        "Logout",
-        "You are revoking the current device. This will log you out.",
-        [
+      if (Platform.OS === "web") {
+        if (window.confirm("Revoke this device and log out?")) logout();
+      } else {
+        Alert.alert("Logout", "This will log you out.", [
           { text: "Cancel", style: "cancel" },
-          {
-            text: "Logout",
-            style: "destructive",
-            onPress: () => logout(),
-          },
-        ]
-      );
+          { text: "Logout", style: "destructive", onPress: () => logout() },
+        ]);
+      }
       return;
     }
 
-    Alert.alert(
-      "Revoke Session",
-      `Are you sure you want to log out of "${session.user_agent || session.device || session.ip}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Revoke",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // ⭐ Try POST first
-              try {
-                await axiosClient.post(`sessions/${session.id}/revoke/`);
-              } catch (err: any) {
-                if (err?.response?.status === 405) {
-                  // ⭐ Fallback to DELETE
-                  await axiosClient.delete(`sessions/${session.id}/revoke/`);
-                } else {
-                  throw err;
-                }
-              }
+    const label = session.user_agent || session.device || session.ip || `Session ${session.id}`;
+    const ok =
+      Platform.OS === "web"
+        ? window.confirm(`Log out of "${label}"?`)
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert("Revoke Session", `Log out of "${label}"?`, [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Revoke", style: "destructive", onPress: () => resolve(true) },
+            ]);
+          });
+    if (!ok) return;
 
-              setSessions((prev) =>
-                prev.filter((s) => s.id !== session.id)
-              );
-
-              Alert.alert("Success", "Session revoked successfully");
-            } catch (error) {
-              Alert.alert("Error", "Could not revoke session");
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await axiosClient.post(`sessions/${session.id}/revoke/`);
+      setSessions((prev) => prev.filter((s) => s.id !== session.id));
+      if (Platform.OS === "web") window.alert("Session revoked");
+      else Alert.alert("Success", "Session revoked successfully");
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.error ||
+        error?.response?.data?.detail ||
+        "Could not revoke session";
+      if (Platform.OS === "web") window.alert(String(msg));
+      else Alert.alert("Error", String(msg));
+    }
   };
 
   const renderItem = ({ item }: { item: Session }) => {
