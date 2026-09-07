@@ -12,7 +12,7 @@ type User = any;
 
 interface AuthContextType {
   user: User | null | undefined;
-  login: (access: string, refresh: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -65,17 +65,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, []);
 
-  const login = async (access: string, refresh: string) => {
+  // ⭐ Updated login: sends device_name + device_type
+  const login = async (username: string, password: string) => {
+    const payload = {
+      username,
+      password,
+      device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
+      device_type: Platform.OS,
+    };
+
+    const res = await axiosClient.post("login/", payload);
+
+    const { access, refresh } = res.data;
+
     await saveToken("ACCESS_TOKEN", access);
     await saveToken("REFRESH_TOKEN", refresh);
 
-    const res = await axiosClient.get("profile/");
-    setUser(res.data);
+    const profileRes = await axiosClient.get("profile/");
+    setUser(profileRes.data);
 
-    // ⭐ Fire-and-forget push registration
     registerForPushNotificationsAsync().catch((e) =>
       console.log("Failed to register push token", e)
     );
+
+    return res.data;
   };
 
   const logout = async () => {
