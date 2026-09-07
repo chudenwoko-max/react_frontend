@@ -90,51 +90,76 @@ export default function BillsScreen() {
   };
 
     const handlePay = async () => {
-    setError("");
-    const customerId =
-      type === "electricity" ? meter : type === "cable" ? smartcard : phone;
-    if (!amount || Number(amount) <= 0) {
-      setError("Enter a valid amount");
-      return;
-    }
-    if (!provider || !customerId) {
-      setError("Provider and phone / customer ID are required");
-      return;
+  setError("");
+
+  const customerId =
+    type === "electricity"
+      ? meter
+      : type === "cable"
+      ? smartcard
+      : phone;
+
+  if (!amount || Number(amount) <= 0) {
+    setError("Enter a valid amount");
+    return;
+  }
+
+  if (!provider || !customerId) {
+    setError("Provider and phone / customer ID are required");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const payload: any = {
+      bill_type: type,
+      provider,
+      amount: Number(amount),
+      customer_id: customerId,
+      package_name: "",
+      reference_id: `bill-${Date.now()}`,
+    };
+
+    const res = await axiosClient.post("bills/pay/", payload);
+
+    // ⭐ Success message block (your requested patch)
+    const message =
+      res.data?.message || `${type} payment successful`;
+
+    if (Platform.OS === "web") {
+      window.alert(message);
+    } else {
+      Alert.alert("Success", message);
     }
 
-    setLoading(true);
-    try {
-      const payload: any = {
-        bill_type: type,
-        provider,
-        amount: Number(amount),
-        customer_id: customerId,
-        package_name: "",
-        reference_id: `bill-${Date.now()}`,
-      };
-      const res = await axiosClient.post("bills/pay/", payload);
-      const message =
-        res.data?.message || `${type} payment successful`;
-      if (Platform.OS === "web") {
-        window.alert(message);
-      } else {
-        Alert.alert("Success", message);
-      }
-      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.detail ||
-        (typeof err?.response?.data === "string" ? err.response.data : null) ||
-        err?.message ||
-        "Payment failed. Please try again.";
-      setError(String(msg));
-      if (Platform.OS === "web") window.alert(String(msg));
-      else Alert.alert("Payment failed", String(msg));
-    } finally {
-      setLoading(false);
+    DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+
+    // ⭐ Added as requested
+    router.replace("/(tabs)");
+
+  } catch (err: any) {
+    const msg =
+      err?.response?.data?.error ||
+      err?.response?.data?.detail ||
+      (typeof err?.response?.data === "string"
+        ? err.response.data
+        : null) ||
+      err?.message ||
+      "Payment failed. Please try again.";
+
+    setError(String(msg));
+
+    if (Platform.OS === "web") {
+      window.alert(String(msg));
+    } else {
+      Alert.alert("Payment failed", String(msg));
     }
-  };
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
