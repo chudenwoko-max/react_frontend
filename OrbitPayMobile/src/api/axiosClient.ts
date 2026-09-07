@@ -32,7 +32,7 @@ const deleteToken = async (key: string) => {
 
 const axiosClient = axios.create({
   baseURL: baseURL,
-  timeout: 12000,
+  timeout: 30000,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -57,7 +57,7 @@ async function refreshAccessToken(): Promise<string | null> {
   const res = await axios.post(
     `${baseURL}token/refresh/`,
     { refresh },
-    { timeout: 12000 }
+    { timeout: 30000 }
   );
 
   const access = res.data?.access;
