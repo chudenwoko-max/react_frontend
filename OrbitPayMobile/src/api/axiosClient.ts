@@ -7,7 +7,9 @@ import { DeviceEventEmitter } from "react-native";
 export const API_UNREACHABLE = "orbitpay:api-unreachable";
 export const API_REACHABLE = "orbitpay:api-reachable";
 
-const BASE_URL = "https://currency-cvt-fintech-1.onrender.com/api/";
+const baseURL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  "https://currency-cvt-fintech-1.onrender.com/api/";
 
 // ---------------- TOKEN HELPERS ----------------
 
@@ -29,7 +31,7 @@ const deleteToken = async (key: string) => {
 // ---------------- AXIOS CLIENT ----------------
 
 const axiosClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: baseURL,
   timeout: 12000,
   headers: { "Content-Type": "application/json" },
 });
@@ -53,7 +55,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refresh) return null;
 
   const res = await axios.post(
-    `${BASE_URL}token/refresh/`,
+    `${baseURL}token/refresh/`,
     { refresh },
     { timeout: 12000 }
   );
