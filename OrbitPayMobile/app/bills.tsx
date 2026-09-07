@@ -26,6 +26,8 @@ import {
   requireTransactionGuard,
   BILL_GUARD_AMOUNT,
 } from "../src/security/transactionGuard";
+import { Alert, Platform, DeviceEventEmitter } from "react-native";
+import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 type VirtualCard = {
   id: number;
@@ -87,118 +89,48 @@ export default function BillsScreen() {
     }
   };
 
-  const handlePay = async () => {
-    if (loading) return;
-
-    // Basic amount validation
+    const handlePay = async () => {
+    setError("");
+    const customerId =
+      type === "electricity" ? meter : type === "cable" ? smartcard : phone;
     if (!amount || Number(amount) <= 0) {
-      setError("Please enter a valid amount");
+      setError("Enter a valid amount");
       return;
     }
-
-    // ⭐ Transaction Guard — prevents accidental large bill payments
-    const guard = await requireTransactionGuard(Number(amount), BILL_GUARD_AMOUNT);
-    if (!guard.ok) return;
-
-    // Card validation
-    if (paymentSource === "card" && !selectedCardId) {
-      setError("Please select a virtual card");
+    if (!provider || !customerId) {
+      setError("Provider and phone / customer ID are required");
       return;
     }
 
     setLoading(true);
-    setError("");
-
     try {
-      let customer_id = "";
-
-      // Customer ID logic
-      if (type === "airtime" || type === "data") {
-        if (!phone || !provider) {
-          setError("Phone number and network are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = phone;
-      } else if (type === "electricity") {
-        if (!meter || !provider) {
-          setError("Meter number and provider are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = meter;
-      } else if (type === "cable") {
-        if (!smartcard || !provider) {
-          setError("Smartcard number and provider are required");
-          setLoading(false);
-          return;
-        }
-        customer_id = smartcard;
-      }
-
-      // ⭐ IDEMPOTENCY KEY
-      const numericAmount = Number(amount);
-      const operationKey = `bills:${type}:${provider}:${customer_id}:${numericAmount}`;
-
-      const reference_id = await getOrCreateReferenceId(operationKey);
-
-      // ⭐ Build payload
       const payload: any = {
         bill_type: type,
-        provider: provider.toUpperCase(),
-        amount: numericAmount,
-        customer_id,
-        reference_id,
+        provider,
+        amount: Number(amount),
+        customer_id: customerId,
+        package_name: "",
+        reference_id: `bill-${Date.now()}`,
       };
-
-      if (type === "data" || type === "cable") {
-        payload.package_name = "";
-      }
-
-      if (type === "electricity") {
-        payload.meter_type = "prepaid";
-      }
-
-      if (paymentSource === "card" && selectedCardId) {
-        payload.card_id = selectedCardId;
-      }
-
-      // ⭐ BILL PAYMENT REQUEST
       const res = await axiosClient.post("bills/pay/", payload);
-
-      // Clear idempotency key ONLY on success
-      await clearReferenceId(operationKey);
-
-      Toast.show({
-        type: "success",
-        text1: "Payment Successful",
-        text2: res.data.message || "Bill paid successfully",
-      });
-
-      // Reset form
-      setPhone("");
-      setAmount("");
-      setMeter("");
-      setSmartcard("");
-      setProvider("");
-      setSelectedCardId(null);
-
-      setTimeout(() => {
-        router.replace("/(tabs)");
-      }, 800);
-    } catch (err: any) {
       const message =
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
+        res.data?.message || `${type} payment successful`;
+      if (Platform.OS === "web") {
+        window.alert(message);
+      } else {
+        Alert.alert("Success", message);
+      }
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        (typeof err?.response?.data === "string" ? err.response.data : null) ||
+        err?.message ||
         "Payment failed. Please try again.";
-
-      setError(message);
-
-      Toast.show({
-        type: "error",
-        text1: "Payment Failed",
-        text2: message,
-      });
+      setError(String(msg));
+      if (Platform.OS === "web") window.alert(String(msg));
+      else Alert.alert("Payment failed", String(msg));
     } finally {
       setLoading(false);
     }
