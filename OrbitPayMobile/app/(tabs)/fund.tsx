@@ -1,3 +1,4 @@
+import { useAuth } from "../../src/context/AuthContext";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -19,6 +20,7 @@ const PENDING_REF_KEY = "pending_funding_reference";
 const PENDING_AMOUNT_KEY = "pending_funding_amount";
 
 export default function FundWalletScreen() {
+  const { logout } = useAuth();
   const router = useRouter();
 
   const [amount, setAmount] = useState("");
@@ -50,7 +52,15 @@ export default function FundWalletScreen() {
 
         await AsyncStorage.multiRemove([PENDING_REF_KEY, PENDING_AMOUNT_KEY]);
         setReference("");
-      } catch (e) {
+      } catch (e: any) {
+
+        // ⭐ PATCH: Handle revoked/expired session
+        if (e?.response?.status === 401) {
+          await logout();
+          router.replace("/(auth)/login");
+          return;
+        }
+
         console.log("Pending funding fetch error:", e);
 
         const pendingRef = await AsyncStorage.getItem(PENDING_REF_KEY);
@@ -97,6 +107,14 @@ export default function FundWalletScreen() {
         },
       });
     } catch (error: any) {
+
+      // ⭐ PATCH: Handle revoked/expired session
+      if (error?.response?.status === 401) {
+        await logout();
+        router.replace("/(auth)/login");
+        return;
+      }
+
       const msg =
         error?.response?.data?.error ||
         "Could not verify payment";
@@ -153,6 +171,14 @@ export default function FundWalletScreen() {
 
       await Linking.openURL(authorization_url);
     } catch (error: any) {
+
+      // ⭐ PATCH: Handle revoked/expired session
+      if (error?.response?.status === 401) {
+        await logout();
+        router.replace("/(auth)/login");
+        return;
+      }
+
       Alert.alert(
         "Error",
         error?.response?.data?.error || "Failed to initialize payment"
@@ -163,44 +189,51 @@ export default function FundWalletScreen() {
   };
 
   const clearPendingLocal = async () => {
-  await AsyncStorage.multiRemove([
-    PENDING_REF_KEY,
-    PENDING_AMOUNT_KEY,
-    "pending_funding_url",
-  ]);
-  setReference("");
-  setCheckoutUrl("");
-  setStatusMessage("");
-};
+    await AsyncStorage.multiRemove([
+      PENDING_REF_KEY,
+      PENDING_AMOUNT_KEY,
+      "pending_funding_url",
+    ]);
+    setReference("");
+    setCheckoutUrl("");
+    setStatusMessage("");
+  };
 
-const handleCancelPending = async () => {
-  const message =
-    "This abandons the current Paystack checkout. Use this only if you did not complete payment.";
+  const handleCancelPending = async () => {
+    const message =
+      "This abandons the current Paystack checkout. Use this only if you did not complete payment.";
 
-  let confirmed = false;
+    let confirmed = false;
 
-  if (Platform.OS === "web") {
-    confirmed = window.confirm(`Start new payment?\n\n${message}`);
-  } else {
-    confirmed = await new Promise((resolve) => {
-      Alert.alert("Start new payment?", message, [
-        { text: "Keep waiting", style: "cancel", onPress: () => resolve(false) },
-        { text: "Start new", style: "destructive", onPress: () => resolve(true) },
-      ]);
-    });
-  }
+    if (Platform.OS === "web") {
+      confirmed = window.confirm(`Start new payment?\n\n${message}`);
+    } else {
+      confirmed = await new Promise((resolve) => {
+        Alert.alert("Start new payment?", message, [
+          { text: "Keep waiting", style: "cancel", onPress: () => resolve(false) },
+          { text: "Start new", style: "destructive", onPress: () => resolve(true) },
+        ]);
+      });
+    }
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  try {
-    await axiosClient.post("wallet/fund/cancel/", { reference });
-  } catch (e) {
-    console.log("Cancel pending error:", e);
-  }
+    try {
+      await axiosClient.post("wallet/fund/cancel/", { reference });
+    } catch (e: any) {
 
-  await clearPendingLocal();
-};
+      // ⭐ PATCH: Handle revoked/expired session
+      if (e?.response?.status === 401) {
+        await logout();
+        router.replace("/(auth)/login");
+        return;
+      }
 
+      console.log("Cancel pending error:", e);
+    }
+
+    await clearPendingLocal();
+  };
 
   return (
     <View style={styles.container}>
