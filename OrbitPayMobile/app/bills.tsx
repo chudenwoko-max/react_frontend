@@ -1,3 +1,4 @@
+import { useAuth } from "../src/context/AuthContext";
 import { useState, useEffect } from "react";
 import {
   View,
@@ -39,6 +40,7 @@ type VirtualCard = {
 };
 
 export default function BillsScreen() {
+    const { logout } = useAuth();
   const [type, setType] = useState("airtime");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
@@ -123,9 +125,7 @@ export default function BillsScreen() {
 
     const res = await axiosClient.post("bills/pay/", payload);
 
-    // ⭐ Success message block (your requested patch)
-    const message =
-      res.data?.message || `${type} payment successful`;
+    const message = res.data?.message || `${type} payment successful`;
 
     if (Platform.OS === "web") {
       window.alert(message);
@@ -135,10 +135,17 @@ export default function BillsScreen() {
 
     DeviceEventEmitter.emit(FINANCIALS_REFRESH);
 
-    // ⭐ Added as requested
     router.replace("/(tabs)");
-
   } catch (err: any) {
+    const status = err?.response?.status;
+
+    // ⭐ NEW PATCH: session revoked → logout + redirect
+    if (status === 401) {
+      await logout();
+      router.replace("/(auth)/login");
+      return;
+    }
+
     const msg =
       err?.response?.data?.error ||
       err?.response?.data?.detail ||
@@ -155,11 +162,11 @@ export default function BillsScreen() {
     } else {
       Alert.alert("Payment failed", String(msg));
     }
-
   } finally {
     setLoading(false);
   }
 };
+
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
