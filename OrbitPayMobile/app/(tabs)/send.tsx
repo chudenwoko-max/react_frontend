@@ -97,9 +97,9 @@ export default function SendScreen() {
     return;
   }
 
-  // ⭐ TEMPORARILY REMOVED
-  // const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
-  // if (!guard.ok) return;
+  // ⭐ RESTORED — guard belongs here (NOT around create-pin / send-money)
+  const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
+  if (!guard.ok) return;
 
   setLoading(true);
   setError("");
@@ -145,15 +145,15 @@ export default function SendScreen() {
       }
     }
 
+    // ⭐ PATCH: sanitized operationKey (storage key only)
     const operationKey = `send_user_${recipient}_${numericAmount}`;
-
     const reference_id = await getOrCreateReferenceId(operationKey);
 
     const payload: any = {
       destination: "user",
       recipient,
       amount: numericAmount,
-      pin: String(pin), // ⭐ PATCH: enforce string
+      pin: String(pin), // ⭐ enforce string
       pin_token: pinToken,
       note: note || "",
       description: note || "Money Transfer",
@@ -197,7 +197,7 @@ export default function SendScreen() {
       return;
     }
 
-    // ⭐ PATCH: include err.message and status in error output
+    // ⭐ PATCH: include err.message + status
     const raw =
       data?.error ||
       data?.detail ||
