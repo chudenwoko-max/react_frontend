@@ -145,7 +145,8 @@ export default function SendScreen() {
       }
     }
 
-    const operationKey = `send:user:${recipient}:${numericAmount}`;
+    const operationKey = `send_user_${recipient}_${numericAmount}`;
+
     const reference_id = await getOrCreateReferenceId(operationKey);
 
     const payload: any = {
