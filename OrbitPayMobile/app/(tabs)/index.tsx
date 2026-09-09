@@ -383,38 +383,52 @@ export default function Dashboard() {
   };
 
   const cancelPendingWithdraw = async () => {
-    if (!pendingWithdraw?.reference) return;
-    setCancellingWithdraw(true);
-    try {
-      await axiosClient.post("wallet/withdraw/cancel/", {
-        reference_id: pendingWithdraw.reference,
-      });
-      setPendingWithdraw(null);
-      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-      await Promise.all([
-        fetchBalance(),
-        fetchSnapshot("7d"),
-        fetchSnapshot("30d"),
-        fetchRecentTransactions(),
-      ]);
-    } catch (e: any) {
-      const status = e?.response?.status;
-      const data = e?.response?.data;
-      if (status === 409) {
-        Alert.alert(
-          "Already queued",
-          data?.error || "Transfer already queued at Paystack. Wait for webhook."
-        );
-      } else {
-        Alert.alert(
-          "Cancel failed",
-          data?.error || "Could not cancel this withdrawal."
-        );
-      }
-    } finally {
-      setCancellingWithdraw(false);
+  if (!pendingWithdraw?.reference) return;
+  setCancellingWithdraw(true);
+
+  try {
+    await axiosClient.post("wallet/withdraw/cancel/", {
+      reference_id: pendingWithdraw.reference,
+    });
+
+    setPendingWithdraw(null);
+    DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+
+    await Promise.all([
+      fetchBalance(),
+      fetchSnapshot("7d"),
+      fetchSnapshot("30d"),
+      fetchRecentTransactions(),
+    ]);
+
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const data = e?.response?.data;
+
+    // ⭐ PATCH: Handle revoked/expired session
+    if (status === 401) {
+      await logout();
+      router.replace("/(auth)/login");
+      return;
     }
-  };
+
+    if (status === 409) {
+      Alert.alert(
+        "Already queued",
+        data?.error || "Transfer already queued at Paystack. Wait for webhook."
+      );
+    } else {
+      Alert.alert(
+        "Cancel failed",
+        data?.error || "Could not cancel this withdrawal."
+      );
+    }
+
+  } finally {
+    setCancellingWithdraw(false);
+  }
+};
+
 
   const handleLogout = async () => {
     try {

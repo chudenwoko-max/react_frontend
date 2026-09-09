@@ -19,14 +19,17 @@ export default function KycScreen() {
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [limits, setLimits] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [canSubmit, setCanSubmit] = useState(true);
   const [error, setError] = useState("");
-    
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const res = await axiosClient.get("kyc/");
         setStatus(res.data.status || res.data.kyc_status || null);
+        setRejectionReason(res.data.rejection_reason || "");
+        setCanSubmit(res.data.can_submit !== false);
         setLimits(res.data.limits || null);
       } catch (err) {
         console.log("KYC status error:", err);
@@ -34,6 +37,7 @@ export default function KycScreen() {
         setFetching(false);
       }
     };
+
     fetchStatus();
   }, []);
 
@@ -92,7 +96,14 @@ export default function KycScreen() {
         </View>
       )}
 
-            {limits && (
+      {/* ⭐ PATCH: Show rejection reason under status box */}
+      {status === "rejected" && rejectionReason ? (
+        <Text style={{ color: "#B91C1C", marginBottom: 16 }}>
+          {rejectionReason}
+        </Text>
+      ) : null}
+
+      {limits && (
         <View style={styles.statusBox}>
           <Text style={styles.statusLabel}>Limits · {limits.label || "Basic"}</Text>
           <Text style={styles.statusValue}>
@@ -145,6 +156,8 @@ export default function KycScreen() {
         loading={loading}
         style={styles.button}
         contentStyle={{ paddingVertical: 6 }}
+
+        // ⭐ PATCH: Allow resubmission when rejected
         disabled={status === "approved" || status === "pending"}
       >
         {status === "approved"
