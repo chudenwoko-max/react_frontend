@@ -7,16 +7,16 @@ import axiosClient from "../../src/api/axiosClient";
 import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
 
 export default function LoginScreen() {
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [show2FA, setShow2FA] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [userId, setUserId] = useState<number | null>(null);
+const { login, completeLogin } = useAuth();   // ⭐ PATCHED
+const [username, setUsername] = useState("");
+const [password, setPassword] = useState("");
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState("");
+const [show2FA, setShow2FA] = useState(false);
+const [otpCode, setOtpCode] = useState("");
+const [userId, setUserId] = useState<number | null>(null);
 
-  const handleLogin = async () => {
+      const handleLogin = async () => {
     if (!username || !password) {
       setError("Please fill in all fields");
       return;
@@ -26,15 +26,22 @@ export default function LoginScreen() {
     setError("");
 
     try {
+      if (username.trim().startsWith("eyJ") || password.startsWith("eyJ")) {
+        setError("Enter your username and password, not a token");
+        setLoading(false);
+        return;
+      }
+
       const fingerprint = await getDeviceFingerprint();
 
       const res = await axiosClient.post("login/", {
         username,
         password,
         device_fingerprint: fingerprint,
+        device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
+        device_type: Platform.OS,
       });
 
-      // Check if 2FA is required
       if (res.data.requires_2fa) {
         setUserId(res.data.user_id);
         setShow2FA(true);
@@ -42,14 +49,11 @@ export default function LoginScreen() {
         return;
       }
 
-      // Normal login
-      await login(res.data.access, res.data.refresh);
+      await completeLogin(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
     } catch (error: any) {
       console.log("FULL LOGIN ERROR:", error);
-
       let message = "Unable to log in. Please try again.";
-
       if (error.response) {
         message =
           error.response.data?.error ||
@@ -60,13 +64,11 @@ export default function LoginScreen() {
       } else {
         message = error.message || message;
       }
-
       setError(message);
     } finally {
       setLoading(false);
     }
   };
-
   const handleVerify2FA = async () => {
     if (!otpCode || otpCode.length !== 6) {
       setError("Please enter the 6-digit code");
@@ -200,3 +202,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
+
