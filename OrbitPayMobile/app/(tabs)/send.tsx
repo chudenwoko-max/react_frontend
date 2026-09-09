@@ -1,3 +1,4 @@
+import { useAuth } from "../../src/context/AuthContext";
 import { useState, useEffect } from "react";
 import {
   View,
@@ -28,6 +29,7 @@ import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
 const HIGH_VALUE_THRESHOLD = 50000;
 
 export default function SendScreen() {
+    const { logout } = useAuth();
   const { selectedUser } = useLocalSearchParams<{ selectedUser?: string }>();
   const [sendMode] = useState<"user" | "bank">("user");
   const [recipient, setRecipient] = useState(selectedUser || "");
@@ -74,129 +76,145 @@ export default function SendScreen() {
     f.nickname || favHandle(f) || "User";
   
 
-  const handleSend = async () => {
-    if (sendMode === "bank") {
-      setError("Bank send is unavailable until Paystack Transfers is enabled.");
-      return;
-    }
+ const handleSend = async () => {
+  if (sendMode === "bank") {
+    setError("Bank send is unavailable until Paystack Transfers is enabled.");
+    return;
+  }
 
-    if (!amount || !pin) {
-      setError("Please fill in amount and PIN");
-      return;
-    }
-    if (!recipient) {
-      setError("Please fill in recipient, amount and PIN");
-      return;
-    }
+  if (!amount || !pin) {
+    setError("Please fill in amount and PIN");
+    return;
+  }
+  if (!recipient) {
+    setError("Please fill in recipient, amount and PIN");
+    return;
+  }
 
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount) || numericAmount <= 0) {
+    setError("Please enter a valid amount");
+    return;
+  }
 
-    const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
-    if (!guard.ok) return;
+  const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
+  if (!guard.ok) return;
 
-    setLoading(true);
-    setError("");
+  setLoading(true);
+  setError("");
 
-    try {
-      const tokenRes = await axiosClient.post("create-pin/", { pin });
-      const pinToken = tokenRes.data.pin_token;
-      if (!pinToken) throw new Error("Could not get PIN token");
+  try {
+    // ⭐ PATCH: ensure PIN is always a string
+    const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
+    const pinToken = tokenRes.data.pin_token;
+    if (!pinToken) throw new Error("Could not get PIN token");
 
-      let highValueToken = null;
+    let highValueToken = null;
 
-      if (numericAmount >= HIGH_VALUE_THRESHOLD) {
-        setIsHighValue(true);
-        const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
-          amount: numericAmount,
-          recipient,
-        });
-        highValueToken = confirmRes.data.high_value_token;
+    if (numericAmount >= HIGH_VALUE_THRESHOLD) {
+      setIsHighValue(true);
 
-        let confirmed = false;
-        if (Platform.OS === "web") {
-          confirmed = window.confirm(
-            `You are about to send ₦${numericAmount.toLocaleString()}. Confirm this is correct.`
-          );
-        } else {
-          confirmed = await new Promise((resolve) => {
-            Alert.alert(
-              "High Value Transfer",
-              `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
-              [
-                { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-                { text: "Confirm", onPress: () => resolve(true) },
-              ]
-            );
-          });
-        }
-        if (!confirmed) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      const operationKey = `send:user:${recipient}:${numericAmount}`;
-      const reference_id = await getOrCreateReferenceId(operationKey);
-
-      const payload: any = {
-        destination: "user",
-        recipient,
+      const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
         amount: numericAmount,
-        pin,
-        pin_token: pinToken,
-        note: note || "",
-        description: note || "Money Transfer",
-        reference_id,
-      };
+        recipient,
+      });
+      highValueToken = confirmRes.data.high_value_token;
 
-      if (highValueToken) payload.high_value_token = highValueToken;
-
-      const res = await axiosClient.post("send-money/", payload);
-
-      await clearReferenceId(operationKey);
-      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-
-      const message = res.data.message || "Money sent successfully.";
+      let confirmed = false;
       if (Platform.OS === "web") {
-        Toast.show({
-          type: "success",
-          text1: res.data?.idempotent ? "Already processed" : "Transfer submitted",
-          text2: message,
-        });
+        confirmed = window.confirm(
+          `You are about to send ₦${numericAmount.toLocaleString()}. Confirm this is correct.`
+        );
       } else {
-        Alert.alert("Success", message);
+        confirmed = await new Promise((resolve) => {
+          Alert.alert(
+            "High Value Transfer",
+            `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
+            [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Confirm", onPress: () => resolve(true) },
+            ]
+          );
+        });
       }
 
-      setRecipient("");
-      setAmount("");
-      setPin("");
-      setNote("");
-
-      setTimeout(() => {
-        router.replace("/(tabs)");
-      }, 600);
-    } catch (err: any) {
-      const status = err.response?.status;
-      const data = err.response?.data;
-      const raw =
-        data?.error ||
-        data?.detail ||
-        "Failed to send money. Please try again.";
-      const message =
-        status === 502 || status === 403
-          ? data?.error ||
-            "Bank send is unavailable until Paystack Transfers is enabled."
-          : raw;
-      setError(typeof message === "string" ? message : JSON.stringify(message));
-    } finally {
-      setLoading(false);
-      setIsHighValue(false);
+      if (!confirmed) {
+        setLoading(false);
+        return;
+      }
     }
-  };
+
+    const operationKey = `send:user:${recipient}:${numericAmount}`;
+    const reference_id = await getOrCreateReferenceId(operationKey);
+
+    const payload: any = {
+      destination: "user",
+      recipient,
+      amount: numericAmount,
+      pin: String(pin), // ⭐ PATCH: enforce string
+      pin_token: pinToken,
+      note: note || "",
+      description: note || "Money Transfer",
+      reference_id,
+    };
+
+    if (highValueToken) payload.high_value_token = highValueToken;
+
+    const res = await axiosClient.post("send-money/", payload);
+
+    await clearReferenceId(operationKey);
+    DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+
+    const message = res.data.message || "Money sent successfully.";
+    if (Platform.OS === "web") {
+      Toast.show({
+        type: "success",
+        text1: res.data?.idempotent ? "Already processed" : "Transfer submitted",
+        text2: message,
+      });
+    } else {
+      Alert.alert("Success", message);
+    }
+
+    setRecipient("");
+    setAmount("");
+    setPin("");
+    setNote("");
+
+    setTimeout(() => {
+      router.replace("/(tabs)");
+    }, 600);
+  } catch (err: any) {
+    const status = err.response?.status;
+    const data = err.response?.data;
+
+    // ⭐ PATCH: handle session revocation cleanly
+    if (status === 401) {
+      await logout();
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    // ⭐ PATCH: safer fallback error message
+    const raw =
+      data?.error ||
+      data?.detail ||
+      err.message ||
+      "Failed to send money. Please try again.";
+
+    const message =
+      status === 502 || status === 403
+        ? data?.error ||
+          "Bank send is unavailable until Paystack Transfers is enabled."
+        : raw;
+
+    setError(typeof message === "string" ? message : JSON.stringify(message));
+  } finally {
+    setLoading(false);
+    setIsHighValue(false);
+  }
+};
+
 
   return (
   <KeyboardAvoidingView
