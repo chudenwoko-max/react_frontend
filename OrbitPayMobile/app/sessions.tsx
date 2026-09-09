@@ -24,20 +24,26 @@ type Session = {
   is_current: boolean;
 };
 
+// ⭐ NEW: unified label helper
+function sessionLabel(s: { device_name?: string; user_agent?: string; device_type?: string }) {
+  const ua = (s.user_agent || "").toLowerCase();
+
+  if (ua.includes("okhttp") || s.device_type === "android") return "Android app";
+  if (ua.includes("mozilla") || s.device_type === "web") return "Web browser";
+
+  return s.device_name || s.user_agent || "Session";
+}
+
 export default function SessionsScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const { logout } = useAuth();
 
   const fetchSessions = async () => {
     try {
       const res = await axiosClient.get("sessions/");
-      const rows = Array.isArray(res.data)
-        ? res.data
-        : res.data.results || [];
-
+      const rows = Array.isArray(res.data) ? res.data : res.data.results || [];
       setSessions(rows);
     } catch (error) {
       console.log("Sessions error:", error);
@@ -57,7 +63,9 @@ export default function SessionsScreen() {
     fetchSessions();
   };
 
-    const revokeSession = async (session: Session) => {
+  const revokeSession = async (session: Session) => {
+    const label = sessionLabel(session);
+
     if (session.is_current) {
       if (Platform.OS === "web") {
         if (window.confirm("Revoke this device and log out?")) logout();
@@ -70,7 +78,6 @@ export default function SessionsScreen() {
       return;
     }
 
-    const label = session.user_agent || session.device || session.ip || `Session ${session.id}`;
     const ok =
       Platform.OS === "web"
         ? window.confirm(`Log out of "${label}"?`)
@@ -80,11 +87,13 @@ export default function SessionsScreen() {
               { text: "Revoke", style: "destructive", onPress: () => resolve(true) },
             ]);
           });
+
     if (!ok) return;
 
     try {
       await axiosClient.post(`sessions/${session.id}/revoke/`);
       setSessions((prev) => prev.filter((s) => s.id !== session.id));
+
       if (Platform.OS === "web") window.alert("Session revoked");
       else Alert.alert("Success", "Session revoked successfully");
     } catch (error: any) {
@@ -92,21 +101,15 @@ export default function SessionsScreen() {
         error?.response?.data?.error ||
         error?.response?.data?.detail ||
         "Could not revoke session";
+
       if (Platform.OS === "web") window.alert(String(msg));
       else Alert.alert("Error", String(msg));
     }
   };
 
   const renderItem = ({ item }: { item: Session }) => {
-    const label =
-      item.user_agent ||
-      item.device ||
-      item.ip ||
-      `Session ${item.id}`;
-
-    const subtitle = item.is_current
-      ? "This device"
-      : item.last_seen || "";
+    const label = sessionLabel(item);
+    const subtitle = item.is_current ? "This device" : item.last_seen || "";
 
     return (
       <View style={[styles.card, item.is_current && styles.currentCard]}>
@@ -165,13 +168,11 @@ export default function SessionsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={24}
-            color="#0F172A"
-          />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#0F172A" />
         </TouchableOpacity>
+
         <Text style={styles.title}>Active Sessions</Text>
+
         <View style={{ width: 24 }} />
       </View>
 
@@ -185,11 +186,7 @@ export default function SessionsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <MaterialCommunityIcons
-              name="devices"
-              size={48}
-              color="#94A3B8"
-            />
+            <MaterialCommunityIcons name="devices" size={48} color="#94A3B8" />
             <Text style={styles.emptyText}>No active sessions</Text>
           </View>
         }
