@@ -1,3 +1,4 @@
+import { Image } from "react-native";
 import { useState } from "react";
 import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { TextInput, Button, Text, HelperText } from "react-native-paper";
@@ -99,9 +100,16 @@ const [userId, setUserId] = useState<number | null>(null);
       style={styles.container}
     >
       <View style={styles.inner}>
-        <Text variant="headlineMedium" style={styles.title}>
-          OrbitPay
-        </Text>
+                  <Image
+            source={require("../../assets/orbitpay-logo.png")}
+            style={{
+              width: 200,
+              height: 56,
+              resizeMode: "contain",
+              alignSelf: "center",
+              marginBottom: 8,
+            }}
+          />
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <TextInput

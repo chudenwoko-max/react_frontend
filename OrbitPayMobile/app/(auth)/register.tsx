@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Image, View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { TextInput, Button, Text, HelperText } from "react-native-paper";
 import { Link, router } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
@@ -48,67 +48,79 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+  <KeyboardAvoidingView
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    style={styles.container}
+  >
+    <ScrollView
+      contentContainerStyle={styles.inner}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text variant="headlineMedium" style={styles.title}>
-          Create Account
-        </Text>
-        <Text style={styles.subtitle}>Join OrbitPay today</Text>
+      <Image
+        source={require("../../assets/orbitpay-logo.png")}
+        style={{
+          width: 200,
+          height: 56,
+          resizeMode: "contain",
+          alignSelf: "center",
+          marginBottom: 8,
+        }}
+      />
 
-        <TextInput
-          label="Username"
-          value={username}
-          onChangeText={setUsername}
-          mode="outlined"
-          autoCapitalize="none"
-          style={styles.input}
-        />
+      <Text style={styles.subtitle}>Join OrbitPay today</Text>
 
-        <TextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          mode="outlined"
-          secureTextEntry
-          style={styles.input}
-        />
+      <TextInput
+        label="Username"
+        value={username}
+        onChangeText={setUsername}
+        mode="outlined"
+        autoCapitalize="none"
+        style={styles.input}
+      />
 
-        <TextInput
-          label="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          mode="outlined"
-          secureTextEntry
-          style={styles.input}
-        />
+      <TextInput
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        mode="outlined"
+        secureTextEntry
+        style={styles.input}
+      />
 
-        {error ? (
-          <HelperText type="error" visible={true}>
-            {error}
-          </HelperText>
-        ) : null}
+      <TextInput
+        label="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        mode="outlined"
+        secureTextEntry
+        style={styles.input}
+      />
 
-        <Button
-          mode="contained"
-          onPress={handleRegister}
-          loading={loading}
-          style={styles.button}
-          contentStyle={{ paddingVertical: 6 }}
-        >
-          Register
+      {error ? (
+        <HelperText type="error" visible={true}>
+          {error}
+        </HelperText>
+      ) : null}
+
+      <Button
+        mode="contained"
+        onPress={handleRegister}
+        loading={loading}
+        style={styles.button}
+        contentStyle={{ paddingVertical: 6 }}
+      >
+        Register
+      </Button>
+
+      <Link href="/(auth)/login" asChild>
+        <Button mode="text" style={{ marginTop: 16 }}>
+          Already have an account? Login
         </Button>
+      </Link>
+    </ScrollView>
+  </KeyboardAvoidingView>
+);
 
-        <Link href="/(auth)/login" asChild>
-          <Button mode="text" style={{ marginTop: 16 }}>
-            Already have an account? Login
-          </Button>
-        </Link>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
 }
 
 const styles = StyleSheet.create({
