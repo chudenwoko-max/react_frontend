@@ -1,3 +1,4 @@
+import { Image } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import {
@@ -569,6 +570,13 @@ export default function Dashboard() {
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+            <View style={{ alignItems: "center", paddingTop: 12, paddingBottom: 8 }}>
+        <Image
+          source={require("../../assets/orbitpay-logo.png")}
+          style={{ width: 160, height: 44, resizeMode: "contain" }}
+        />
       </View>
 
       <BalanceCard balance={balance} loading={loading} />
