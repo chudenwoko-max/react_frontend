@@ -108,8 +108,8 @@ export default function Dashboard() {
       fetchBalance();
       fetchWallets();
       fetchWeeklySpend();
-      fetchSnapshot("7d");
-      fetchSnapshot("30d");
+      fetchSnapshot();
+      fetchSnapshot();
     });
     return () => sub.remove();
   }, []);
@@ -288,44 +288,42 @@ export default function Dashboard() {
     }
   };
 
-    const fetchSnapshot = async (range: "7d" | "30d" = "7d") => {
-    try {
-      const res = await axiosClient.get("wallet/snapshot/", { params: { range } });
-      const data = res.data || {};
+  const fetchSnapshot = async () => {
+  try {
+    const res = await axiosClient.get("wallet/snapshot/", {
+      params: { range: "30d" },
+    });
+    const data = res.data || {};
+    const daily = Array.isArray(data.daily) ? data.daily : [];
 
-      if (range === "7d") {
-        const daily = Array.isArray(data.daily) ? data.daily : [];
-        const spends = daily
-          .slice()
-          .sort((a: any, b: any) =>
-            String(a.date || "").localeCompare(String(b.date || ""))
-          )
-          .slice(-7)
-          .map((d: { spend?: number }) => Number(d.spend) || 0);
-        while (spends.length < 7) spends.unshift(0);
-        setWeeklyData(spends);
-        setPendingWithdraw(data.pending_withdraw || null);
-        setWeeklyInsight({
-          title: "Orbit Insight · This week",
-          message: `You spent ₦${Number(data.spend || 0).toLocaleString("en-NG", {
-            minimumFractionDigits: 2,
-          })} in the last 7 days.`,
-          save_reason: `Wallet balance ₦${Number(data.balance || 0).toLocaleString(
-            "en-NG",
-            { minimumFractionDigits: 2 }
-          )}.`,
-        });
-      }
+    const spends = daily
+      .slice()
+      .sort((a: any, b: any) =>
+        String(a.date || "").localeCompare(String(b.date || ""))
+      )
+      .slice(-7)
+      .map((d: { spend?: number }) => Number(d.spend) || 0);
+    while (spends.length < 7) spends.unshift(0);
 
-      if (range === "30d") {
-        setMonthSpent(Number(data.spend) || 0);
-        setMonthReceived(Number(data.received) || 0);
-      }
-    } catch (e) {
-      console.log("Snapshot error:", e);
-    }
-  };
+    setWeeklyData(spends);
+    setPendingWithdraw(data.pending_withdraw || null);
+    setWeeklyInsight({
+      title: "Orbit Insight · This week",
+      message: `You spent ₦${Number(
+        spends.reduce((a: number, b: number) => a + b, 0)
+      ).toLocaleString("en-NG", { minimumFractionDigits: 2 })} in the last 7 days.`,
+      save_reason: `Wallet balance ₦${Number(data.balance || 0).toLocaleString(
+        "en-NG",
+        { minimumFractionDigits: 2 }
+      )}.`,
+    });
 
+    setMonthSpent(Number(data.spend) || 0);
+    setMonthReceived(Number(data.received) || 0);
+  } catch (e) {
+    console.log("Snapshot error:", e);
+  }
+};
   const fetchCashflowAlert = async () => {
     try {
       const res = await axiosClient.get("analytics/cashflow/");
@@ -347,8 +345,8 @@ export default function Dashboard() {
       fetchLatestInsight(),
       fetchSavingsSuggestion(),
       fetchCashflowAlert(),
-      fetchSnapshot("7d"),
-      fetchSnapshot("30d"),
+      fetchSnapshot(),
+      fetchSnapshot(),
     ]);
     setLoading(false);
     setRefreshing(false);
@@ -360,8 +358,8 @@ export default function Dashboard() {
         isFirstLoad.current = false;
         loadData();
         fetchWeeklySpend();
-        fetchSnapshot("7d");
-        fetchSnapshot("30d");
+        fetchSnapshot();
+        fetchSnapshot();
       } else {
         Promise.all([
           fetchBalance(),
@@ -378,8 +376,8 @@ export default function Dashboard() {
     setRefreshing(true);
     await loadData();
     await fetchWeeklySpend();
-    await fetchSnapshot("7d");
-    await fetchSnapshot("30d");
+    await fetchSnapshot();
+    await fetchSnapshot();
     setRefreshing(false);
   };
 
@@ -397,8 +395,8 @@ export default function Dashboard() {
 
     await Promise.all([
       fetchBalance(),
-      fetchSnapshot("7d"),
-      fetchSnapshot("30d"),
+      fetchSnapshot(),
+      fetchSnapshot(),
       fetchRecentTransactions(),
     ]);
 
