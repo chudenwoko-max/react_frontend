@@ -13,7 +13,16 @@ import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
+// NEW: feature flag
+const TRANSFERS_ENABLED =
+  process.env.EXPO_PUBLIC_TRANSFERS_ENABLED === "true";
+
 export default function WithdrawPausedScreen() {
+  // If transfers are enabled, show the REAL withdraw screen instead
+  if (TRANSFERS_ENABLED) {
+    return router.replace("/withdraw"); // your actual withdraw form route
+  }
+
   const [pending, setPending] = useState<{
     reference: string;
     amount: string;
@@ -24,7 +33,9 @@ export default function WithdrawPausedScreen() {
 
   const loadPending = async () => {
     try {
-      const res = await axiosClient.get("wallet/snapshot/", { params: { range: "7d" } });
+      const res = await axiosClient.get("wallet/snapshot/", {
+        params: { range: "7d" },
+      });
       setPending(res.data?.pending_withdraw || null);
     } catch {
       setPending(null);
@@ -37,7 +48,7 @@ export default function WithdrawPausedScreen() {
     loadPending();
   }, []);
 
-    const cancelPendingWithdraw = async () => {
+  const cancelPendingWithdraw = async () => {
     if (!pending?.reference) return;
     setCancelling(true);
     try {
@@ -53,7 +64,8 @@ export default function WithdrawPausedScreen() {
       if (status === 409) {
         Alert.alert(
           "Already queued",
-          data?.error || "Transfer already queued at Paystack. Wait for webhook."
+          data?.error ||
+            "Transfer already queued at Paystack. Wait for webhook."
         );
       } else {
         Alert.alert(
@@ -65,9 +77,14 @@ export default function WithdrawPausedScreen() {
       setCancelling(false);
     }
   };
+
   return (
     <View style={styles.container}>
-      <MaterialCommunityIcons name="bank-off-outline" size={48} color="#94A3B8" />
+      <MaterialCommunityIcons
+        name="bank-off-outline"
+        size={48}
+        color="#94A3B8"
+      />
       <Text style={styles.title}>Withdrawals paused</Text>
       <Text style={styles.body}>
         Bank payouts are unavailable on this Paystack account. Your NGN wallet
@@ -80,7 +97,10 @@ export default function WithdrawPausedScreen() {
         <View style={styles.pendingCard}>
           <Text style={styles.pendingTitle}>On hold</Text>
           <Text style={styles.pendingBody}>
-            ₦{Number(pending.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}{" "}
+            ₦
+            {Number(pending.amount).toLocaleString("en-NG", {
+              minimumFractionDigits: 2,
+            })}{" "}
             ({pending.status})
           </Text>
           <TouchableOpacity
@@ -95,7 +115,10 @@ export default function WithdrawPausedScreen() {
         </View>
       ) : null}
 
-      <TouchableOpacity style={styles.homeBtn} onPress={() => router.replace("/(tabs)")}>
+      <TouchableOpacity
+        style={styles.homeBtn}
+        onPress={() => router.replace("/(tabs)")}
+      >
         <Text style={styles.homeText}>Back to Home</Text>
       </TouchableOpacity>
     </View>
@@ -132,8 +155,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F59E0B",
   },
-  pendingTitle: { fontSize: 16, fontWeight: "700", color: "#92400E", marginBottom: 6 },
-  pendingBody: { fontSize: 14, color: "#78350F", marginBottom: 12 },
+  pendingTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#92400E",
+    marginBottom: 6,
+  },
+  pendingBody: {
+    fontSize: 14,
+    color: "#78350F",
+    marginBottom: 12,
+  },
   cancelBtn: {
     alignSelf: "flex-start",
     backgroundColor: "#0F172A",
