@@ -2,123 +2,146 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   DeviceEventEmitter,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
-// NEW: feature flag
-const TRANSFERS_ENABLED =
-  process.env.EXPO_PUBLIC_TRANSFERS_ENABLED === "true";
-
-export default function WithdrawPausedScreen() {
-  // If transfers are enabled, show the REAL withdraw screen instead
-  if (TRANSFERS_ENABLED) {
-    return router.replace("/withdraw"); // your actual withdraw form route
-  }
-
-  const [pending, setPending] = useState<{
-    reference: string;
-    amount: string;
-    status: string;
-  } | null>(null);
+export default function WithdrawScreen() {
+  const [amount, setAmount] = useState("");
+  const [pin, setPin] = useState("");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(false);
-
-  const loadPending = async () => {
-    try {
-      const res = await axiosClient.get("wallet/snapshot/", {
-        params: { range: "7d" },
-      });
-      setPending(res.data?.pending_withdraw || null);
-    } catch {
-      setPending(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadPending();
+    (async () => {
+      try {
+        const res = await axiosClient.get("bank-accounts/");
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.results || res.data?.accounts || [];
+        setAccounts(list);
+        if (list[0]?.id) setAccountId(list[0].id);
+      } catch {
+        setAccounts([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const cancelPendingWithdraw = async () => {
-    if (!pending?.reference) return;
-    setCancelling(true);
+  const onSubmit = async () => {
+    const naira = Number(amount);
+    if (!naira || naira < 100) {
+      Alert.alert("Amount", "Minimum withdrawal is ₦100.");
+      return;
+    }
+    if (!pin || pin.length < 4) {
+      Alert.alert("PIN", "Enter your transaction PIN.");
+      return;
+    }
+    setBusy(true);
     try {
-      await axiosClient.post("wallet/withdraw/cancel/", {
-        reference_id: pending.reference,
-      });
-      setPending(null);
+      // Same PIN token endpoint as app/(tabs)/send.tsx
+      const tokenRes = await axiosClient.post("pin/verify/", { pin });
+      const pinToken = tokenRes.data.pin_token;
+      if (!pinToken) {
+        Alert.alert("PIN", "Could not verify PIN.");
+        return;
+      }
+
+      const body: Record<string, unknown> = {
+        amount: naira,
+        pin_token: pinToken,
+      };
+      if (accountId) body.bank_account_id = accountId;
+
+      const res = await axiosClient.post("withdraw/", body);
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-      Alert.alert("Cancelled", "Withdrawal cancelled. Wallet refunded.");
+      Alert.alert(
+        "Withdrawal",
+        res.data?.message ||
+          `Queued (${res.data?.status || "pending"}) ref ${
+            res.data?.reference_id || ""
+          }`
+      );
+      router.replace("/(tabs)");
     } catch (e: any) {
       const status = e?.response?.status;
       const data = e?.response?.data;
-      if (status === 409) {
-        Alert.alert(
-          "Already queued",
-          data?.error ||
-            "Transfer already queued at Paystack. Wait for webhook."
-        );
-      } else {
-        Alert.alert(
-          "Cancel failed",
-          data?.error || "Could not cancel this withdrawal."
-        );
+      if (status === 401) {
+        router.replace("/(auth)/login");
+        return;
       }
+      Alert.alert(
+        "Withdraw failed",
+        data?.error || data?.detail || data?.code || "Request failed"
+      );
     } finally {
-      setCancelling(false);
+      setBusy(false);
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color="#0F172A" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <MaterialCommunityIcons
-        name="bank-off-outline"
-        size={48}
-        color="#94A3B8"
-      />
-      <Text style={styles.title}>Withdrawals paused</Text>
-      <Text style={styles.body}>
-        Bank payouts are unavailable on this Paystack account. Your NGN wallet
-        still works for in-app sends and funding.
+      <Text style={styles.title}>Withdraw to bank</Text>
+      <Text style={styles.sub}>
+        Paystack test Transfer. Starter may still return 502.
       </Text>
 
-      {loading ? (
-        <ActivityIndicator color="#0F172A" style={{ marginTop: 24 }} />
-      ) : pending ? (
-        <View style={styles.pendingCard}>
-          <Text style={styles.pendingTitle}>On hold</Text>
-          <Text style={styles.pendingBody}>
-            ₦
-            {Number(pending.amount).toLocaleString("en-NG", {
-              minimumFractionDigits: 2,
-            })}{" "}
-            ({pending.status})
-          </Text>
-          <TouchableOpacity
-            style={styles.cancelBtn}
-            onPress={cancelPendingWithdraw}
-            disabled={cancelling}
-          >
-            <Text style={styles.cancelText}>
-              {cancelling ? "Cancelling…" : "Cancel and refund"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+      {accounts.length === 0 ? (
+        <Text style={styles.warn}>
+          No linked bank account. Link one first; the API will reject withdraw
+          without it.
+        </Text>
+      ) : (
+        <Text style={styles.sub}>
+          Using {accounts[0]?.bank_name} {accounts[0]?.account_number}
+        </Text>
+      )}
+
+      <TextInput
+        style={styles.input}
+        keyboardType="decimal-pad"
+        placeholder="Amount (NGN)"
+        value={amount}
+        onChangeText={setAmount}
+      />
+      <TextInput
+        style={styles.input}
+        keyboardType="number-pad"
+        placeholder="Transaction PIN"
+        secureTextEntry
+        value={pin}
+        onChangeText={setPin}
+        maxLength={6}
+      />
 
       <TouchableOpacity
-        style={styles.homeBtn}
-        onPress={() => router.replace("/(tabs)")}
+        style={[styles.btn, busy && { opacity: 0.6 }]}
+        onPress={onSubmit}
+        disabled={busy}
       >
+        <Text style={styles.btnText}>{busy ? "Sending…" : "Withdraw"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
         <Text style={styles.homeText}>Back to Home</Text>
       </TouchableOpacity>
     </View>
@@ -131,49 +154,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     padding: 24,
     paddingTop: 80,
-    alignItems: "center",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  body: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  pendingCard: {
-    marginTop: 28,
-    width: "100%",
-    backgroundColor: "#FEF3C7",
-    borderRadius: 16,
-    padding: 16,
+  title: { fontSize: 24, fontWeight: "700", color: "#0F172A", marginBottom: 8 },
+  sub: { fontSize: 14, color: "#64748B", marginBottom: 12, lineHeight: 20 },
+  warn: { fontSize: 14, color: "#B45309", marginBottom: 16 },
+  input: {
     borderWidth: 1,
-    borderColor: "#F59E0B",
-  },
-  pendingTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 6,
-  },
-  pendingBody: {
-    fontSize: 14,
-    color: "#78350F",
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
+    backgroundColor: "#FFF",
+    fontSize: 16,
   },
-  cancelBtn: {
-    alignSelf: "flex-start",
+  btn: {
     backgroundColor: "#0F172A",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    marginTop: 8,
   },
-  cancelText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  homeBtn: { marginTop: 32, padding: 12 },
-  homeText: { fontSize: 16, fontWeight: "600", color: "#0284C7" },
+  btnText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
+  homeText: {
+    marginTop: 24,
+    textAlign: "center",
+    color: "#0284C7",
+    fontWeight: "600",
+  },
 });
