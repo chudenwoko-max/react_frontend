@@ -9,7 +9,7 @@ export const API_REACHABLE = "orbitpay:api-reachable";
 
 const baseURL =
   process.env.EXPO_PUBLIC_API_URL ||
-  "https://currency-cvt-fintech-1.onrender.com/api/";
+  "https://api.payhost.dev/api/";
 
 // ---------------- TOKEN HELPERS ----------------
 

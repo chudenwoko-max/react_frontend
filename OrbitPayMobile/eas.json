@@ -15,14 +15,14 @@
       },
       "env": {
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
-        "EXPO_PUBLIC_API_URL": "https://currency-cvt-fintech-1.onrender.com/api/"
+        "EXPO_PUBLIC_API_URL": "https://api.payhost.dev/api/"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
-        "EXPO_PUBLIC_API_URL": "https://currency-cvt-fintech-1.onrender.com/api/"
+        "EXPO_PUBLIC_API_URL": "https://api.payhost.dev/api/"
       }
     }
   },
