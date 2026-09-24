@@ -1,8 +1,6 @@
 import axios from "axios";
-import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
 
-const API_BASE_URL = "https://currency-cvt-fintech-1.onrender.com";
+const API_BASE_URL = "https://api.payhost.dev";
 
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
@@ -12,23 +10,12 @@ const axiosClient = axios.create({
   },
 });
 
-// Helpers
-const getToken = async (key) => {
-  if (Platform.OS === "web") {
-    return localStorage.getItem(key);
-  }
-  return await SecureStore.getItemAsync(key);
-};
+const getToken = async (key) => localStorage.getItem(key);
 
 const deleteToken = async (key) => {
-  if (Platform.OS === "web") {
-    localStorage.removeItem(key);
-  } else {
-    await SecureStore.deleteItemAsync(key);
-  }
+  localStorage.removeItem(key);
 };
 
-// Attach access token
 axiosClient.interceptors.request.use(async (config) => {
   try {
     const token = await getToken("ACCESS_TOKEN");
@@ -41,7 +28,6 @@ axiosClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Handle 401 + refresh
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -64,13 +50,7 @@ axiosClient.interceptors.response.use(
         });
 
         const newAccess = res.data.access;
-
-        if (Platform.OS === "web") {
-          localStorage.setItem("ACCESS_TOKEN", newAccess);
-        } else {
-          await SecureStore.setItemAsync("ACCESS_TOKEN", newAccess);
-        }
-
+        localStorage.setItem("ACCESS_TOKEN", newAccess);
         originalRequest.headers.Authorization = `Bearer ${newAccess}`;
         return axiosClient(originalRequest);
       } catch (refreshError) {
