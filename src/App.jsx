@@ -63,6 +63,7 @@ function App() {
         <Route path="scheduled" element={<ScheduledTransfers />} />
         <Route path="support" element={<Support />} />
         <Route path="statements" element={<Statements />} />
+        <Route path="/business" element={<Business />} />
       </Route>
     </Routes>
   );
