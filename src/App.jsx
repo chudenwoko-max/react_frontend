@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 import Logout from "./pages/Logout";
-
+import Business from "./pages/Business";
 import Login from "./pages/Login";
 import Register from "./pages/Register";   // ← keep this
 
