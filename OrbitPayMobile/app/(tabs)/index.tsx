@@ -167,6 +167,7 @@ export default function Dashboard() {
   const SPEND_TYPES = new Set([
     "transfer",
     "transfer_sent",
+    "merchant_pay",
     "withdraw",
     "airtime",
     "data",
@@ -565,15 +566,198 @@ export default function Dashboard() {
     );
   }, []);
 
-  return (
+    return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* remainder of JSX unchanged — BalanceCard still uses `balance` */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push("/(tabs)/profile")}
+        >
+          <MaterialCommunityIcons name="dots-grid" size={22} color="#0F172A" />
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push("/notifications")}
+          >
+            <MaterialCommunityIcons name="bell-outline" size={22} color="#0F172A" />
+            {unreadCount > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? "9+" : String(unreadCount)}
+                </Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <BalanceCard balance={balance} loading={loading} />
-      {/* ... */}
+
+      <PendingWithdrawBanner
+        pending={pendingWithdraw}
+        onCancel={cancelPendingWithdraw}
+        cancelling={cancellingWithdraw}
+      />
+
+      {cashflowAlert ? (
+        <View
+          style={[
+            styles.cashflowCard,
+            cashflowAlert.level === "critical"
+              ? styles.cashflowCritical
+              : styles.cashflowWarning,
+          ]}
+        >
+          <Text style={styles.cashflowLabel}>
+            {cashflowAlert.title || "Cashflow"}
+          </Text>
+          <Text style={styles.insightMessage}>
+            {cashflowAlert.message || cashflowAlert.body || ""}
+          </Text>
+        </View>
+      ) : null}
+
+      {weeklyInsight?.message ? (
+        <View style={styles.insightCard}>
+          <View style={styles.insightHeader}>
+            <MaterialCommunityIcons name="lightbulb-outline" size={18} color="#C2410C" />
+            <Text style={styles.insightLabel}>Insight</Text>
+          </View>
+          <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
+          <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+          {weeklyInsight.save_reason ? (
+            <Text style={[styles.insightMessage, { marginTop: 8 }]}>
+              {weeklyInsight.save_reason}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {savingsSuggestion ? (
+        <View style={styles.suggestionCard}>
+          <Text style={styles.suggestionLabel}>Savings suggestion</Text>
+          <Text style={styles.insightMessage}>
+            {savingsSuggestion.message || savingsSuggestion.title || ""}
+          </Text>
+          <View style={styles.suggestionActions}>
+            <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
+              <Text style={styles.dismissText}>Dismiss</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
+              <Text style={styles.acceptText}>Accept</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
+
+      <WalletsGrid wallets={wallets} />
+
+      <QuickActions />
+
+      <WeeklyChart weeklyData={weeklyData} />
+
+      {savingsGoals.length > 0 ? (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Savings</Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/wallet")}>
+              <Text style={styles.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {savingsGoals.map((g) => {
+              const target = Number(g.target || g.target_amount || 0) || 1;
+              const current = Number(g.balance || g.current || g.amount || 0);
+              const pct = Math.min(100, (current / target) * 100);
+              return (
+                <View key={g.id || g.title} style={styles.goalCard}>
+                  <Text style={styles.goalTitle} numberOfLines={1}>
+                    {g.title || g.name || "Goal"}
+                  </Text>
+                  <Text style={styles.goalAmount}>
+                    {formatNgn(current)} / {formatNgn(target)}
+                  </Text>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${pct}%` }]} />
+                  </View>
+                  <Text style={styles.goalProgress}>{Math.round(pct)}%</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </>
+      ) : null}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent</Text>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
+          <Text style={styles.seeAll}>See all</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <MaterialCommunityIcons name="magnify" size={18} color="#94A3B8" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search transactions"
+          placeholderTextColor="#94A3B8"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterTabs}
+      >
+        {(["all", "sent", "received", "bills", "others"] as const).map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterTab, filterType === f && styles.filterTabActive]}
+            onPress={() => setFilterType(f)}
+          >
+            <Text
+              style={[
+                styles.filterTabText,
+                filterType === f && styles.filterTabTextActive,
+              ]}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {loading ? (
+        <>
+          <SkeletonTx />
+          <SkeletonTx />
+          <SkeletonTx />
+        </>
+      ) : filteredTransactions.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <MaterialCommunityIcons name="swap-horizontal" size={28} color="#94A3B8" />
+          <Text style={styles.emptyText}>No transactions yet</Text>
+          <Text style={styles.emptySubText}>
+            Fund, send, or pay a merchant to see activity here.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.txList}>
+          {filteredTransactions.map(renderTransaction)}
+        </View>
+      )}
     </ScrollView>
   );
 }
