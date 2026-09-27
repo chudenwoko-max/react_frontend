@@ -679,6 +679,9 @@ export default function Dashboard() {
             <TouchableOpacity onPress={() => router.push("/savings")}>
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
+                      <TouchableOpacity onPress={() => router.push("/pay")}>
+            <Text>Pay a business</Text>
+          </TouchableOpacity>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 28 }}>
@@ -773,6 +776,8 @@ export default function Dashboard() {
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </Text>
             </TouchableOpacity>
+            
+            
           ))}
         </ScrollView>
       )}
