@@ -7,9 +7,12 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  DeviceEventEmitter,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 type Card = { id: number; last4: string; brand?: string };
 
@@ -27,7 +30,10 @@ export default function PayMerchantScreen() {
       .catch(() => setCards([]));
   }, []);
 
-  const goHome = () => router.replace("/(tabs)");
+  const finishOk = () => {
+    DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+    router.replace("/(tabs)");
+  };
 
   const payWallet = async () => {
     if (busy) return;
@@ -38,10 +44,9 @@ export default function PayMerchantScreen() {
         amount,
         description: "Wallet pay",
       });
-      Alert.alert("Paid", "Wallet payment sent", [{ text: "OK", onPress: goHome }]);
+      finishOk();
     } catch (e: any) {
       Alert.alert("Error", e.response?.data?.error || "Wallet pay failed");
-    } finally {
       setBusy(false);
     }
   };
@@ -57,7 +62,7 @@ export default function PayMerchantScreen() {
       });
       const url = res.data?.authorization_url;
       if (!url) throw new Error("No checkout URL");
-      router.push({ pathname: "/fund", params: { url } });
+      await Linking.openURL(url);
     } catch (e: any) {
       Alert.alert("Error", e.response?.data?.error || "Checkout failed");
     } finally {
@@ -74,10 +79,9 @@ export default function PayMerchantScreen() {
         card_id: cardId,
         amount,
       });
-      Alert.alert("Paid", "Charged saved card", [{ text: "OK", onPress: goHome }]);
+      finishOk();
     } catch (e: any) {
       Alert.alert("Error", e.response?.data?.error || "Card pay failed");
-    } finally {
       setBusy(false);
     }
   };
@@ -88,10 +92,20 @@ export default function PayMerchantScreen() {
       <Text style={styles.hint}>Use a customer account, not the shop owner.</Text>
 
       <Text style={styles.label}>Merchant id</Text>
-      <TextInput style={styles.input} value={merchantId} onChangeText={setMerchantId} keyboardType="number-pad" />
+      <TextInput
+        style={styles.input}
+        value={merchantId}
+        onChangeText={setMerchantId}
+        keyboardType="number-pad"
+      />
 
       <Text style={styles.label}>Amount</Text>
-      <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+      <TextInput
+        style={styles.input}
+        value={amount}
+        onChangeText={setAmount}
+        keyboardType="decimal-pad"
+      />
 
       <TouchableOpacity style={styles.btn} onPress={payWallet} disabled={busy}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Pay with wallet</Text>}
@@ -107,9 +121,7 @@ export default function PayMerchantScreen() {
           style={[styles.card, cardId === c.id && styles.cardOn]}
           onPress={() => setCardId(c.id)}
         >
-          <Text>
-            {(c.brand || "Card") + " •••• " + c.last4}
-          </Text>
+          <Text>{(c.brand || "Card") + " •••• " + c.last4}</Text>
         </TouchableOpacity>
       ))}
 
