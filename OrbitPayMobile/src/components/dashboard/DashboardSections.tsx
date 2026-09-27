@@ -1,16 +1,10 @@
 // ========== FILE: src/components/dashboard/DashboardSections.tsx ==========
 
 import React, { memo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-// ---------- Balance Card ----------
 export const BalanceCard = memo(function BalanceCard({
   balance,
   loading,
@@ -30,7 +24,6 @@ export const BalanceCard = memo(function BalanceCard({
   );
 });
 
-// ---------- Month Snapshot ----------
 export const MonthSnapshot = memo(function MonthSnapshot({
   monthSpent,
   monthReceived,
@@ -63,7 +56,6 @@ export const MonthSnapshot = memo(function MonthSnapshot({
   );
 });
 
-// ---------- Wallets Grid ----------
 export const WalletsGrid = memo(function WalletsGrid({
   wallets,
 }: {
@@ -97,7 +89,6 @@ export const WalletsGrid = memo(function WalletsGrid({
   );
 });
 
-// ---------- Quick Actions ----------
 export const QuickActions = memo(function QuickActions() {
   return (
     <>
@@ -111,7 +102,9 @@ export const QuickActions = memo(function QuickActions() {
           <View style={[styles.iconCircle, { backgroundColor: "#E0F2FE" }]}>
             <MaterialCommunityIcons name="send" size={24} color="#0284C7" />
           </View>
-          <Text style={styles.actionText}>Send</Text>
+          <Text style={styles.actionText} numberOfLines={2}>
+            Send
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -122,7 +115,9 @@ export const QuickActions = memo(function QuickActions() {
           <View style={[styles.iconCircle, { backgroundColor: "#DCFCE7" }]}>
             <MaterialCommunityIcons name="plus" size={24} color="#16A34A" />
           </View>
-          <Text style={styles.actionText}>Fund</Text>
+          <Text style={styles.actionText} numberOfLines={2}>
+            Fund
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -137,7 +132,9 @@ export const QuickActions = memo(function QuickActions() {
               color="#EA580C"
             />
           </View>
-          <Text style={styles.actionText}>Pay Merchant</Text>
+          <Text style={styles.actionText} numberOfLines={2}>
+            Pay Merchant
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -148,7 +145,9 @@ export const QuickActions = memo(function QuickActions() {
           <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
             <MaterialCommunityIcons name="history" size={24} color="#7C3AED" />
           </View>
-          <Text style={styles.actionText}>History</Text>
+          <Text style={styles.actionText} numberOfLines={2}>
+            History
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -163,14 +162,15 @@ export const QuickActions = memo(function QuickActions() {
               color="#7C3AED"
             />
           </View>
-          <Text style={styles.actionText}>Orbit AI</Text>
+          <Text style={styles.actionText} numberOfLines={2}>
+            Orbit AI
+          </Text>
         </TouchableOpacity>
       </View>
     </>
   );
 });
 
-// ---------- Weekly Chart ----------
 export const WeeklyChart = memo(function WeeklyChart({
   weeklyData,
 }: {
@@ -237,7 +237,6 @@ export const PendingWithdrawBanner = memo(function PendingWithdrawBanner({
   );
 });
 
-// ---------- Styles (shared by these components) ----------
 const styles = StyleSheet.create({
   balanceCard: {
     backgroundColor: "#0F172A",
@@ -322,11 +321,12 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 32,
   },
   actionButton: {
     alignItems: "center",
-    width: 70,
+    width: 64,
   },
   iconCircle: {
     width: 56,
@@ -337,9 +337,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionText: {
-    fontSize: 13,
+    width: 64,
+    fontSize: 11,
+    lineHeight: 14,
+    minHeight: 28,
     color: "#475569",
     fontWeight: "500",
+    textAlign: "center",
   },
   chartCard: {
     backgroundColor: "#FFFFFF",
