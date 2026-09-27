@@ -9,33 +9,32 @@ function FundWallet() {
 
   const quickAmounts = [1000, 2000, 5000, 10000, 20000, 50000];
 
-  const handleFund = async () => {
-  if (!amount || Number(amount) <= 0) {
-    toast.error("Please enter a valid amount");
-    return;
-  }
-  if (!method) {
-    toast.error("Please select a payment method");
-    return;
-  }
+    const handleFund = async () => {
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
 
-  setLoading(true);
-
-  try {
-    const res = await axiosClient.post("/wallet/fund/", {
-      amount: amount,
-    });
-
-    toast.success(res.data.message || `Successfully funded ₦${Number(amount).toLocaleString()}`);
-    setAmount("");
-    setMethod("");
-  } catch (error) {
-    console.error("Fund wallet error:", error);
-    toast.error(error.response?.data?.error || "Funding failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const res = await axiosClient.post("wallet/fund/initialize/", {
+        amount: amount,
+      });
+      const url =
+        res.data.authorization_url ||
+        res.data.data?.authorization_url;
+      if (!url) {
+        toast.error("No checkout URL from Paystack");
+        return;
+      }
+      window.location.href = url;
+    } catch (error) {
+      console.error("Fund wallet error:", error);
+      toast.error(error.response?.data?.error || "Funding failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.page}>
