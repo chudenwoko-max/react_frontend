@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,18 @@ import {
   DeviceEventEmitter,
   Linking,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 type Card = { id: number; last4: string; brand?: string };
+
+function apiError(e: any, fallback: string) {
+  const d = e?.response?.data;
+  if (!d) return e?.message || fallback;
+  if (typeof d === "string") return d;
+  return d.error || d.detail || d.message || fallback;
+}
 
 export default function PayMerchantScreen() {
   const [merchantId, setMerchantId] = useState("1");
@@ -22,49 +29,98 @@ export default function PayMerchantScreen() {
   const [cards, setCards] = useState<Card[]>([]);
   const [cardId, setCardId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [awaitingCheckout, setAwaitingCheckout] = useState(false);
 
-  useEffect(() => {
-    axiosClient
-      .get("me/cards/")
-      .then((r) => setCards(Array.isArray(r.data) ? r.data : []))
-      .catch(() => setCards([]));
+  const loadCards = useCallback(async () => {
+    try {
+      const r = await axiosClient.get("me/cards/");
+      const list: Card[] = Array.isArray(r.data) ? r.data : [];
+      setCards(list);
+      setCardId((prev) => {
+        if (prev && list.some((c) => c.id === prev)) return prev;
+        return list.length === 1 ? list[0].id : prev;
+      });
+    } catch {
+      setCards([]);
+    }
   }, []);
 
-  const finishOk = () => {
+  useEffect(() => {
+    loadCards();
+  }, [loadCards]);
+
+  const finishOk = useCallback(() => {
+    setAwaitingCheckout(false);
     DeviceEventEmitter.emit(FINANCIALS_REFRESH);
     router.replace("/(tabs)");
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!awaitingCheckout) return;
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+      loadCards();
+      setAwaitingCheckout(false);
+      router.replace("/(tabs)");
+    }, [awaitingCheckout, loadCards])
+  );
+
+  const parsedAmount = () => {
+    const n = Number(amount);
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert("Error", "Enter a valid amount");
+      return null;
+    }
+    return n;
+  };
+
+  const parsedMerchant = () => {
+    const n = Number(merchantId);
+    if (!Number.isInteger(n) || n <= 0) {
+      Alert.alert("Error", "Enter a valid merchant id");
+      return null;
+    }
+    return n;
   };
 
   const payWallet = async () => {
     if (busy) return;
+    const merchant_id = parsedMerchant();
+    const amt = parsedAmount();
+    if (merchant_id == null || amt == null) return;
     setBusy(true);
     try {
       await axiosClient.post("merchant/pay-wallet/", {
-        merchant_id: Number(merchantId),
-        amount,
+        merchant_id,
+        amount: amt,
         description: "Wallet pay",
       });
       finishOk();
     } catch (e: any) {
-      Alert.alert("Error", e.response?.data?.error || "Wallet pay failed");
+      Alert.alert("Error", apiError(e, "Wallet pay failed"));
       setBusy(false);
     }
   };
 
   const payCheckout = async () => {
     if (busy) return;
+    const merchant_id = parsedMerchant();
+    const amt = parsedAmount();
+    if (merchant_id == null || amt == null) return;
     setBusy(true);
     try {
       const res = await axiosClient.post("merchant/pay-checkout/", {
-        merchant_id: Number(merchantId),
-        amount,
+        merchant_id,
+        amount: amt,
         description: "Save card + pay",
       });
       const url = res.data?.authorization_url;
       if (!url) throw new Error("No checkout URL");
+      setAwaitingCheckout(true);
       await Linking.openURL(url);
     } catch (e: any) {
-      Alert.alert("Error", e.response?.data?.error || "Checkout failed");
+      setAwaitingCheckout(false);
+      Alert.alert("Error", apiError(e, "Checkout failed"));
     } finally {
       setBusy(false);
     }
@@ -72,16 +128,19 @@ export default function PayMerchantScreen() {
 
   const payCard = async () => {
     if (busy || !cardId) return;
+    const merchant_id = parsedMerchant();
+    const amt = parsedAmount();
+    if (merchant_id == null || amt == null) return;
     setBusy(true);
     try {
       await axiosClient.post("merchant/pay-card/", {
-        merchant_id: Number(merchantId),
+        merchant_id,
         card_id: cardId,
-        amount,
+        amount: amt,
       });
       finishOk();
     } catch (e: any) {
-      Alert.alert("Error", e.response?.data?.error || "Card pay failed");
+      Alert.alert("Error", apiError(e, "Card pay failed"));
       setBusy(false);
     }
   };
@@ -108,7 +167,11 @@ export default function PayMerchantScreen() {
       />
 
       <TouchableOpacity style={styles.btn} onPress={payWallet} disabled={busy}>
-        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Pay with wallet</Text>}
+        {busy ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.btnText}>Pay with wallet</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.btn} onPress={payCheckout} disabled={busy}>
