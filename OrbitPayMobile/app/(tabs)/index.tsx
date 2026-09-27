@@ -250,17 +250,16 @@ export default function Dashboard() {
     }
   };
 
-  const fetchRecentTransactions = async () => {
+    const fetchRecentTransactions = async () => {
     try {
       const res = await axiosClient.get("transactions/", {
-        params: { page: 1, page_size: 8 },
+        params: { page: 1, page_size: 8, _t: Date.now() },
       });
 
       const data = Array.isArray(res.data)
         ? res.data
         : res.data.results || [];
 
-      // Only update the recent list — no monthly calculations here
       setRecentTransactions(data);
     } catch (error) {
       console.log("Recent transactions error:", error);
@@ -353,24 +352,27 @@ export default function Dashboard() {
   };
 
   useFocusEffect(
-    useCallback(() => {
-      if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-        loadData();
-        fetchWeeklySpend();
-        fetchSnapshot();
-        fetchSnapshot();
-      } else {
-        Promise.all([
-          fetchBalance(),
-          fetchUnreadCount(),
-          fetchWallets(),
-          fetchWeeklySpend(),
-          fetchLatestInsight(),
-        ]);
-      }
-    }, [])
-  );
+  useCallback(() => {
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      loadData();
+      fetchWeeklySpend();
+      fetchSnapshot();
+      fetchRecentTransactions();   // ⭐ PATCH
+    } else {
+      Promise.all([
+        fetchBalance(),
+        fetchUnreadCount(),
+        fetchWallets(),
+        fetchWeeklySpend(),
+        fetchLatestInsight(),
+        fetchSnapshot(),            // ⭐ PATCH
+        fetchRecentTransactions(),  // ⭐ PATCH
+      ]);
+    }
+  }, [])
+);
+
 
   const onRefresh = async () => {
     setRefreshing(true);
