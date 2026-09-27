@@ -1,4 +1,3 @@
-import { Image } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import {
@@ -85,14 +84,6 @@ const formatCategory = (cat?: string) => {
   return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-const SkeletonCard = () => (
-  <View style={styles.skeletonCard}>
-    <View style={styles.skeletonLineShort} />
-    <View style={styles.skeletonLine} />
-    <View style={styles.skeletonLineMedium} />
-  </View>
-);
-
 const SkeletonTx = () => (
   <View style={styles.skeletonTxRow}>
     <View style={styles.skeletonCircle} />
@@ -102,6 +93,23 @@ const SkeletonTx = () => (
     </View>
   </View>
 );
+
+const SPEND_TYPES = new Set([
+  "transfer",
+  "transfer_sent",
+  "merchant_pay",
+  "withdraw",
+  "airtime",
+  "data",
+  "electricity",
+  "cable",
+  "bills",
+  "debit",
+  "bill_airtime",
+  "bill_data",
+  "bill_electricity",
+  "bill_cable",
+]);
 
 export default function Dashboard() {
   const { logout } = useAuth();
@@ -113,7 +121,9 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingWithdraw, setPendingWithdraw] = useState<any>(null);
   const [cancellingWithdraw, setCancellingWithdraw] = useState(false);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    []
+  );
   const [monthSpent, setMonthSpent] = useState(0);
   const [monthReceived, setMonthReceived] = useState(0);
   const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
@@ -122,7 +132,9 @@ export default function Dashboard() {
   const [weeklyInsight, setWeeklyInsight] = useState<any>(null);
   const [savingsSuggestion, setSavingsSuggestion] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
+  const [filterType, setFilterType] = useState<
+    "all" | "sent" | "received" | "bills" | "others"
+  >("all");
   const [cashflowAlert, setCashflowAlert] = useState<any>(null);
   const isFirstLoad = useRef(true);
   const [kycStatus, setKycStatus] = useState("unverified");
@@ -143,43 +155,113 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
-      fetchUnreadCount();
-      fetchWallets();
-      fetchWeeklySpend();
-      fetchSnapshot();
-      refreshFinancials();
-    });
-    return () => sub.remove();
-  }, [refreshFinancials]);
+  const fetchLatestInsight = async () => {
+    try {
+      const res = await axiosClient.get("insights/latest/");
+      const weekly = res.data?.weekly || res.data?.savings || res.data;
+      if (
+        !weekly ||
+        (!weekly.body &&
+          !weekly.message &&
+          !weekly.save_reason &&
+          weekly.suggested_save == null &&
+          !weekly.title)
+      ) {
+        setWeeklyInsight(null);
+        return;
+      }
+      setWeeklyInsight({
+        title: weekly.title || "Orbit Insight · This week",
+        message: weekly.body || weekly.message || "",
+        save_reason: weekly.save_reason || "",
+        suggested_save: weekly.suggested_save,
+      });
+    } catch (error) {
+      console.log("Insight error:", error);
+      setWeeklyInsight(null);
+    }
+  };
 
-  useEffect(() => {
-    axiosClient
-      .get("kyc/")
-      .then((res) => {
-        setKycStatus(String(res.data.status || res.data.kyc_status || "unverified").toLowerCase());
-        setKycLimits(res.data.limits || null);
-      })
-      .catch(() => setKycStatus("unverified"));
-  }, []);
+  const fetchSavingsSuggestion = async () => {
+    try {
+      const res = await axiosClient.get("savings/suggestions/");
+      const list = Array.isArray(res.data)
+        ? res.data
+        : res.data?.results || res.data?.suggestions || [];
+      setSavingsSuggestion(Array.isArray(list) && list.length > 0 ? list[0] : null);
+    } catch (error) {
+      console.log("Savings suggestion error:", error);
+      setSavingsSuggestion(null);
+    }
+  };
 
-  const SPEND_TYPES = new Set([
-    "transfer",
-    "transfer_sent",
-    "merchant_pay",
-    "withdraw",
-    "airtime",
-    "data",
-    "electricity",
-    "cable",
-    "bills",
-    "debit",
-    "bill_airtime",
-    "bill_data",
-    "bill_electricity",
-    "bill_cable",
-  ]);
+  const acceptSuggestion = async () => {
+    if (!savingsSuggestion?.id) return;
+    try {
+      await axiosClient.post(
+        `savings/suggestions/${savingsSuggestion.id}/accept/`
+      );
+      setSavingsSuggestion(null);
+      await fetchSavingsGoals();
+    } catch (error) {
+      console.log("Accept suggestion error:", error);
+    }
+  };
+
+  const dismissSuggestion = async () => {
+    if (!savingsSuggestion?.id) return;
+    try {
+      await axiosClient.post(
+        `savings/suggestions/${savingsSuggestion.id}/dismiss/`
+      );
+      setSavingsSuggestion(null);
+    } catch (error) {
+      console.log("Dismiss suggestion error:", error);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await axiosClient.get("notifications/");
+      setUnreadCount(res.data.unread_count ?? 0);
+    } catch {
+      setUnreadCount(0);
+    }
+  };
+
+  const fetchSavingsGoals = async () => {
+    try {
+      const res = await axiosClient.get("savings/");
+      const data = Array.isArray(res.data) ? res.data : [];
+      setSavingsGoals(data.slice(0, 3));
+    } catch {
+      setSavingsGoals([]);
+    }
+  };
+
+  const fetchWallets = async () => {
+    try {
+      const res = await axiosClient.get("wallets/");
+      const data = Array.isArray(res.data) ? res.data : [];
+      setWallets(data);
+    } catch (error) {
+      console.log("Wallets error:", error);
+      setWallets([]);
+    }
+  };
+
+  const fetchRecentTransactions = async () => {
+    try {
+      const res = await axiosClient.get("transactions/", {
+        params: { page: 1, page_size: 8, _t: Date.now() },
+      });
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      setRecentTransactions(data);
+    } catch (error) {
+      console.log("Recent transactions error:", error);
+      setRecentTransactions([]);
+    }
+  };
 
   function bucketWeeklySpend(rows: any[]) {
     const buckets = [0, 0, 0, 0, 0, 0, 0];
@@ -211,106 +293,6 @@ export default function Dashboard() {
     }
   };
 
-  const fetchSavingsSuggestion = async () => {
-    try {
-      const res = await axiosClient.get("savings/suggestions/");
-      const list = Array.isArray(res.data) ? res.data : [];
-      setSavingsSuggestion(list.length > 0 ? list[0] : null);
-    } catch (error) {
-      console.log("Savings suggestion error:", error);
-      setSavingsSuggestion(null);
-    }
-  };
-
-  const acceptSuggestion = async () => {
-    if (!savingsSuggestion?.id) return;
-    try {
-      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/accept/`);
-      setSavingsSuggestion(null);
-      await fetchSavingsGoals();
-    } catch (error) {
-      console.log("Accept suggestion error:", error);
-    }
-  };
-
-  const dismissSuggestion = async () => {
-    if (!savingsSuggestion?.id) return;
-    try {
-      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/dismiss/`);
-      setSavingsSuggestion(null);
-    } catch (error) {
-      console.log("Dismiss suggestion error:", error);
-    }
-  };
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await axiosClient.get("notifications/");
-      const count = res.data.unread_count ?? 0;
-      setUnreadCount(count);
-    } catch (error) {
-      setUnreadCount(0);
-    }
-  };
-
-  const fetchSavingsGoals = async () => {
-    try {
-      const res = await axiosClient.get("savings/");
-      const data = Array.isArray(res.data) ? res.data : [];
-      setSavingsGoals(data.slice(0, 3));
-    } catch (error) {
-      setSavingsGoals([]);
-    }
-  };
-
-  const fetchWallets = async () => {
-    try {
-      const res = await axiosClient.get("wallets/");
-      const data = Array.isArray(res.data) ? res.data : [];
-      setWallets(data);
-    } catch (error) {
-      console.log("Wallets error:", error);
-      setWallets([]);
-    }
-  };
-
-  const fetchRecentTransactions = async () => {
-    try {
-      const res = await axiosClient.get("transactions/", {
-        params: { page: 1, page_size: 8, _t: Date.now() },
-      });
-
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.results || [];
-
-      setRecentTransactions(data);
-    } catch (error) {
-      console.log("Recent transactions error:", error);
-      setRecentTransactions([]);
-    }
-  };
-
-  const fetchLatestInsight = async () => {
-    try {
-      const res = await axiosClient.get("insights/latest/");
-      const weekly = res.data?.weekly || null;
-      if (!weekly) {
-        setWeeklyInsight(null);
-        return;
-      }
-      setWeeklyInsight({
-        title: weekly.title || "Orbit Insight · This week",
-        message: weekly.body || weekly.message || "",
-        save_reason: weekly.save_reason || "",
-        suggested_save: weekly.suggested_save,
-      });
-    } catch (error) {
-      console.log("Insight error:", error);
-      setWeeklyInsight(null);
-    }
-  };
-
   const fetchSnapshot = async () => {
     try {
       const res = await axiosClient.get("wallet/snapshot/", {
@@ -330,16 +312,6 @@ export default function Dashboard() {
 
       setWeeklyData(spends);
       setPendingWithdraw(data.pending_withdraw || null);
-      setWeeklyInsight({
-        title: "Orbit Insight · This week",
-        message: `You spent ₦${Number(
-          spends.reduce((a: number, b: number) => a + b, 0)
-        ).toLocaleString("en-NG", { minimumFractionDigits: 2 })} in the last 7 days.`,
-        save_reason: `Wallet balance ₦${Number(
-          consumerBalanceFromSnapshot(data)
-        ).toLocaleString("en-NG", { minimumFractionDigits: 2 })}.`,
-      });
-
       setMonthSpent(Number(data.spend) || 0);
       setMonthReceived(Number(data.received) || 0);
       setBalance(formatNgn(consumerBalanceFromSnapshot(data)));
@@ -375,21 +347,46 @@ export default function Dashboard() {
     setRefreshing(false);
   };
 
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(FINANCIALS_REFRESH, () => {
+      fetchUnreadCount();
+      fetchWallets();
+      fetchWeeklySpend();
+      fetchSnapshot();
+      fetchLatestInsight();
+      fetchSavingsSuggestion();
+      fetchRecentTransactions();
+      refreshFinancials();
+    });
+    return () => sub.remove();
+  }, [refreshFinancials]);
+
+  useEffect(() => {
+    axiosClient
+      .get("kyc/")
+      .then((res) => {
+        setKycStatus(
+          String(res.data.status || res.data.kyc_status || "unverified").toLowerCase()
+        );
+        setKycLimits(res.data.limits || null);
+      })
+      .catch(() => setKycStatus("unverified"));
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       refreshFinancials();
+      fetchLatestInsight();
+      fetchSavingsSuggestion();
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
         loadData();
         fetchWeeklySpend();
-        fetchSnapshot();
-        fetchRecentTransactions();
       } else {
         Promise.all([
           fetchUnreadCount(),
           fetchWallets(),
           fetchWeeklySpend(),
-          fetchLatestInsight(),
           fetchSnapshot(),
           fetchRecentTransactions(),
         ]);
@@ -401,7 +398,6 @@ export default function Dashboard() {
     setRefreshing(true);
     await loadData();
     await fetchWeeklySpend();
-    await fetchSnapshot();
     setRefreshing(false);
   };
 
@@ -490,7 +486,12 @@ export default function Dashboard() {
           desc.includes("funded");
 
         if (filterType === "sent")
-          return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw";
+          return (
+            !isCredit &&
+            !desc.includes("bill") &&
+            !desc.includes("withdraw") &&
+            type !== "withdraw"
+          );
         if (filterType === "received") return isCredit;
         if (filterType === "bills")
           return (
@@ -533,10 +534,17 @@ export default function Dashboard() {
       <TouchableOpacity
         key={item.id || item.reference_id}
         style={styles.txCard}
-        onPress={() => router.push(`/transaction/${item.id || item.reference_id}`)}
+        onPress={() =>
+          router.push(`/transaction/${item.id || item.reference_id}`)
+        }
         activeOpacity={0.7}
       >
-        <View style={[styles.txIcon, { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" }]}>
+        <View
+          style={[
+            styles.txIcon,
+            { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" },
+          ]}
+        >
           <MaterialCommunityIcons
             name={isCredit ? "arrow-down" : "arrow-up"}
             size={18}
@@ -554,23 +562,36 @@ export default function Dashboard() {
               </Text>
             </View>
             <Text style={styles.txDate}>
-              {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
+              {item.created_at
+                ? new Date(item.created_at).toLocaleDateString()
+                : "—"}
             </Text>
           </View>
         </View>
-        <Text style={[styles.txAmount, { color: isCredit ? "#16A34A" : "#DC2626" }]}>
+        <Text
+          style={[styles.txAmount, { color: isCredit ? "#16A34A" : "#DC2626" }]}
+        >
           {isCredit ? "+" : "-"}₦
-          {Number(item.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+          {Number(item.amount).toLocaleString("en-NG", {
+            minimumFractionDigits: 2,
+          })}
         </Text>
       </TouchableOpacity>
     );
   }, []);
 
-    return (
+  void snapshot;
+  void recent;
+  void kycStatus;
+  void kycLimits;
+
+  return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
       <View style={styles.headerRow}>
         <TouchableOpacity
@@ -584,7 +605,11 @@ export default function Dashboard() {
             style={styles.iconButton}
             onPress={() => router.push("/notifications")}
           >
-            <MaterialCommunityIcons name="bell-outline" size={22} color="#0F172A" />
+            <MaterialCommunityIcons
+              name="bell-outline"
+              size={22}
+              color="#0F172A"
+            />
             {unreadCount > 0 ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -625,17 +650,31 @@ export default function Dashboard() {
         </View>
       ) : null}
 
-      {weeklyInsight?.message ? (
+      {weeklyInsight &&
+      (weeklyInsight.message ||
+        weeklyInsight.save_reason ||
+        weeklyInsight.suggested_save != null) ? (
         <View style={styles.insightCard}>
           <View style={styles.insightHeader}>
-            <MaterialCommunityIcons name="lightbulb-outline" size={18} color="#C2410C" />
+            <MaterialCommunityIcons
+              name="lightbulb-outline"
+              size={18}
+              color="#C2410C"
+            />
             <Text style={styles.insightLabel}>Insight</Text>
           </View>
           <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
-          <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+          {weeklyInsight.message ? (
+            <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
+          ) : null}
           {weeklyInsight.save_reason ? (
             <Text style={[styles.insightMessage, { marginTop: 8 }]}>
               {weeklyInsight.save_reason}
+            </Text>
+          ) : null}
+          {weeklyInsight.suggested_save != null ? (
+            <Text style={[styles.insightMessage, { marginTop: 8 }]}>
+              Suggested save {formatNgn(Number(weeklyInsight.suggested_save))}
             </Text>
           ) : null}
         </View>
@@ -645,13 +684,22 @@ export default function Dashboard() {
         <View style={styles.suggestionCard}>
           <Text style={styles.suggestionLabel}>Savings suggestion</Text>
           <Text style={styles.insightMessage}>
-            {savingsSuggestion.message || savingsSuggestion.title || ""}
+            {savingsSuggestion.message ||
+              savingsSuggestion.title ||
+              savingsSuggestion.body ||
+              ""}
           </Text>
           <View style={styles.suggestionActions}>
-            <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
+            <TouchableOpacity
+              style={styles.dismissBtn}
+              onPress={dismissSuggestion}
+            >
               <Text style={styles.dismissText}>Dismiss</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
+            <TouchableOpacity
+              style={styles.acceptBtn}
+              onPress={acceptSuggestion}
+            >
               <Text style={styles.acceptText}>Accept</Text>
             </TouchableOpacity>
           </View>
@@ -747,7 +795,11 @@ export default function Dashboard() {
         </>
       ) : filteredTransactions.length === 0 ? (
         <View style={styles.emptyCard}>
-          <MaterialCommunityIcons name="swap-horizontal" size={28} color="#94A3B8" />
+          <MaterialCommunityIcons
+            name="swap-horizontal"
+            size={28}
+            color="#94A3B8"
+          />
           <Text style={styles.emptyText}>No transactions yet</Text>
           <Text style={styles.emptySubText}>
             Fund, send, or pay a merchant to see activity here.
@@ -763,8 +815,19 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 60 },
-  headerRow: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", marginBottom: 20, gap: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    padding: 20,
+    paddingTop: 60,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 16,
+  },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 12 },
   iconButton: { padding: 6, position: "relative" },
@@ -790,9 +853,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  insightHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10, gap: 8 },
+  insightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 8,
+  },
   insightLabel: { fontSize: 14, fontWeight: "600", color: "#C2410C" },
-  insightTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 6 },
+  insightTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
+  },
   insightMessage: { fontSize: 14, lineHeight: 20, color: "#475569" },
   suggestionCard: {
     backgroundColor: "#ECFDF5",
@@ -803,41 +876,114 @@ const styles = StyleSheet.create({
     borderColor: "#A7F3D0",
   },
   suggestionLabel: { fontSize: 14, fontWeight: "600", color: "#0F766E" },
-  cashflowCard: { borderRadius: 16, padding: 18, marginBottom: 20, borderWidth: 1 },
+  cashflowCard: {
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+  },
   cashflowWarning: { backgroundColor: "#FFFBEB", borderColor: "#FDE68A" },
   cashflowCritical: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
   cashflowLabel: { fontSize: 14, fontWeight: "600" },
-  suggestionActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 16 },
-  acceptBtn: { backgroundColor: "#0D9488", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
+  suggestionActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 16,
+  },
+  acceptBtn: {
+    backgroundColor: "#0D9488",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
   acceptText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  dismissBtn: { backgroundColor: "#F1F5F9", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
+  dismissBtn: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
   dismissText: { color: "#475569", fontSize: 13, fontWeight: "600" },
-  sectionTitle: { fontSize: 18, fontWeight: "600", color: "#0F172A", marginBottom: 16 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 8,
+  },
   seeAll: { fontSize: 14, color: "#0284C7", fontWeight: "600" },
-  goalCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, width: 200, marginRight: 12 },
-  goalTitle: { fontSize: 15, fontWeight: "600", color: "#0F172A", marginBottom: 8 },
+  goalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    width: 200,
+    marginRight: 12,
+  },
+  goalTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
   goalAmount: { fontSize: 13, color: "#64748B", marginBottom: 10 },
-  progressBar: { height: 6, backgroundColor: "#E2E8F0", borderRadius: 3, overflow: "hidden", marginBottom: 6 },
+  progressBar: {
+    height: 6,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
   progressFill: { height: "100%", backgroundColor: "#16A34A", borderRadius: 3 },
   goalProgress: { fontSize: 12, color: "#16A34A", fontWeight: "600" },
   txList: { gap: 10 },
-  txCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 14, padding: 14 },
-  txIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center", marginRight: 12 },
+  txCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+  },
+  txIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
   txInfo: { flex: 1, marginRight: 8 },
   txTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
-  txMetaRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 8 },
+  txMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
+  },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   categoryBadgeText: { fontSize: 11, fontWeight: "600" },
   txDate: { fontSize: 12, color: "#94A3B8" },
   txAmount: { fontSize: 14, fontWeight: "700" },
-  emptyCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 40, alignItems: "center", justifyContent: "center" },
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyText: { marginTop: 12, color: "#94A3B8", fontSize: 15 },
-  emptySubText: { marginTop: 8, color: "#94A3B8", fontSize: 12, textAlign: "center" },
-  skeletonCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, marginBottom: 16 },
-  skeletonLine: { height: 12, backgroundColor: "#E2E8F0", borderRadius: 6, marginBottom: 10 },
-  skeletonLineShort: { height: 12, width: "55%", backgroundColor: "#E2E8F0", borderRadius: 6, marginBottom: 10 },
-  skeletonLineMedium: { height: 12, width: "80%", backgroundColor: "#F1F5F9", borderRadius: 6 },
+  emptySubText: {
+    marginTop: 8,
+    color: "#94A3B8",
+    fontSize: 12,
+    textAlign: "center",
+  },
   skeletonTxRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -846,8 +992,27 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  skeletonCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E2E8F0", marginRight: 12 },
+  skeletonCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E2E8F0",
+    marginRight: 12,
+  },
   skeletonTxLines: { flex: 1 },
+  skeletonLineShort: {
+    height: 12,
+    width: "55%",
+    backgroundColor: "#E2E8F0",
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  skeletonLineMedium: {
+    height: 12,
+    width: "80%",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 6,
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -858,7 +1023,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 14, color: "#0F172A" },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: "#0F172A",
+  },
   filterTabs: { marginBottom: 16, paddingVertical: 8 },
   filterTab: {
     paddingHorizontal: 14,
