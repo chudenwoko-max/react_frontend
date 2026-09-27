@@ -29,6 +29,7 @@ import Referral from "./pages/Referral";
 import ScheduledTransfers from "./pages/ScheduledTransfers";
 import Support from "./pages/Support";
 import Statements from "./pages/Statements";
+import PayMerchant from "./pages/PayMerchant";
 
 function App() {
   return (
@@ -74,7 +75,8 @@ function App() {
         <Route path="statements" element={<Statements />} />
 
         {/* ===================== BUSINESS / MERCHANT ROUTE ===================== */}
-        <Route path="business" element={<Business />} />
+                <Route path="business" element={<Business />} />
+        <Route path="pay" element={<PayMerchant />} />
 
       </Route>
     </Routes>
