@@ -1,4 +1,4 @@
-// ========== NEW FILE: src/components/dashboard/DashboardSections.tsx ==========
+// ========== FILE: src/components/dashboard/DashboardSections.tsx ==========
 
 import React, { memo } from "react";
 import {
@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -107,6 +106,7 @@ export const QuickActions = memo(function QuickActions() {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => router.push("/(tabs)/send")}
+          activeOpacity={0.8}
         >
           <View style={[styles.iconCircle, { backgroundColor: "#E0F2FE" }]}>
             <MaterialCommunityIcons name="send" size={24} color="#0284C7" />
@@ -117,6 +117,7 @@ export const QuickActions = memo(function QuickActions() {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => router.push("/(tabs)/fund")}
+          activeOpacity={0.8}
         >
           <View style={[styles.iconCircle, { backgroundColor: "#DCFCE7" }]}>
             <MaterialCommunityIcons name="plus" size={24} color="#16A34A" />
@@ -124,20 +125,25 @@ export const QuickActions = memo(function QuickActions() {
           <Text style={styles.actionText}>Fund</Text>
         </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton} activeOpacity={1} disabled>
-          <View style={[styles.iconCircle, { backgroundColor: "#F1F5F9" }]}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/pay")}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: "#FFEDD5" }]}>
             <MaterialCommunityIcons
-              name="bank-transfer-out"
+              name="storefront-outline"
               size={24}
-              color="#94A3B8"
+              color="#EA580C"
             />
           </View>
-          <Text style={[styles.actionText, { color: "#94A3B8" }]}>Soon</Text>
+          <Text style={styles.actionText}>Pay Merchant</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => router.push("/(tabs)/history")}
+          activeOpacity={0.8}
         >
           <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
             <MaterialCommunityIcons name="history" size={24} color="#7C3AED" />
@@ -148,6 +154,7 @@ export const QuickActions = memo(function QuickActions() {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => router.push("/orbit-ai")}
+          activeOpacity={0.8}
         >
           <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
             <MaterialCommunityIcons
@@ -168,9 +175,7 @@ export const WeeklyChart = memo(function WeeklyChart({
   weeklyData,
 }: {
   weeklyData: number[];
-}) 
-
-{
+}) {
   const max = Math.max(...weeklyData, 1);
   const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
   const todayIndex = new Date().getDay();
@@ -213,7 +218,10 @@ export const PendingWithdrawBanner = memo(function PendingWithdrawBanner({
     <View style={styles.pendingCard}>
       <Text style={styles.pendingTitle}>Withdrawal in progress</Text>
       <Text style={styles.pendingBody}>
-        ₦{Number(pending.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}{" "}
+        ₦
+        {Number(pending.amount).toLocaleString("en-NG", {
+          minimumFractionDigits: 2,
+        })}{" "}
         is on hold ({pending.status}). Cancel if Paystack did not queue it.
       </Text>
       <TouchableOpacity
@@ -365,8 +373,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#94A3B8",
   },
-
-    pendingCard: {
+  pendingCard: {
     backgroundColor: "#FEF3C7",
     borderRadius: 16,
     padding: 16,
@@ -374,8 +381,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F59E0B",
   },
-  pendingTitle: { fontSize: 16, fontWeight: "700", color: "#92400E", marginBottom: 6 },
-  pendingBody: { fontSize: 14, color: "#78350F", lineHeight: 20, marginBottom: 12 },
+  pendingTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#92400E",
+    marginBottom: 6,
+  },
+  pendingBody: {
+    fontSize: 14,
+    color: "#78350F",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
   pendingBtn: {
     alignSelf: "flex-start",
     backgroundColor: "#0F172A",
