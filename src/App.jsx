@@ -1,10 +1,14 @@
+// src/App.jsx
+
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
+
 import Logout from "./pages/Logout";
 import Business from "./pages/Business";
+
 import Login from "./pages/Login";
-import Register from "./pages/Register";   // ← keep this
+import Register from "./pages/Register";
 
 import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
@@ -29,11 +33,12 @@ import Statements from "./pages/Statements";
 function App() {
   return (
     <Routes>
-      {/* ========== PUBLIC ROUTES ========== */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />   {/* ← Moved outside */}
 
-      {/* ========== PROTECTED ROUTES ========== */}
+      {/* ===================== PUBLIC ROUTES ===================== */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* ===================== PROTECTED ROUTES ===================== */}
       <Route
         path="/"
         element={
@@ -42,7 +47,11 @@ function App() {
           </ProtectedRoute>
         }
       >
+
+        {/* Default landing inside MainLayout */}
         <Route index element={<Dashboard />} />
+
+        {/* Wallet / Consumer App Routes */}
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="wallet" element={<Wallet />} />
         <Route path="send-money" element={<SendMoney />} />
@@ -63,7 +72,10 @@ function App() {
         <Route path="scheduled" element={<ScheduledTransfers />} />
         <Route path="support" element={<Support />} />
         <Route path="statements" element={<Statements />} />
-        <Route path="/business" element={<Business />} />
+
+        {/* ===================== BUSINESS / MERCHANT ROUTE ===================== */}
+        <Route path="business" element={<Business />} />
+
       </Route>
     </Routes>
   );
