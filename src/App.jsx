@@ -1,13 +1,11 @@
-// src/App.jsx
-
 import { Routes, Route } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
 import Landing from "./pages/Landing";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
+import Privacy from "./Privacy";
+import Terms from "./Terms";
 
 import Logout from "./pages/Logout";
 import Business from "./pages/Business";
@@ -39,59 +37,56 @@ const host = window.location.hostname;
 const isMarketing =
   host === "www.payhost.dev" || host === "payhost.dev";
 
+function AppShell() {
+  return (
+    <Route
+      path="/"
+      element={
+        <ProtectedRoute>
+          <MainLayout />
+        </ProtectedRoute>
+      }
+    >
+      <Route index element={<Dashboard />} />
+      <Route path="dashboard" element={<Dashboard />} />
+      <Route path="wallet" element={<Wallet />} />
+      <Route path="send-money" element={<SendMoney />} />
+      <Route path="fund-wallet" element={<FundWallet />} />
+      <Route path="withdraw" element={<Withdraw />} />
+      <Route path="transactions" element={<Transactions />} />
+      <Route path="converter" element={<CurrencyConverter />} />
+      <Route path="profile" element={<Profile />} />
+      <Route path="avatar-upload" element={<AvatarUpload />} />
+      <Route path="bank-account" element={<BankAccount />} />
+      <Route path="kyc" element={<KYC />} />
+      <Route path="logout" element={<Logout />} />
+      <Route path="request-money" element={<RequestMoney />} />
+      <Route path="bills" element={<BillPayments />} />
+      <Route path="savings" element={<Savings />} />
+      <Route path="cards" element={<VirtualCards />} />
+      <Route path="referral" element={<Referral />} />
+      <Route path="scheduled" element={<ScheduledTransfers />} />
+      <Route path="support" element={<Support />} />
+      <Route path="statements" element={<Statements />} />
+      <Route path="business" element={<Business />} />
+      <Route path="pay" element={<PayMerchant />} />
+    </Route>
+  );
+}
+
 function App() {
   return (
     <Routes>
-
-      {/* ===================== PUBLIC ROUTES ===================== */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
-      {/* Public legal pages */}
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
 
-      {/* Marketing landing page (only on apex/www) */}
-      {isMarketing && <Route path="/" element={<Landing />} />}
-
-      {/* ===================== PROTECTED ROUTES ===================== */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Default dashboard home (only when NOT marketing host) */}
-        {!isMarketing && <Route index element={<Dashboard />} />}
-
-        {/* Wallet / Consumer App Routes */}
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="wallet" element={<Wallet />} />
-        <Route path="send-money" element={<SendMoney />} />
-        <Route path="fund-wallet" element={<FundWallet />} />
-        <Route path="withdraw" element={<Withdraw />} />
-        <Route path="transactions" element={<Transactions />} />
-        <Route path="converter" element={<CurrencyConverter />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="avatar-upload" element={<AvatarUpload />} />
-        <Route path="bank-account" element={<BankAccount />} />
-        <Route path="kyc" element={<KYC />} />
-        <Route path="logout" element={<Logout />} />
-        <Route path="request-money" element={<RequestMoney />} />
-        <Route path="bills" element={<BillPayments />} />
-        <Route path="savings" element={<Savings />} />
-        <Route path="cards" element={<VirtualCards />} />
-        <Route path="referral" element={<Referral />} />
-        <Route path="scheduled" element={<ScheduledTransfers />} />
-        <Route path="support" element={<Support />} />
-        <Route path="statements" element={<Statements />} />
-
-        {/* ===================== BUSINESS / MERCHANT ROUTES ===================== */}
-        <Route path="business" element={<Business />} />
-        <Route path="pay" element={<PayMerchant />} />
-      </Route>
+      {isMarketing ? (
+        <Route path="/" element={<Landing />} />
+      ) : (
+        AppShell()
+      )}
     </Routes>
   );
 }
