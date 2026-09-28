@@ -1,12 +1,16 @@
 // src/App.jsx
 
 import { Routes, Route } from "react-router-dom";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
+import Landing from "./pages/Landing";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+
 import Logout from "./pages/Logout";
 import Business from "./pages/Business";
-
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -31,6 +35,10 @@ import Support from "./pages/Support";
 import Statements from "./pages/Statements";
 import PayMerchant from "./pages/PayMerchant";
 
+const host = window.location.hostname;
+const isMarketing =
+  host === "www.payhost.dev" || host === "payhost.dev";
+
 function App() {
   return (
     <Routes>
@@ -38,6 +46,13 @@ function App() {
       {/* ===================== PUBLIC ROUTES ===================== */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      {/* Public legal pages */}
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+
+      {/* Marketing landing page (only on apex/www) */}
+      {isMarketing && <Route path="/" element={<Landing />} />}
 
       {/* ===================== PROTECTED ROUTES ===================== */}
       <Route
@@ -48,9 +63,8 @@ function App() {
           </ProtectedRoute>
         }
       >
-
-        {/* Default landing inside MainLayout */}
-        <Route index element={<Dashboard />} />
+        {/* Default dashboard home (only when NOT marketing host) */}
+        {!isMarketing && <Route index element={<Dashboard />} />}
 
         {/* Wallet / Consumer App Routes */}
         <Route path="dashboard" element={<Dashboard />} />
@@ -74,10 +88,9 @@ function App() {
         <Route path="support" element={<Support />} />
         <Route path="statements" element={<Statements />} />
 
-        {/* ===================== BUSINESS / MERCHANT ROUTE ===================== */}
-                <Route path="business" element={<Business />} />
+        {/* ===================== BUSINESS / MERCHANT ROUTES ===================== */}
+        <Route path="business" element={<Business />} />
         <Route path="pay" element={<PayMerchant />} />
-
       </Route>
     </Routes>
   );
