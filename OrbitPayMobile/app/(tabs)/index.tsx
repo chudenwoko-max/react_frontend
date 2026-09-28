@@ -594,12 +594,7 @@ export default function Dashboard() {
       }
     >
       <View style={styles.headerRow}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => router.push("/(tabs)/profile")}
-        >
-          <MaterialCommunityIcons name="dots-grid" size={22} color="#0F172A" />
-        </TouchableOpacity>
+        
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.iconButton}
