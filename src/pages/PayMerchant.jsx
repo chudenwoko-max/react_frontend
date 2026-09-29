@@ -9,9 +9,6 @@ export default function PayMerchant() {
   const [amount, setAmount] = useState("500");
   const [description, setDescription] = useState("Wallet pay");
   const [pin, setPin] = useState("");
-  const [pinToken, setPinToken] = useState(
-    () => localStorage.getItem("pin_token") || ""
-  );
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -27,16 +24,30 @@ export default function PayMerchant() {
   const payWallet = async (e) => {
     e.preventDefault();
     if (busy) return;
+
     if (!pin) {
       toast.error("Enter your transfer PIN");
       return;
     }
-    if (!pinToken) {
-      toast.error("PIN token missing. Open Send once so a token is created.");
-      return;
-    }
+
     setBusy(true);
+
     try {
+      // Step 1: verify PIN → get pin_token
+      const verified = await axiosClient.post("/verify-pin/", {
+        pin: String(pin),
+      });
+
+      const pinToken =
+        verified.data?.pin_token || verified.data?.token || "";
+
+      if (!pinToken) {
+        toast.error("Could not create PIN token");
+        setBusy(false);
+        return;
+      }
+
+      // Step 2: pay with wallet using pin + pin_token
       await axiosClient.post("merchant/pay-wallet/", {
         merchant_id: Number(merchantId),
         amount,
@@ -44,6 +55,7 @@ export default function PayMerchant() {
         pin,
         pin_token: pinToken,
       });
+
       toast.success("Paid from wallet");
       window.location.replace("/");
     } catch (err) {
@@ -55,11 +67,14 @@ export default function PayMerchant() {
   const payCard = async (e) => {
     e.preventDefault();
     if (busy) return;
+
     if (!cardId) {
       toast.error("Select a saved card or pay once via Collect first");
       return;
     }
+
     setBusy(true);
+
     try {
       await axiosClient.post("merchant/pay-card/", {
         merchant_id: Number(merchantId),
@@ -67,6 +82,7 @@ export default function PayMerchant() {
         amount,
         description,
       });
+
       toast.success("Paid with saved card");
       window.location.replace("/");
     } catch (err) {
@@ -78,14 +94,17 @@ export default function PayMerchant() {
   const addCardCheckout = async () => {
     if (busy) return;
     setBusy(true);
+
     try {
       const res = await axiosClient.post("merchant/pay-checkout/", {
         merchant_id: Number(merchantId),
         amount,
         description: "Save card + pay",
       });
+
       const url = res.data?.authorization_url;
       if (!url) throw new Error("No checkout URL");
+
       window.location.href = url;
     } catch (err) {
       setMsg(err.response?.data?.error || err.message || "Checkout failed");
@@ -126,14 +145,6 @@ export default function PayMerchant() {
         autoComplete="off"
         value={pin}
         onChange={(e) => setPin(e.target.value)}
-        style={{ width: "100%", marginBottom: 12 }}
-      />
-
-      <label>PIN token</label>
-      <input
-        value={pinToken}
-        onChange={(e) => setPinToken(e.target.value)}
-        placeholder="From Send / create-pin"
         style={{ width: "100%", marginBottom: 16 }}
       />
 
