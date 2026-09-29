@@ -8,6 +8,10 @@ export default function PayMerchant() {
   const [merchantId, setMerchantId] = useState("1");
   const [amount, setAmount] = useState("500");
   const [description, setDescription] = useState("Wallet pay");
+  const [pin, setPin] = useState("");
+  const [pinToken, setPinToken] = useState(
+    () => localStorage.getItem("pin_token") || ""
+  );
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -23,12 +27,22 @@ export default function PayMerchant() {
   const payWallet = async (e) => {
     e.preventDefault();
     if (busy) return;
+    if (!pin) {
+      toast.error("Enter your transfer PIN");
+      return;
+    }
+    if (!pinToken) {
+      toast.error("PIN token missing. Open Send once so a token is created.");
+      return;
+    }
     setBusy(true);
     try {
       await axiosClient.post("merchant/pay-wallet/", {
         merchant_id: Number(merchantId),
         amount,
         description,
+        pin,
+        pin_token: pinToken,
       });
       toast.success("Paid from wallet");
       window.location.replace("/");
@@ -61,7 +75,6 @@ export default function PayMerchant() {
     }
   };
 
-  // ⭐ NEW: Consumer Checkout → Save Card
   const addCardCheckout = async () => {
     if (busy) return;
     setBusy(true);
@@ -103,6 +116,24 @@ export default function PayMerchant() {
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
+        style={{ width: "100%", marginBottom: 12 }}
+      />
+
+      <label>Transfer PIN</label>
+      <input
+        type="password"
+        inputMode="numeric"
+        autoComplete="off"
+        value={pin}
+        onChange={(e) => setPin(e.target.value)}
+        style={{ width: "100%", marginBottom: 12 }}
+      />
+
+      <label>PIN token</label>
+      <input
+        value={pinToken}
+        onChange={(e) => setPinToken(e.target.value)}
+        placeholder="From Send / create-pin"
         style={{ width: "100%", marginBottom: 16 }}
       />
 
@@ -115,7 +146,6 @@ export default function PayMerchant() {
         {busy ? "Paying…" : "Pay with wallet"}
       </button>
 
-      {/* ⭐ NEW BUTTON: First-time Checkout → Save Card */}
       <button
         type="button"
         onClick={addCardCheckout}
