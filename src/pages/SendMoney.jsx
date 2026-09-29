@@ -13,21 +13,20 @@ export default function SendMoney() {
   const [amount, setAmount] = useState("");
 
   const [showPinModal, setShowPinModal] = useState(false);
-  const [pinMode, setPinMode] = useState("verify"); // "set" or "verify"
+  const [pinMode, setPinMode] = useState("verify");
   const [pendingUser, setPendingUser] = useState(null);
   const [pendingAmount, setPendingAmount] = useState("");
 
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
   const [lastRecipient, setLastRecipient] = useState("");
 
-  // Automatically ask to create PIN if not set
   useEffect(() => {
-  const hasPin = localStorage.getItem("HAS_PIN");
-  if (!hasPin) {
-    setPinMode("set");
-    setShowPinModal(true);
-  }
-}, []);
+    const hasPin = localStorage.getItem("HAS_PIN");
+    if (!hasPin) {
+      setPinMode("set");
+      setShowPinModal(true);
+    }
+  }, []);
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -60,22 +59,41 @@ export default function SendMoney() {
     setShowPinModal(true);
   };
 
+  const savePinToken = (data) => {
+    const token = data?.token || data?.pin_token || "";
+    if (token) localStorage.setItem("PIN_TOKEN", token);
+    return token;
+  };
+
   const handlePinVerified = async (pin) => {
-    // If we are in "set" mode
     if (pinMode === "set") {
-      localStorage.setItem("HAS_PIN", "true");
-      toast.success("PIN created successfully!");
-      setShowPinModal(false);
+      try {
+        const res = await axiosClient.post("/create-pin/", { pin });
+        savePinToken(res.data);
+        localStorage.setItem("HAS_PIN", "true");
+        toast.success("PIN created successfully!");
+        setShowPinModal(false);
+      } catch (err) {
+        toast.error(err.response?.data?.error || "Could not create PIN");
+      }
       return;
     }
 
-    // Normal send money flow
     if (!pendingUser?.username) {
       toast.error("Recipient lost. Please try again.");
       return;
     }
 
-    const pinToken = localStorage.getItem("PIN_TOKEN");
+    let pinToken = localStorage.getItem("PIN_TOKEN");
+    if (!pinToken) {
+      try {
+        const res = await axiosClient.post("/verify-pin/", { pin });
+        pinToken = savePinToken(res.data);
+      } catch (err) {
+        toast.error(err.response?.data?.error || "PIN token missing. Please try again.");
+        return;
+      }
+    }
     if (!pinToken) {
       toast.error("PIN token missing. Please try again.");
       return;
@@ -95,13 +113,13 @@ export default function SendMoney() {
       setLastRecipient(pendingUser.username);
       setShowFavoriteModal(true);
 
-      // Reset form
       setAmount("");
       setSearch("");
       setResults([]);
       setSelectedUser(null);
       setPendingUser(null);
       setPendingAmount("");
+      setShowPinModal(false);
     } catch (err) {
       toast.error(err.response?.data?.error || "Transfer failed");
     }
@@ -115,7 +133,6 @@ export default function SendMoney() {
       </div>
 
       <div style={styles.card}>
-        {/* Favorites */}
         <div style={{ marginBottom: 24 }}>
           <FavoriteRecipients
             onSelect={(fav) => {
@@ -126,7 +143,6 @@ export default function SendMoney() {
           />
         </div>
 
-        {/* Search */}
         <div style={styles.formGroup}>
           <label style={styles.label}>Recipient</label>
           <input
@@ -138,7 +154,6 @@ export default function SendMoney() {
           />
         </div>
 
-        {/* Search Results */}
         {results.length > 0 && (
           <div style={styles.resultsBox}>
             {results.map((user, index) => (
@@ -166,7 +181,6 @@ export default function SendMoney() {
           </div>
         )}
 
-        {/* Selected User */}
         {selectedUser && (
           <div style={styles.selectedBox}>
             <div>
@@ -185,7 +199,6 @@ export default function SendMoney() {
           </div>
         )}
 
-        {/* Amount */}
         <div style={styles.formGroup}>
           <label style={styles.label}>Amount</label>
           <div style={styles.amountWrapper}>
@@ -200,13 +213,11 @@ export default function SendMoney() {
           </div>
         </div>
 
-        {/* Send Button */}
         <button onClick={handleSend} style={styles.sendBtn}>
           Continue
         </button>
       </div>
 
-      {/* Modals */}
       <AddFavoriteModal
         open={showFavoriteModal}
         onClose={() => setShowFavoriteModal(false)}
@@ -223,7 +234,6 @@ export default function SendMoney() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   page: {
     padding: "32px 28px",
