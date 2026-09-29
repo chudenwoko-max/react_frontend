@@ -25,6 +25,13 @@ ChartJS.register(
   Filler
 );
 
+const QUICK_ACTIONS = [
+  { label: "Fund", to: "/fund-wallet" },
+  { label: "Send", to: "/send-money" },
+  { label: "Pay Merchant", to: "/pay" },
+  { label: "Withdraw", to: "/withdraw" },
+];
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [wallets, setWallets] = useState([]);
@@ -107,7 +114,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Multi-Currency Balances */}
       <div style={styles.walletsRow}>
         {wallets.length === 0 ? (
           <div style={styles.emptyWallet}>
@@ -143,7 +149,14 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Quick Stats */}
+      <div style={styles.actionsRow}>
+        {QUICK_ACTIONS.map((action) => (
+          <Link key={action.to} to={action.to} style={styles.actionTile}>
+            {action.label}
+          </Link>
+        ))}
+      </div>
+
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
           <p style={styles.statLabel}>Total Sent</p>
@@ -169,7 +182,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts */}
       <div style={styles.chartsRow}>
         <div style={styles.chartCard}>
           <h3 style={styles.chartTitle}>Transactions (Last 7 Days)</h3>
@@ -181,7 +193,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Transactions */}
       <div style={styles.chartCard}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <h3 style={styles.chartTitle}>Recent Transactions</h3>
@@ -225,7 +236,6 @@ export default function Dashboard() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   page: {
     padding: "32px 28px",
@@ -291,6 +301,26 @@ const styles = {
     padding: 30,
     background: "white",
     borderRadius: 12,
+  },
+  actionsRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionTile: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    minHeight: 52,
+    padding: "12px 10px",
+    background: "#0f172a",
+    color: "#fff",
+    borderRadius: 12,
+    textDecoration: "none",
+    fontWeight: 600,
+    fontSize: 14,
   },
   statsGrid: {
     display: "grid",
