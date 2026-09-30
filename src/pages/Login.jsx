@@ -87,16 +87,18 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <div style={styles.brandSection}>
-          <img
-            src="/orbitpay-logo.png"
-            alt="OrbitPay"
-            style={styles.logo}
-          />
-          <p style={styles.tagline}>
-            {requires2FA ? "Enter Verification Code" : "Sign in to your account"}
+
+        {/* BRAND BLOCK (Payhost) */}
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <img src="/payhost-mark.png" alt="Payhost" height={48} />
+          <p style={{ margin: "8px 0 0", fontWeight: 700, color: "#0F172A" }}>
+            Payhost
           </p>
         </div>
+
+        <p style={styles.tagline}>
+          {requires2FA ? "Enter Verification Code" : "Sign in to your account"}
+        </p>
 
         {!requires2FA ? (
           <form onSubmit={handleLogin}>
@@ -198,19 +200,12 @@ const styles = {
     border: "1px solid #e5e7eb",
     boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
   },
-  brandSection: {
-    textAlign: "center",
-    marginBottom: 32,
-  },
-  logo: {
-    height: 104,
-    marginBottom: 12,
-    objectFit: "contain",
-  },
   tagline: {
+    textAlign: "center",
     color: "#6b7280",
     marginTop: 8,
     fontSize: 15,
+    marginBottom: 24,
   },
   formGroup: {
     marginBottom: 20,
@@ -233,7 +228,7 @@ const styles = {
   button: {
     width: "100%",
     padding: "13px",
-    background: "#0F172A", // Navy primary
+    background: "#0F172A",
     color: "white",
     border: "none",
     borderRadius: 10,

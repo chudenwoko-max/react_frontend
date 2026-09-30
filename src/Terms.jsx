@@ -11,6 +11,14 @@ export default function Terms() {
         color: "#0F172A",
       }}
     >
+
+      <a
+        href="/"
+        style={{ display: "inline-flex", alignItems: "center", marginBottom: 24 }}
+      >
+        <img src="/payhost-logo.png" alt="Payhost" height={28} />
+      </a>
+
       <p><Link to="/">← Payhost</Link></p>
 
       <h1>Terms of use</h1>
@@ -47,7 +55,6 @@ export default function Terms() {
         forbidden. We may freeze wallets for suspected abuse.
       </p>
 
-      {/* INSERTED BLOCK */}
       <h2>Disputes</h2>
       <p>
         If a payment looks wrong, email hello@payhost.dev within 48 hours with

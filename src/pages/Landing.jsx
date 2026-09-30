@@ -4,7 +4,15 @@ export default function Landing() {
   return (
     <div style={wrap}>
       <header style={header}>
-        <strong>Payhost</strong>
+        <a href="/" style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src="/payhost-logo.png"
+            alt="Payhost"
+            height={36}
+            style={{ display: "block" }}
+          />
+        </a>
+
         <nav style={nav}>
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>

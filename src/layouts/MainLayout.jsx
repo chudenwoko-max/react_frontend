@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
@@ -23,6 +23,19 @@ export default function MainLayout() {
           position: "relative",
         }}
       >
+
+        {/* BRAND PATCH — replaces OrbitPay */}
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid #E2E8F0" }}>
+          <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
+            <img
+              src="/payhost-logo.png"
+              alt="Payhost"
+              height={28}
+              style={{ display: "block" }}
+            />
+          </Link>
+        </div>
+
         <Navbar
           isSidebarOpen={sidebarOpen}
           onMenuClick={() => setSidebarOpen((prev) => !prev)}
