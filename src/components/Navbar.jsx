@@ -1,126 +1,81 @@
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import NotificationBell from "./NotificationBell";
-import { FaBars, FaTimes } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
-function Navbar({ onMenuClick, isSidebarOpen }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("ACCESS_TOKEN");
-    localStorage.removeItem("REFRESH_TOKEN");
-    navigate("/login");
-  };
-
+export default function Navbar({ isSidebarOpen, onMenuClick }) {
   return (
-    <nav style={styles.nav}>
-      <div style={styles.left}>
-        {/* Hamburger */}
+    <header
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 20px",
+        borderBottom: "1px solid #E2E8F0",
+        background: "#ffffff",
+      }}
+    >
+      {/* Left — Payhost brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
           onClick={onMenuClick}
-          style={styles.menuBtn}
-          className="menu-btn"
-          title={isSidebarOpen ? "Close menu" : "Open menu"}
-          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+          style={{
+            background: "transparent",
+            border: "none",
+            fontSize: 22,
+            cursor: "pointer",
+            lineHeight: 1,
+          }}
         >
-          {isSidebarOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+          ☰
         </button>
 
-        {/* Only the logo (already has OrbitPay text) - enlarged & tight */}
-        <img
-          src="/orbitpay-logo.png"
-          alt="OrbitPay"
-          style={styles.logo}
-        />
+        <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src="/payhost-logo.png"
+            alt="Payhost"
+            style={{ height: 28, display: "block" }}
+          />
+        </Link>
       </div>
 
-      <div style={styles.right}>
-        <NotificationBell />
-
-        <div style={styles.userInfo}>
+      {/* Right — user info */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img
             src={
-              user?.avatar ||
-              `https://ui-avatars.com/api/?name=${user?.username || "User"}&background=e5e7eb&color=374151`
+              window.user?.avatar ||
+              `https://ui-avatars.com/api/?name=${window.user?.username || "User"}&background=e5e7eb&color=374151`
             }
             alt="avatar"
-            style={styles.avatar}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
           />
-          <span style={styles.username}>{user?.username || "User"}</span>
+          <span style={{ fontSize: 15, color: "#374151" }}>
+            {window.user?.username || "User"}
+          </span>
         </div>
 
-        <button onClick={handleLogout} style={styles.logoutBtn}>
+        <button
+          onClick={() => {
+            localStorage.removeItem("ACCESS_TOKEN");
+            localStorage.removeItem("REFRESH_TOKEN");
+            window.location.href = "/login";
+          }}
+          style={{
+            padding: "8px 14px",
+            background: "#0F172A",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: 14,
+          }}
+        >
           Logout
         </button>
       </div>
-    </nav>
+    </header>
   );
 }
-
-export default Navbar;
-
-const styles = {
-  nav: {
-    background: "#ffffff",
-    height: "64px",
-    padding: "0 16px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottom: "1px solid #e5e7eb",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  left: {
-    display: "flex",
-    alignItems: "center",
-    gap: "2px", // extremely close like GitHub
-  },
-  menuBtn: {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    padding: "4px",
-    color: "#0F172A",
-    display: "flex",
-    alignItems: "center",
-  },
-  logo: {
-    height: 36, // same visual size as the 24px icon + padding
-    width: "auto",
-    objectFit: "contain",
-  },
-  right: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-  },
-  userInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    objectFit: "cover",
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#374151",
-  },
-  logoutBtn: {
-    background: "#ffffff",
-    color: "#dc2626",
-    border: "1px solid #fecaca",
-    padding: "8px 16px",
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-};

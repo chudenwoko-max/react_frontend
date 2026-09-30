@@ -30,122 +30,123 @@ export default function Statements() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Account Statements</h1>
-          <p style={styles.subtitle}>View and download your monthly statements</p>
-        </div>
+  <div style={styles.page}>
+    <div style={styles.header}>
+      <div>
+        <h1 style={styles.title}>Account Statements</h1>
+        <p style={styles.subtitle}>View and download your monthly statements</p>
       </div>
+    </div>
 
-      {/* Month Selector */}
-      <div style={styles.card}>
-        <div style={styles.selectorRow}>
-          <div style={{ flex: 1 }}>
-            <label style={styles.label}>Select Month</label>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              style={styles.input}
-            />
+    {/* Month Selector */}
+    <div style={styles.card}>
+      <div style={styles.selectorRow}>
+        <div style={{ flex: 1 }}>
+          <label style={styles.label}>Select Month</label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            style={styles.input}
+          />
+        </div>
+        <button
+          onClick={handleFetch}
+          disabled={loading}
+          style={styles.primaryBtn}
+        >
+          {loading ? "Loading..." : "Generate Statement"}
+        </button>
+      </div>
+    </div>
+
+    {/* Statement Result */}
+    {statement && (
+      <div style={styles.statementCard} id="statement-print">
+        <div style={styles.statementHeader}>
+          <div>
+            <h2 style={{ margin: 0 }}>Payhost</h2>
+            <p style={{ margin: "4px 0 0", color: "#6b7280" }}>
+              Account Statement
+            </p>
           </div>
-          <button
-            onClick={handleFetch}
-            disabled={loading}
-            style={styles.primaryBtn}
-          >
-            {loading ? "Loading..." : "Generate Statement"}
+          <button onClick={handlePrint} style={styles.printBtn}>
+            Print / Save PDF
           </button>
         </div>
-      </div>
 
-      {/* Statement Result */}
-      {statement && (
-        <div style={styles.statementCard} id="statement-print">
-          <div style={styles.statementHeader}>
-            <div>
-              <h2 style={{ margin: 0 }}>OrbitPay</h2>
-              <p style={{ margin: "4px 0 0", color: "#6b7280" }}>
-                Account Statement
-              </p>
-            </div>
-            <button onClick={handlePrint} style={styles.printBtn}>
-              Print / Save PDF
-            </button>
-          </div>
-
-          <div style={styles.userInfo}>
-            <p><strong>Account Holder:</strong> {statement.user.username}</p>
-            <p><strong>Email:</strong> {statement.user.email || "—"}</p>
-            <p><strong>Period:</strong> {statement.month}</p>
-          </div>
-
-          {/* Summary */}
-          <div style={styles.summaryGrid}>
-            <div style={styles.summaryItem}>
-              <p style={styles.summaryLabel}>Total Inflow</p>
-              <p style={styles.summaryValue}>
-                ₦{Number(statement.summary.total_inflow).toLocaleString()}
-              </p>
-            </div>
-            <div style={styles.summaryItem}>
-              <p style={styles.summaryLabel}>Total Outflow</p>
-              <p style={styles.summaryValue}>
-                ₦{Number(statement.summary.total_outflow).toLocaleString()}
-              </p>
-            </div>
-            <div style={styles.summaryItem}>
-              <p style={styles.summaryLabel}>Transactions</p>
-              <p style={styles.summaryValue}>
-                {statement.summary.transaction_count}
-              </p>
-            </div>
-            <div style={styles.summaryItem}>
-              <p style={styles.summaryLabel}>Closing Balance</p>
-              <p style={styles.summaryValue}>
-                ₦{Number(statement.summary.closing_balance).toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          {/* Transactions Table */}
-          <h3 style={{ marginTop: 28, marginBottom: 12 }}>Transactions</h3>
-
-          {statement.transactions.length === 0 ? (
-            <p style={{ color: "#9ca3af", textAlign: "center", padding: 20 }}>
-              No transactions for this month
-            </p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Date</th>
-                    <th style={styles.th}>Type</th>
-                    <th style={styles.th}>Description</th>
-                    <th style={styles.th}>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statement.transactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td style={styles.td}>{tx.date}</td>
-                      <td style={styles.td}>{tx.type}</td>
-                      <td style={styles.td}>{tx.description}</td>
-                      <td style={styles.td}>
-                        ₦{Number(tx.amount).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div style={styles.userInfo}>
+          <p><strong>Account Holder:</strong> {statement.user.username}</p>
+          <p><strong>Email:</strong> {statement.user.email || "—"}</p>
+          <p><strong>Period:</strong> {statement.month}</p>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Summary */}
+        <div style={styles.summaryGrid}>
+          <div style={styles.summaryItem}>
+            <p style={styles.summaryLabel}>Total Inflow</p>
+            <p style={styles.summaryValue}>
+              ₦{Number(statement.summary.total_inflow).toLocaleString()}
+            </p>
+          </div>
+          <div style={styles.summaryItem}>
+            <p style={styles.summaryLabel}>Total Outflow</p>
+            <p style={styles.summaryValue}>
+              ₦{Number(statement.summary.total_outflow).toLocaleString()}
+            </p>
+          </div>
+          <div style={styles.summaryItem}>
+            <p style={styles.summaryLabel}>Transactions</p>
+            <p style={styles.summaryValue}>
+              {statement.summary.transaction_count}
+            </p>
+          </div>
+          <div style={styles.summaryItem}>
+            <p style={styles.summaryLabel}>Closing Balance</p>
+            <p style={styles.summaryValue}>
+              ₦{Number(statement.summary.closing_balance).toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        <h3 style={{ marginTop: 28, marginBottom: 12 }}>Transactions</h3>
+
+        {statement.transactions.length === 0 ? (
+          <p style={{ color: "#9ca3af", textAlign: "center", padding: 20 }}>
+            No transactions for this month
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Date</th>
+                  <th style={styles.th}>Type</th>
+                  <th style={styles.th}>Description</th>
+                  <th style={styles.th}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {statement.transactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td style={styles.td}>{tx.date}</td>
+                    <td style={styles.td}>{tx.type}</td>
+                    <td style={styles.td}>{tx.description}</td>
+                    <td style={styles.td}>
+                      ₦{Number(tx.amount).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
+
 }
 
 // ================= STYLES =================

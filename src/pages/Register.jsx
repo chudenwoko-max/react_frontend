@@ -38,80 +38,81 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>Create Account</h1>
-          <p style={styles.subtitle}>Join OrbitPay and start sending money instantly</p>
+  <div style={styles.page}>
+    <div style={styles.card}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Create Account</h1>
+        <p style={styles.subtitle}>Join Payhost and start sending money instantly</p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Username</label>
+          <input
+            type="text"
+            name="username"
+            placeholder="Choose a username"
+            value={formData.username}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Username</label>
-            <input
-              type="text"
-              name="username"
-              placeholder="Choose a username"
-              value={formData.username}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-          </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Email</label>
+          <input
+            type="email"
+            name="email"
+            placeholder="Enter your email"
+            value={formData.email}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+        </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-          </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Password</label>
+          <input
+            type="password"
+            name="password"
+            placeholder="Create a password"
+            value={formData.password}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+        </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Create a password"
-              value={formData.password}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-          </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Confirm Password</label>
+          <input
+            type="password"
+            name="confirm_password"
+            placeholder="Confirm your password"
+            value={formData.confirm_password}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+        </div>
 
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Confirm Password</label>
-            <input
-              type="password"
-              name="confirm_password"
-              placeholder="Confirm your password"
-              value={formData.confirm_password}
-              onChange={handleChange}
-              style={styles.input}
-              required
-            />
-          </div>
+        <button type="submit" style={styles.button} disabled={loading}>
+          {loading ? "Creating Account..." : "Create Account"}
+        </button>
+      </form>
 
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
-
-        <p style={styles.footerText}>
-          Already have an account?{" "}
-          <Link to="/login" style={styles.link}>
-            Login
-          </Link>
-        </p>
-      </div>
+      <p style={styles.footerText}>
+        Already have an account?{" "}
+        <Link to="/login" style={styles.link}>
+          Login
+        </Link>
+      </p>
     </div>
-  );
+  </div>
+);
+
 }
 
 const styles = {
