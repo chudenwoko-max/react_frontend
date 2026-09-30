@@ -47,18 +47,35 @@ export default function PayMerchant() {
         return;
       }
 
-      // Step 2: pay with wallet using pin + pin_token
-      await axiosClient.post("merchant/pay-wallet/", {
-        merchant_id: Number(merchantId),
-        amount,
-        description,
-        pin,
-        pin_token: pinToken,
-      });
+      // ⭐ IDEMPOTENCY KEY (one per tap)
+      const idem =
+        sessionStorage.getItem("pay_idem") ||
+        (crypto.randomUUID && crypto.randomUUID()) ||
+        String(Date.now());
+
+      sessionStorage.setItem("pay_idem", idem);
+
+      // Step 2: pay with wallet using pin + pin_token + idempotency key
+      await axiosClient.post(
+        "merchant/pay-wallet/",
+        {
+          merchant_id: Number(merchantId),
+          amount,
+          description,
+          pin,
+          pin_token: pinToken,
+        },
+        {
+          headers: { "Idempotency-Key": idem },
+        }
+      );
+
+      sessionStorage.removeItem("pay_idem");
 
       toast.success("Paid from wallet");
       window.location.replace("/");
     } catch (err) {
+      sessionStorage.removeItem("pay_idem");
       toast.error(err.response?.data?.error || "Wallet pay failed");
       setBusy(false);
     }
