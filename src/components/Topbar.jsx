@@ -12,32 +12,40 @@ function Topbar() {
   };
 
   return (
-    <header style={styles.header}>
-      {/* Left */}
-      <div style={styles.left}>
-        <span style={styles.brand}>OrbitPay</span>
+  <header style={styles.header}>
+    {/* Left */}
+    <div style={styles.left}>
+      <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
+        <img
+          src="/payhost-logo.png"
+          alt="Payhost"
+          height={28}
+          style={{ display: "block" }}
+        />
+      </Link>
+    </div>
+
+    {/* Right */}
+    <div style={styles.right}>
+      <div style={styles.userSection}>
+        <img
+          src={
+            user?.avatar ||
+            `https://ui-avatars.com/api/?name=${user?.username || "User"}&background=e5e7eb&color=374151`
+          }
+          alt="avatar"
+          style={styles.avatar}
+        />
+        <span style={styles.username}>{user?.username || "User"}</span>
       </div>
 
-      {/* Right */}
-      <div style={styles.right}>
-        <div style={styles.userSection}>
-          <img
-            src={
-              user?.avatar ||
-              `https://ui-avatars.com/api/?name=${user?.username || "User"}&background=e5e7eb&color=374151`
-            }
-            alt="avatar"
-            style={styles.avatar}
-          />
-          <span style={styles.username}>{user?.username || "User"}</span>
-        </div>
+      <button onClick={handleLogout} style={styles.logoutBtn}>
+        Logout
+      </button>
+    </div>
+  </header>
+);
 
-        <button onClick={handleLogout} style={styles.logoutBtn}>
-          Logout
-        </button>
-      </div>
-    </header>
-  );
 }
 
 export default Topbar;
