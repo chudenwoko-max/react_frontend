@@ -8,7 +8,7 @@ export default function Landing() {
           <img
             src="/payhost-logo.png"
             alt="Payhost"
-            height={36}
+            height={72}
             style={{ display: "block" }}
           />
         </a>

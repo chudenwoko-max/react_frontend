@@ -31,7 +31,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
           <img
             src="/payhost-logo.png"
             alt="Payhost"
-            style={{ height: 28, display: "block" }}
+            style={{ height: 56, display: "block" }}
           />
         </Link>
       </div>

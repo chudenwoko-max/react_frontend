@@ -16,7 +16,7 @@ export default function Privacy() {
         href="/"
         style={{ display: "inline-flex", alignItems: "center", marginBottom: 24 }}
       >
-        <img src="/payhost-logo.png" alt="Payhost" height={28} />
+        <img src="/payhost-logo.png" alt="Payhost" height={56} />
       </a>
 
       <p><Link to="/">← Payhost</Link></p>

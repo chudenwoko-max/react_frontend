@@ -37,13 +37,18 @@ export default function Register() {
     }
   };
 
-  return (
-  <div style={styles.page}>
-    <div style={styles.card}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Create Account</h1>
-        <p style={styles.subtitle}>Join Payhost and start sending money instantly</p>
-      </div>
+    return (
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <div style={styles.header}>
+          <img
+            src="/payhost-mark.png"
+            alt="Payhost"
+            style={{ height: 96, width: "auto", display: "block", margin: "0 auto 16px" }}
+          />
+          <h1 style={styles.title}>Create Account</h1>
+          <p style={styles.subtitle}>Join Payhost and start sending money instantly</p>
+        </div>
 
       <form onSubmit={handleSubmit}>
         <div style={styles.formGroup}>

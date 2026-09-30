@@ -30,7 +30,7 @@ export default function MainLayout() {
             <img
               src="/payhost-logo.png"
               alt="Payhost"
-              height={28}
+              height={56}
               style={{ display: "block" }}
             />
           </Link>
