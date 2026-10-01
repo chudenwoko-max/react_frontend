@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
@@ -83,28 +84,32 @@ const CABLE_PROVIDERS = [
 ];
 
 export default function BillPayments() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("airtime");
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
 
-  // Airtime & Data
   const [provider, setProvider] = useState("MTN");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
   const [selectedPlan, setSelectedPlan] = useState(null);
 
-  // Electricity
   const [disco, setDisco] = useState("Ikeja Electric");
   const [meterNumber, setMeterNumber] = useState("");
   const [meterType, setMeterType] = useState("prepaid");
   const [elecAmount, setElecAmount] = useState("");
 
-  // Cable
   const [cableProvider, setCableProvider] = useState("DSTV");
   const [smartcard, setSmartcard] = useState("");
   const [cablePackage, setCablePackage] = useState(null);
 
   const quickAmounts = [100, 200, 500, 1000, 2000, 5000];
+
+  // ✅ Hard redirect version
+  const goHomeAfterSuccess = (message) => {
+    toast.success(message);
+    window.location.replace("/");
+  };
 
   useEffect(() => {
     if (activeTab === "history") fetchHistory();
@@ -122,13 +127,12 @@ export default function BillPayments() {
   const handleBuyAirtime = async () => {
     if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
     if (!amount || Number(amount) < 50) return toast.error("Minimum amount is ₦50");
+    if (loading) return;
 
     setLoading(true);
     try {
       await axiosClient.post("/bills/airtime/", { provider, phone, amount });
-      toast.success(`Airtime of ₦${amount} sent successfully`);
-      setAmount("");
-      setPhone("");
+      goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Purchase failed");
     } finally {
@@ -139,6 +143,7 @@ export default function BillPayments() {
   const handleBuyData = async () => {
     if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
     if (!selectedPlan) return toast.error("Please select a data plan");
+    if (loading) return;
 
     setLoading(true);
     try {
@@ -148,9 +153,7 @@ export default function BillPayments() {
         amount: selectedPlan.amount,
         package_name: selectedPlan.name,
       });
-      toast.success(`${selectedPlan.name} purchased successfully`);
-      setSelectedPlan(null);
-      setPhone("");
+      goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Purchase failed");
     } finally {
@@ -161,6 +164,7 @@ export default function BillPayments() {
   const handlePayElectricity = async () => {
     if (!meterNumber) return toast.error("Enter meter number");
     if (!elecAmount || Number(elecAmount) < 500) return toast.error("Minimum amount is ₦500");
+    if (loading) return;
 
     setLoading(true);
     try {
@@ -170,9 +174,7 @@ export default function BillPayments() {
         amount: elecAmount,
         meter_type: meterType,
       });
-      toast.success("Electricity payment successful");
-      setMeterNumber("");
-      setElecAmount("");
+      goHomeAfterSuccess("Electricity payment successful");
     } catch (err) {
       toast.error(err.response?.data?.error || "Payment failed");
     } finally {
@@ -183,6 +185,7 @@ export default function BillPayments() {
   const handlePayCable = async () => {
     if (!smartcard) return toast.error("Enter smartcard number");
     if (!cablePackage) return toast.error("Please select a package");
+    if (loading) return;
 
     setLoading(true);
     try {
@@ -192,9 +195,7 @@ export default function BillPayments() {
         amount: cablePackage.amount,
         package_name: cablePackage.name,
       });
-      toast.success(`${cablePackage.name} subscription successful`);
-      setSmartcard("");
-      setCablePackage(null);
+      goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Payment failed");
     } finally {
@@ -205,6 +206,7 @@ export default function BillPayments() {
   const currentCablePackages =
     CABLE_PROVIDERS.find((p) => p.id === cableProvider)?.packages || [];
 
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -212,7 +214,6 @@ export default function BillPayments() {
         <p style={styles.subtitle}>Airtime, Data, Electricity & Cable TV</p>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         {["airtime", "data", "electricity", "cable", "history"].map((tab) => (
           <button
@@ -230,7 +231,6 @@ export default function BillPayments() {
       </div>
 
       <div style={styles.card}>
-        {/* ===== AIRTIME ===== */}
         {activeTab === "airtime" && (
           <div>
             <label style={styles.label}>Select Network</label>
@@ -298,7 +298,6 @@ export default function BillPayments() {
           </div>
         )}
 
-        {/* ===== DATA ===== */}
         {activeTab === "data" && (
           <div>
             <label style={styles.label}>Select Network</label>
@@ -356,7 +355,6 @@ export default function BillPayments() {
           </div>
         )}
 
-        {/* ===== ELECTRICITY ===== */}
         {activeTab === "electricity" && (
           <div>
             <div style={styles.formGroup}>
@@ -367,7 +365,9 @@ export default function BillPayments() {
                 style={styles.input}
               >
                 {ELECTRICITY_PROVIDERS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </div>
@@ -424,7 +424,6 @@ export default function BillPayments() {
           </div>
         )}
 
-        {/* ===== CABLE TV ===== */}
         {activeTab === "cable" && (
           <div>
             <label style={styles.label}>Select Provider</label>
@@ -483,7 +482,6 @@ export default function BillPayments() {
           </div>
         )}
 
-        {/* ===== HISTORY ===== */}
         {activeTab === "history" && (
           <div>
             {history.length === 0 ? (
@@ -525,7 +523,6 @@ export default function BillPayments() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   page: { padding: "32px 28px", maxWidth: 580, margin: "0 auto" },
   header: { marginBottom: 24 },
