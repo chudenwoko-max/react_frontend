@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { FaBars, FaTimes } from "react-icons/fa";
 
 export default function Navbar({ isSidebarOpen, onMenuClick }) {
   return (
@@ -12,23 +13,29 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         background: "#ffffff",
       }}
     >
-      {/* Left — Payhost brand */}
+      {/* Left — Payhost brand + menu button */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
           onClick={onMenuClick}
           style={{
             background: "transparent",
             border: "none",
-            fontSize: 22,
             cursor: "pointer",
             lineHeight: 1,
+            padding: 4,
           }}
+          title={isSidebarOpen ? "Close menu" : "Open menu"}
+          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          ☰
+          {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
         <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
-          
+          <img
+            src="/payhost-logo.png"
+            alt="Payhost"
+            style={{ height: 28, display: "block" }}
+          />
         </Link>
       </div>
 
