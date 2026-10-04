@@ -1,53 +1,45 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
 
 export default function AvatarUpload() {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
-    if (selected) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
+    if (!selected) return;
+    if (!selected.type.startsWith("image/")) {
+      toast.error("Choose a JPG or PNG");
+      return;
     }
+    setFile(selected);
+    setPreview(URL.createObjectURL(selected));
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast.error("Please select an image");
-      return;
-    }
+    if (!file || loading) return;
 
     const formData = new FormData();
     formData.append("avatar", file);
-
     setLoading(true);
 
     try {
       const res = await axiosClient.post("user/avatar/", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      toast.success("Avatar updated successfully");
-
-      // Update user in context if backend returns new avatar
       if (res.data?.avatar) {
         setUser({ ...user, avatar: res.data.avatar });
-      } else {
-        window.location.reload();
       }
+      toast.success("Avatar updated");
+      navigate("/");
     } catch (err) {
-      toast.error("Upload failed");
-      console.error(err);
-    } finally {
+      toast.error(err.response?.data?.error || "Upload failed");
       setLoading(false);
     }
   };
