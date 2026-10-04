@@ -68,10 +68,7 @@ a {
    Responsive Sidebar
    =============================== */
 
-/* Let React control the open/close state on mobile */
-.sidebar {
-  /* no forced transform here */
-}
+/* ❌ Removed empty .sidebar { } block */
 
 /* Desktop styles */
 @media (min-width: 1024px) {
@@ -89,6 +86,36 @@ a {
 
   /* Hide close button on desktop */
   .close-btn {
+    display: none !important;
+  }
+}
+
+/* ===============================
+   PRINT MODE FOR STATEMENTS
+   =============================== */
+
+@media print {
+  /* Hide everything except the statement */
+  body.printing-statement * {
+    visibility: hidden;
+  }
+
+  body.printing-statement #statement-print,
+  body.printing-statement #statement-print * {
+    visibility: visible;
+  }
+
+  body.printing-statement #statement-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Hide sidebar, navbar, buttons */
+  .sidebar,
+  .navbar,
+  .no-print {
     display: none !important;
   }
 }

@@ -26,10 +26,12 @@ export default function Statements() {
   };
 
   const handlePrint = () => {
-    window.print();
+  document.body.classList.add("printing-statement");
+  window.print();
+  document.body.classList.remove("printing-statement");
   };
 
-  return (
+ return (
   <div style={styles.page}>
     <div style={styles.header}>
       <div>
@@ -63,14 +65,30 @@ export default function Statements() {
     {/* Statement Result */}
     {statement && (
       <div style={styles.statementCard} id="statement-print">
+
+        {/* ⭐ PATCHED HEADER — logo only, no <h2>Payhost</h2> */}
         <div style={styles.statementHeader}>
-          <div>
-            <h2 style={{ margin: 0 }}>Payhost</h2>
-            <p style={{ margin: "4px 0 0", color: "#6b7280" }}>
-              Account Statement
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img
+              src="/payhost-logo.png"
+              alt="Payhost"
+              style={{ height: 36, width: "auto" }}
+            />
+            <div>
+              <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+                Account statement
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6b7280" }}>
+                {statement.month}
+              </p>
+            </div>
           </div>
-          <button onClick={handlePrint} style={styles.printBtn}>
+
+          <button
+            onClick={handlePrint}
+            style={styles.printBtn}
+            className="no-print"
+          >
             Print / Save PDF
           </button>
         </div>
@@ -146,6 +164,7 @@ export default function Statements() {
     )}
   </div>
 );
+
 
 }
 
