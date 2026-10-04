@@ -28,11 +28,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         </button>
 
         <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
-          <img
-            src="/payhost-logo.png"
-            alt="Payhost"
-            style={{ height: 56, display: "block" }}
-          />
+          
         </Link>
       </div>
 
