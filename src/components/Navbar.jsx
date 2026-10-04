@@ -13,6 +13,28 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         background: "#ffffff",
       }}
     >
+      {/* GitHub-style tooltip CSS */}
+      <style>{`
+        .menu-tip { position: relative; }
+        .menu-tip::after {
+          content: attr(data-tip);
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          background: #1f2328;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 6px 8px;
+          border-radius: 6px;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          z-index: 1000;
+        }
+        .menu-tip:hover::after { opacity: 1; }
+      `}</style>
+
       {/* Left — menu button only */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
