@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, onClose }) {
       }}
       className="sidebar"
     >
-      {/* GitHub-style tooltip CSS */}
+      {/* GitHub-style tooltip CSS (still needed for navbar bars) */}
       <style>{`
         .menu-tip { position: relative; }
         .menu-tip::after {
@@ -57,14 +57,14 @@ export default function Sidebar({ isOpen, onClose }) {
           z-index: 1000;
         }
         .menu-tip:hover::after { opacity: 1; }
+        .menu-tip:active::after,
+        .menu-tip:not(:hover)::after { opacity: 0; }
       `}</style>
 
-      {/* Close button at top of sidebar (GitHub pattern) */}
+      {/* Close button at top of sidebar (GitHub pattern, NO tooltip) */}
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 8px 0" }}>
         <button
           type="button"
-          className="menu-tip"
-          data-tip="Close menu"
           aria-label="Close menu"
           onMouseDown={(e) => e.currentTarget.blur()}
           onClick={(e) => {
