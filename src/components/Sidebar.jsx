@@ -63,10 +63,14 @@ export default function Sidebar({ isOpen, onClose }) {
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 8px 0" }}>
         <button
           type="button"
-          onClick={onClose}
           className="menu-tip"
           data-tip="Close menu"
           aria-label="Close menu"
+          onMouseDown={(e) => e.currentTarget.blur()}
+          onClick={(e) => {
+            e.currentTarget.blur();
+            onClose();
+          }}
           style={{
             position: "relative",
             width: 32,
