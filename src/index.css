@@ -65,12 +65,42 @@ a {
 }
 
 /* ===============================
+   GitHub‑style tooltip for menu button
+   =============================== */
+
+.menu-tip {
+  position: relative;
+}
+
+.menu-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2328;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.menu-tip:hover::after,
+.menu-tip:focus-visible::after {
+  opacity: 1;
+}
+
+/* ===============================
    Responsive Sidebar
    =============================== */
 
 /* ❌ Removed empty .sidebar { } block */
 
-/* Desktop styles */
 @media (min-width: 1024px) {
   .sidebar {
     transform: translateX(0) !important;

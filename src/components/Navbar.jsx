@@ -24,7 +24,8 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
             lineHeight: 1,
             padding: 4,
           }}
-          title={isSidebarOpen ? "Close menu" : "Open menu"}
+          className="menu-tip"
+          data-tip={isSidebarOpen ? "Close menu" : "Open menu"}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
           {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
