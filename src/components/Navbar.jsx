@@ -33,23 +33,6 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         {/* Removed duplicate navbar logo */}
       </div>
 
-      {/* Center — Search bar */}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-        <input
-          type="text"
-          placeholder="Search..."
-          style={{
-            width: "60%",
-            maxWidth: 320,
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #d1d5db",
-            fontSize: 14,
-            outline: "none",
-          }}
-        />
-      </div>
-
       {/* Right — user info */}
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
