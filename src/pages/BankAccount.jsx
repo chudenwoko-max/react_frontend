@@ -39,21 +39,38 @@ export default function BankAccount() {
     return;
   }
 
+  // ⭐ Resolve bank code from selectedBank
+  const code = form.bank_code || form.code || form.bank_code_fallback;
+  if (!code) {
+    toast.error("Bank code is missing for this bank");
+    return;
+  }
+
   setSaving(true);
   try {
-    await axiosClient.post("/bank/link/", form);
-    
-    // After saving, fetch the account again
+    await axiosClient.post("/bank/link/", {
+      bank_name: form.bank_name,
+      bank_code: code,
+      account_number: form.account_number,
+      account_name: form.account_name,
+    });
+
+    // ⭐ Fetch updated bank account
     const res = await axiosClient.get("/bank/account/");
     setAccount(res.data);
-    
+
     toast.success("Bank account saved successfully");
   } catch (err) {
-    toast.error(err.response?.data?.error || "Failed to save bank account");
+    toast.error(
+      err.response?.data?.error ||
+      err.response?.data?.detail ||
+      "Failed to save bank account"
+    );
   } finally {
     setSaving(false);
   }
 };
+
 
   if (loading) {
     return (
