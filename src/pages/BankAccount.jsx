@@ -19,7 +19,7 @@ export default function BankAccount() {
   // ================= LOAD ACCOUNT + BANK LIST =================
   useEffect(() => {
     axiosClient
-      .get("/bank/account/")
+      .get("bank/account/")   // ⭐ FIXED: removed /api/
       .then((res) => {
         if (res.data) {
           setAccount(res.data);
@@ -36,7 +36,7 @@ export default function BankAccount() {
 
     // ⭐ Load banks with correct code
     axiosClient
-      .get("/api/banks/")
+      .get("banks/")   // ⭐ FIXED: removed /api/
       .then((res) => {
         setBanks(
           (res.data.data || res.data || []).map((b) => ({
@@ -78,14 +78,14 @@ export default function BankAccount() {
 
     setSaving(true);
     try {
-      await axiosClient.post("/bank/link/", {
+      await axiosClient.post("bank/link/", {   // ⭐ FIXED: removed /api/
         bank_name: form.bank_name,
         bank_code: code,
         account_number: form.account_number,
         account_name: form.account_name,
       });
 
-      const res = await axiosClient.get("/bank/account/");
+      const res = await axiosClient.get("bank/account/");  // ⭐ FIXED
       setAccount(res.data);
 
       toast.success("Bank account saved successfully");
