@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function BankAccount() {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
 
   const [banks, setBanks] = useState([]);
 
@@ -65,40 +67,39 @@ export default function BankAccount() {
 
   // ================= SAVE =================
   const handleSave = async () => {
-    if (!form.bank_name || !form.account_number || !form.account_name) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+  if (saving) return;
+  if (!form.bank_name || !form.account_number || !form.account_name) {
+    toast.error("Please fill in all fields");
+    return;
+  }
+  if (!form.bank_code) {
+    toast.error("Bank code is missing for this bank");
+    return;
+  }
+  if (form.account_number.length !== 10) {
+    toast.error("Account number must be 10 digits");
+    return;
+  }
 
-    const code = form.bank_code;
-    if (!code) {
-      toast.error("Bank code is missing for this bank");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await axiosClient.post("bank/link/", {   // ⭐ FIXED: removed /api/
-        bank_name: form.bank_name,
-        bank_code: code,
-        account_number: form.account_number,
-        account_name: form.account_name,
-      });
-
-      const res = await axiosClient.get("bank/account/");  // ⭐ FIXED
-      setAccount(res.data);
-
-      toast.success("Bank account saved successfully");
-    } catch (err) {
-      toast.error(
-        err.response?.data?.error ||
-          err.response?.data?.detail ||
-          "Failed to save bank account"
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+  setSaving(true);
+  try {
+    await axiosClient.post("bank/link/", {
+      bank_name: form.bank_name,
+      bank_code: form.bank_code,
+      account_number: form.account_number,
+      account_name: form.account_name,
+    });
+    toast.success("Bank account saved");
+    navigate("/");
+  } catch (err) {
+    toast.error(
+      err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Failed to save bank account"
+    );
+    setSaving(false);
+  }
+};
 
   // ================= RENDER =================
   if (loading) {
