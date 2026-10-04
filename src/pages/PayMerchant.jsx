@@ -34,7 +34,7 @@ export default function PayMerchant() {
 
     try {
       // Step 1: verify PIN → get pin_token
-      const verified = await axiosClient.post("/verify-pin/", {
+      const verified = await axiosClient.post("verify-pin/", {
         pin: String(pin),
       });
 
@@ -76,7 +76,20 @@ export default function PayMerchant() {
       window.location.replace("/");
     } catch (err) {
       sessionStorage.removeItem("pay_idem");
-      toast.error(err.response?.data?.error || "Wallet pay failed");
+
+      console.error(
+        err.response?.status,
+        err.response?.data,
+        err.message
+      );
+
+      toast.error(
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
+        "Wallet pay failed"
+      );
+
       setBusy(false);
     }
   };
@@ -103,7 +116,19 @@ export default function PayMerchant() {
       toast.success("Paid with saved card");
       window.location.replace("/");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Card pay failed");
+      console.error(
+        err.response?.status,
+        err.response?.data,
+        err.message
+      );
+
+      toast.error(
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
+        "Card pay failed"
+      );
+
       setBusy(false);
     }
   };
@@ -124,7 +149,19 @@ export default function PayMerchant() {
 
       window.location.href = url;
     } catch (err) {
-      setMsg(err.response?.data?.error || err.message || "Checkout failed");
+      console.error(
+        err.response?.status,
+        err.response?.data,
+        err.message
+      );
+
+      setMsg(
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
+        "Checkout failed"
+      );
+
       setBusy(false);
     }
   };
