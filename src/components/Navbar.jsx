@@ -13,7 +13,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         background: "#ffffff",
       }}
     >
-      {/* Left — Payhost brand + menu button */}
+      {/* Left — menu button only */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
           onClick={onMenuClick}
@@ -30,13 +30,24 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
           {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
 
-        <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
-          <img
-            src="/payhost-logo.png"
-            alt="Payhost"
-            style={{ height: 28, display: "block" }}
-          />
-        </Link>
+        {/* Removed duplicate navbar logo */}
+      </div>
+
+      {/* Center — Search bar */}
+      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+        <input
+          type="text"
+          placeholder="Search..."
+          style={{
+            width: "60%",
+            maxWidth: 320,
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            fontSize: 14,
+            outline: "none",
+          }}
+        />
       </div>
 
       {/* Right — user info */}
