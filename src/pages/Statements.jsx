@@ -25,145 +25,180 @@ export default function Statements() {
     }
   };
 
-  const handlePrint = () => {
-  document.body.classList.add("printing-statement");
-  window.print();
-  document.body.classList.remove("printing-statement");
-  };
+  const handlePrint = () => window.print();
 
  return (
-  <div style={styles.page}>
-    <div style={styles.header}>
-      <div>
-        <h1 style={styles.title}>Account Statements</h1>
-        <p style={styles.subtitle}>View and download your monthly statements</p>
-      </div>
-    </div>
+  <>
+    {/* PRINT CSS (inline so Vercel deploy always includes it) */}
+    <style>{`
+      @media print {
+        body * { visibility: hidden; }
+        #statement-print, #statement-print * { visibility: visible; }
+        #statement-print {
+          position: absolute;
+          left: 0; top: 0;
+          width: 100%;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .no-print { display: none !important; }
+        #statement-print table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        #statement-print th,
+        #statement-print td {
+          padding: 8px 6px;
+          border-bottom: 1px solid #e5e7eb;
+          white-space: nowrap;
+        }
+        #statement-print td.amt,
+        #statement-print th.amt {
+          text-align: right;
+        }
+      }
+    `}</style>
 
-    {/* Month Selector */}
-    <div style={styles.card}>
-      <div style={styles.selectorRow}>
-        <div style={{ flex: 1 }}>
-          <label style={styles.label}>Select Month</label>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            style={styles.input}
-          />
+    <div style={styles.page}>
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Account Statements</h1>
+          <p style={styles.subtitle}>View and download your monthly statements</p>
         </div>
-        <button
-          onClick={handleFetch}
-          disabled={loading}
-          style={styles.primaryBtn}
-        >
-          {loading ? "Loading..." : "Generate Statement"}
-        </button>
       </div>
-    </div>
 
-    {/* Statement Result */}
-    {statement && (
-      <div style={styles.statementCard} id="statement-print">
-
-        {/* ⭐ PATCHED HEADER — logo only, no <h2>Payhost</h2> */}
-        <div style={styles.statementHeader}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img
-              src="/payhost-logo.png"
-              alt="Payhost"
-              style={{ height: 36, width: "auto" }}
+      {/* Month Selector */}
+      <div style={styles.card}>
+        <div style={styles.selectorRow}>
+          <div style={{ flex: 1 }}>
+            <label style={styles.label}>Select Month</label>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              style={styles.input}
             />
-            <div>
-              <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
-                Account statement
+          </div>
+          <button
+            onClick={handleFetch}
+            disabled={loading}
+            style={styles.primaryBtn}
+            className="no-print"
+          >
+            {loading ? "Loading..." : "Generate Statement"}
+          </button>
+        </div>
+      </div>
+
+      {/* Statement Result */}
+      {statement && (
+        <div style={styles.statementCard} id="statement-print">
+
+          {/* ⭐ Clean document header — ONE logo only */}
+          <div style={styles.statementHeader}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img
+                src="/payhost-logo.png"
+                alt="Payhost"
+                style={{ height: 32, width: "auto" }}
+              />
+              <div>
+                <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+                  Account statement
+                </p>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6b7280" }}>
+                  {statement.month}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handlePrint}
+              style={styles.printBtn}
+              className="no-print"
+            >
+              Print / Save PDF
+            </button>
+          </div>
+
+          <div style={styles.userInfo}>
+            <p><strong>Account Holder:</strong> {statement.user.username}</p>
+            <p><strong>Email:</strong> {statement.user.email || "—"}</p>
+            <p><strong>Period:</strong> {statement.month}</p>
+          </div>
+
+          {/* Summary */}
+          <div style={styles.summaryGrid}>
+            <div style={styles.summaryItem}>
+              <p style={styles.summaryLabel}>Total Inflow</p>
+              <p style={styles.summaryValue}>
+                ₦{Number(statement.summary.total_inflow).toLocaleString()}
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 13, color: "#6b7280" }}>
-                {statement.month}
+            </div>
+            <div style={styles.summaryItem}>
+              <p style={styles.summaryLabel}>Total Outflow</p>
+              <p style={styles.summaryValue}>
+                ₦{Number(statement.summary.total_outflow).toLocaleString()}
+              </p>
+            </div>
+            <div style={styles.summaryItem}>
+              <p style={styles.summaryLabel}>Transactions</p>
+              <p style={styles.summaryValue}>
+                {statement.summary.transaction_count}
+              </p>
+            </div>
+            <div style={styles.summaryItem}>
+              <p style={styles.summaryLabel}>Closing Balance</p>
+              <p style={styles.summaryValue}>
+                ₦{Number(statement.summary.closing_balance).toLocaleString()}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handlePrint}
-            style={styles.printBtn}
-            className="no-print"
-          >
-            Print / Save PDF
-          </button>
-        </div>
+          {/* Transactions Table */}
+          <h3 style={{ marginTop: 28, marginBottom: 12 }}>Transactions</h3>
 
-        <div style={styles.userInfo}>
-          <p><strong>Account Holder:</strong> {statement.user.username}</p>
-          <p><strong>Email:</strong> {statement.user.email || "—"}</p>
-          <p><strong>Period:</strong> {statement.month}</p>
-        </div>
-
-        {/* Summary */}
-        <div style={styles.summaryGrid}>
-          <div style={styles.summaryItem}>
-            <p style={styles.summaryLabel}>Total Inflow</p>
-            <p style={styles.summaryValue}>
-              ₦{Number(statement.summary.total_inflow).toLocaleString()}
+          {statement.transactions.length === 0 ? (
+            <p style={{ color: "#9ca3af", textAlign: "center", padding: 20 }}>
+              No transactions for this month
             </p>
-          </div>
-          <div style={styles.summaryItem}>
-            <p style={styles.summaryLabel}>Total Outflow</p>
-            <p style={styles.summaryValue}>
-              ₦{Number(statement.summary.total_outflow).toLocaleString()}
-            </p>
-          </div>
-          <div style={styles.summaryItem}>
-            <p style={styles.summaryLabel}>Transactions</p>
-            <p style={styles.summaryValue}>
-              {statement.summary.transaction_count}
-            </p>
-          </div>
-          <div style={styles.summaryItem}>
-            <p style={styles.summaryLabel}>Closing Balance</p>
-            <p style={styles.summaryValue}>
-              ₦{Number(statement.summary.closing_balance).toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Transactions Table */}
-        <h3 style={{ marginTop: 28, marginBottom: 12 }}>Transactions</h3>
-
-        {statement.transactions.length === 0 ? (
-          <p style={{ color: "#9ca3af", textAlign: "center", padding: 20 }}>
-            No transactions for this month
-          </p>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Type</th>
-                  <th style={styles.th}>Description</th>
-                  <th style={styles.th}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {statement.transactions.map((tx) => (
-                  <tr key={tx.id}>
-                    <td style={styles.td}>{tx.date}</td>
-                    <td style={styles.td}>{tx.type}</td>
-                    <td style={styles.td}>{tx.description}</td>
-                    <td style={styles.td}>
-                      ₦{Number(tx.amount).toLocaleString()}
-                    </td>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Date</th>
+                    <th style={styles.th}>Type</th>
+                    <th style={styles.th}>Description</th>
+                    <th style={styles.th} className="amt">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
+                </thead>
+                <tbody>
+                  {statement.transactions.map((tx) => (
+                    <tr key={tx.id}>
+                      <td style={styles.td}>{tx.date}</td>
+                      <td style={styles.td}>{tx.type}</td>
+                      <td style={styles.td}>{tx.description}</td>
+                      <td style={styles.td} className="amt">
+                        ₦{Number(tx.amount).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ⭐ Footer line */}
+          <p style={{ marginTop: 24, fontSize: 12, color: "#6b7280" }}>
+            Payhost wallet statement. Generated for the signed‑in user. This is not a bank certificate.
+          </p>
+        </div>
+      )}
+    </div>
+  </>
 );
+
 
 
 }
