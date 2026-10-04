@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
@@ -7,10 +8,12 @@ import FavoriteRecipients from "../components/FavoriteRecipients";
 import AddFavoriteModal from "../components/AddFavoriteModal";
 
 export default function SendMoney() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinMode, setPinMode] = useState("verify");
@@ -31,19 +34,18 @@ export default function SendMoney() {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearch(value);
-
     if (!value.trim()) {
       setResults([]);
       return;
     }
-
     axiosClient
-      .get(`/users/search/?q=${value}`)
+      .get(`users/search/?q=${encodeURIComponent(value)}`)
       .then((res) => setResults(res.data.results || res.data))
       .catch(() => setResults([]));
   };
 
   const handleSend = () => {
+    if (busy) return;
     if (!selectedUser) {
       toast.error("Select a recipient first");
       return;
@@ -52,7 +54,6 @@ export default function SendMoney() {
       toast.error("Enter a valid amount");
       return;
     }
-
     setPendingUser(selectedUser);
     setPendingAmount(amount);
     setPinMode("verify");
@@ -68,10 +69,10 @@ export default function SendMoney() {
   const handlePinVerified = async (pin) => {
     if (pinMode === "set") {
       try {
-        const res = await axiosClient.post("/create-pin/", { pin });
+        const res = await axiosClient.post("create-pin/", { pin });
         savePinToken(res.data);
         localStorage.setItem("HAS_PIN", "true");
-        toast.success("PIN created successfully!");
+        toast.success("PIN created");
         setShowPinModal(false);
       } catch (err) {
         toast.error(err.response?.data?.error || "Could not create PIN");
@@ -87,7 +88,7 @@ export default function SendMoney() {
     let pinToken = localStorage.getItem("PIN_TOKEN");
     if (!pinToken) {
       try {
-        const res = await axiosClient.post("/verify-pin/", { pin });
+        const res = await axiosClient.post("verify-pin/", { pin });
         pinToken = savePinToken(res.data);
       } catch (err) {
         toast.error(err.response?.data?.error || "PIN token missing. Please try again.");
@@ -99,29 +100,20 @@ export default function SendMoney() {
       return;
     }
 
+    setBusy(true);
     try {
-      await axiosClient.post("/send-money/", {
+      await axiosClient.post("send-money/", {
         recipient: pendingUser.username,
         amount: pendingAmount,
-        pin: pin,
+        pin,
         pin_token: pinToken,
       });
-
-      toast.success("Transfer successful!");
       localStorage.removeItem("PIN_TOKEN");
-
-      setLastRecipient(pendingUser.username);
-      setShowFavoriteModal(true);
-
-      setAmount("");
-      setSearch("");
-      setResults([]);
-      setSelectedUser(null);
-      setPendingUser(null);
-      setPendingAmount("");
-      setShowPinModal(false);
+      toast.success("Transfer successful");
+      navigate("/");
     } catch (err) {
       toast.error(err.response?.data?.error || "Transfer failed");
+      setBusy(false);
     }
   };
 
@@ -213,8 +205,8 @@ export default function SendMoney() {
           </div>
         </div>
 
-        <button onClick={handleSend} style={styles.sendBtn}>
-          Continue
+        <button onClick={handleSend} disabled={busy} style={styles.sendBtn}>
+          {busy ? "Sending..." : "Continue"}
         </button>
       </div>
 
@@ -235,25 +227,10 @@ export default function SendMoney() {
 }
 
 const styles = {
-  page: {
-    padding: "32px 28px",
-    maxWidth: 560,
-    margin: "0 auto",
-  },
-  header: {
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: "#111827",
-    margin: 0,
-  },
-  subtitle: {
-    color: "#6b7280",
-    marginTop: 4,
-    fontSize: 14,
-  },
+  page: { padding: "32px 28px", maxWidth: 560, margin: "0 auto" },
+  header: { marginBottom: 28 },
+  title: { fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 },
+  subtitle: { color: "#6b7280", marginTop: 4, fontSize: 14 },
   card: {
     background: "#ffffff",
     borderRadius: 16,
@@ -261,16 +238,8 @@ const styles = {
     border: "1px solid #f3f4f6",
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#374151",
-    marginBottom: 6,
-  },
+  formGroup: { marginBottom: 20 },
+  label: { display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 6 },
   input: {
     width: "100%",
     padding: "12px 14px",
@@ -279,12 +248,7 @@ const styles = {
     fontSize: 15,
     outline: "none",
   },
-  resultsBox: {
-    background: "#f9fafb",
-    borderRadius: 10,
-    marginBottom: 16,
-    overflow: "hidden",
-  },
+  resultsBox: { background: "#f9fafb", borderRadius: 10, marginBottom: 16, overflow: "hidden" },
   resultItem: {
     display: "flex",
     alignItems: "center",
@@ -305,17 +269,8 @@ const styles = {
     fontWeight: 600,
     fontSize: 16,
   },
-  resultName: {
-    margin: 0,
-    fontWeight: 600,
-    fontSize: 14,
-    color: "#111827",
-  },
-  resultEmail: {
-    margin: "2px 0 0",
-    fontSize: 12,
-    color: "#6b7280",
-  },
+  resultName: { margin: 0, fontWeight: 600, fontSize: 14, color: "#111827" },
+  resultEmail: { margin: "2px 0 0", fontSize: 12, color: "#6b7280" },
   selectedBox: {
     display: "flex",
     justifyContent: "space-between",
