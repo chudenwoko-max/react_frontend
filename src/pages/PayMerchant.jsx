@@ -73,7 +73,10 @@ export default function PayMerchant() {
       sessionStorage.removeItem("pay_idem");
 
       toast.success("Paid from wallet");
-      window.location.replace("/");
+
+      // ⭐ NEW SUCCESS REDIRECT
+      window.location.href = "/dashboard";
+
     } catch (err) {
       sessionStorage.removeItem("pay_idem");
 
@@ -114,7 +117,10 @@ export default function PayMerchant() {
       });
 
       toast.success("Paid with saved card");
-      window.location.replace("/");
+
+      // ⭐ NEW SUCCESS REDIRECT
+      window.location.href = "/dashboard";
+
     } catch (err) {
       console.error(
         err.response?.status,

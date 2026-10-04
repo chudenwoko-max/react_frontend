@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axiosClient from "../axiosClient";
 import { Link } from "react-router-dom";
 import { Line, Bar } from "react-chartjs-2";
@@ -36,21 +36,35 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [wallets, setWallets] = useState([]);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [summaryRes, walletsRes] = await Promise.all([
-          axiosClient.get("/dashboard/summary/"),
-          axiosClient.get("/wallets/"),
-        ]);
-        setData(summaryRes.data);
-        setWallets(walletsRes.data);
-      } catch (err) {
-        console.log(err);
-      }
-    };
-    fetchAll();
+  const fetchAll = useCallback(async () => {
+    try {
+      const stamp = Date.now();
+      const [summaryRes, walletsRes] = await Promise.all([
+        axiosClient.get("dashboard/summary/", { params: { t: stamp } }),
+        axiosClient.get("wallets/", { params: { t: stamp } }),
+      ]);
+      setData(summaryRes.data);
+      setWallets(Array.isArray(walletsRes.data) ? walletsRes.data : []);
+    } catch (err) {
+      console.log(err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+    const onRefresh = () => fetchAll();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchAll();
+    };
+    window.addEventListener("payhost:balance-changed", onRefresh);
+    window.addEventListener("focus", onRefresh);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("payhost:balance-changed", onRefresh);
+      window.removeEventListener("focus", onRefresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [fetchAll]);
 
   if (!data) {
     return (
