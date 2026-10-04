@@ -79,12 +79,10 @@ a {
     height: 100vh !important;
   }
 
-  /* Hide hamburger button on desktop */
   .menu-btn {
     display: none !important;
   }
 
-  /* Hide close button on desktop */
   .close-btn {
     display: none !important;
   }
@@ -95,27 +93,42 @@ a {
    =============================== */
 
 @media print {
-  /* Hide everything except the statement */
-  body.printing-statement * {
+  body * {
     visibility: hidden;
   }
 
-  body.printing-statement #statement-print,
-  body.printing-statement #statement-print * {
+  #statement-print,
+  #statement-print * {
     visibility: visible;
   }
 
-  body.printing-statement #statement-print {
+  #statement-print {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    box-shadow: none !important;
+    border: none !important;
   }
 
-  /* Hide sidebar, navbar, buttons */
-  .sidebar,
-  .navbar,
   .no-print {
     display: none !important;
+  }
+
+  #statement-print table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  #statement-print th,
+  #statement-print td {
+    padding: 8px 6px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+
+  #statement-print td.amt,
+  #statement-print th.amt {
+    text-align: right;
   }
 }
