@@ -7,19 +7,25 @@ export default function BankAccount() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [banks, setBanks] = useState([]);
+
   const [form, setForm] = useState({
     bank_name: "",
+    bank_code: "",
     account_number: "",
     account_name: "",
   });
 
+  // ================= LOAD ACCOUNT + BANK LIST =================
   useEffect(() => {
-    axiosClient.get("/bank/account/")
+    axiosClient
+      .get("/bank/account/")
       .then((res) => {
         if (res.data) {
           setAccount(res.data);
           setForm({
             bank_name: res.data.bank_name || "",
+            bank_code: res.data.bank_code || "",
             account_number: res.data.account_number || "",
             account_name: res.data.account_name || "",
           });
@@ -27,51 +33,74 @@ export default function BankAccount() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // ⭐ Load banks with correct code
+    axiosClient
+      .get("/api/banks/")
+      .then((res) => {
+        setBanks(
+          (res.data.data || res.data || []).map((b) => ({
+            name: b.name,
+            code: b.code || b.bank_code || "",
+          }))
+        );
+      })
+      .catch(() => toast.error("Failed to load bank list"));
   }, []);
 
+  // ================= FORM CHANGE =================
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = async () => {
-  if (!form.bank_name || !form.account_number || !form.account_name) {
-    toast.error("Please fill in all fields");
-    return;
-  }
-
-  // ⭐ Resolve bank code from selectedBank
-  const code = form.bank_code || form.code || form.bank_code_fallback;
-  if (!code) {
-    toast.error("Bank code is missing for this bank");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    await axiosClient.post("/bank/link/", {
-      bank_name: form.bank_name,
-      bank_code: code,
-      account_number: form.account_number,
-      account_name: form.account_name,
+  // ⭐ PATCHED BANK SELECT
+  const handleBankSelect = (e) => {
+    const bank = banks.find((b) => b.name === e.target.value);
+    setForm({
+      ...form,
+      bank_name: bank?.name || "",
+      bank_code: bank?.code || bank?.bank_code || "",
     });
+  };
 
-    // ⭐ Fetch updated bank account
-    const res = await axiosClient.get("/bank/account/");
-    setAccount(res.data);
+  // ================= SAVE =================
+  const handleSave = async () => {
+    if (!form.bank_name || !form.account_number || !form.account_name) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
-    toast.success("Bank account saved successfully");
-  } catch (err) {
-    toast.error(
-      err.response?.data?.error ||
-      err.response?.data?.detail ||
-      "Failed to save bank account"
-    );
-  } finally {
-    setSaving(false);
-  }
-};
+    const code = form.bank_code;
+    if (!code) {
+      toast.error("Bank code is missing for this bank");
+      return;
+    }
 
+    setSaving(true);
+    try {
+      await axiosClient.post("/bank/link/", {
+        bank_name: form.bank_name,
+        bank_code: code,
+        account_number: form.account_number,
+        account_name: form.account_name,
+      });
 
+      const res = await axiosClient.get("/bank/account/");
+      setAccount(res.data);
+
+      toast.success("Bank account saved successfully");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.detail ||
+          "Failed to save bank account"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ================= RENDER =================
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
@@ -84,9 +113,7 @@ export default function BankAccount() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>Bank Account</h1>
-        <p style={styles.subtitle}>
-          Add your bank account for withdrawals
-        </p>
+        <p style={styles.subtitle}>Add your bank account for withdrawals</p>
       </div>
 
       <div style={styles.card}>
@@ -100,17 +127,21 @@ export default function BankAccount() {
           </div>
         )}
 
-        {/* Form */}
+        {/* ⭐ Bank Dropdown */}
         <div style={styles.formGroup}>
           <label style={styles.label}>Bank Name</label>
-          <input
-            type="text"
-            name="bank_name"
+          <select
             value={form.bank_name}
-            onChange={handleChange}
-            placeholder="e.g. GTBank, Access Bank, Zenith"
+            onChange={handleBankSelect}
             style={styles.input}
-          />
+          >
+            <option value="">Select Bank</option>
+            {banks.map((b) => (
+              <option key={b.code} value={b.name}>
+                {b.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div style={styles.formGroup}>
@@ -146,7 +177,11 @@ export default function BankAccount() {
             opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? "Saving..." : account ? "Update Bank Account" : "Save Bank Account"}
+          {saving
+            ? "Saving..."
+            : account
+            ? "Update Bank Account"
+            : "Save Bank Account"}
         </button>
       </div>
     </div>
