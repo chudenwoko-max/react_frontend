@@ -79,18 +79,24 @@ export default function Transactions() {
         />
 
         <select
-          value={type}
-          onChange={(e) => {
-            setType(e.target.value);
-            setPage(1);
-          }}
-          style={styles.select}
-        >
-          <option value="">All Types</option>
-          <option value="fund">Fund</option>
-          <option value="withdraw">Withdraw</option>
-          <option value="send">Send</option>
-        </select>
+  value={type}
+  onChange={(e) => {
+    setType(e.target.value);
+    setPage(1);
+  }}
+  style={styles.select}
+>
+  <option value="">All Types</option>
+  <option value="fund">Fund</option>
+  <option value="withdraw">Withdraw</option>
+  <option value="send">Send</option>
+  <option value="merchant">Merchant</option>
+  <option value="airtime">Airtime</option>
+  <option value="data">Data</option>
+  <option value="electricity">Electricity</option>
+  <option value="cable">Cable</option>
+</select>
+
 
         <select
           value={dateRange}
