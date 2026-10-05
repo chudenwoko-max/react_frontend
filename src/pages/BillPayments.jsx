@@ -124,84 +124,131 @@ export default function BillPayments() {
     }
   };
 
-  const handleBuyAirtime = async () => {
-    if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
-    if (!amount || Number(amount) < 50) return toast.error("Minimum amount is ₦50");
-    if (loading) return;
+ const handleBuyAirtime = async () => {
+  if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
+  if (!amount || Number(amount) < 50) return toast.error("Minimum amount is ₦50");
+  if (loading) return;
 
-    setLoading(true);
-    try {
-      await axiosClient.post("/bills/airtime/", { provider, phone, amount });
-      goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Purchase failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Idempotency key
+  const existingIdem = sessionStorage.getItem("bill_idem");
+  const idem = existingIdem || crypto.randomUUID();
+  sessionStorage.setItem("bill_idem", idem);
+
+  setLoading(true);
+  try {
+    await axiosClient.post(
+      "/bills/airtime/",
+      { provider, phone, amount, idempotency_key: idem },
+      { headers: { "Idempotency-Key": idem } }
+    );
+
+    sessionStorage.removeItem("bill_idem");
+    goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Purchase failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleBuyData = async () => {
-    if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
-    if (!selectedPlan) return toast.error("Please select a data plan");
-    if (loading) return;
+  if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
+  if (!selectedPlan) return toast.error("Please select a data plan");
+  if (loading) return;
 
-    setLoading(true);
-    try {
-      await axiosClient.post("/bills/data/", {
+  const existingIdem = sessionStorage.getItem("bill_idem");
+  const idem = existingIdem || crypto.randomUUID();
+  sessionStorage.setItem("bill_idem", idem);
+
+  setLoading(true);
+  try {
+    await axiosClient.post(
+      "/bills/data/",
+      {
         provider,
         phone,
         amount: selectedPlan.amount,
         package_name: selectedPlan.name,
-      });
-      goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Purchase failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+        idempotency_key: idem,
+      },
+      { headers: { "Idempotency-Key": idem } }
+    );
+
+    sessionStorage.removeItem("bill_idem");
+    goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Purchase failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handlePayElectricity = async () => {
-    if (!meterNumber) return toast.error("Enter meter number");
-    if (!elecAmount || Number(elecAmount) < 500) return toast.error("Minimum amount is ₦500");
-    if (loading) return;
+  if (!meterNumber) return toast.error("Enter meter number");
+  if (!elecAmount || Number(elecAmount) < 500) return toast.error("Minimum amount is ₦500");
+  if (loading) return;
 
-    setLoading(true);
-    try {
-      await axiosClient.post("/bills/electricity/", {
+  const existingIdem = sessionStorage.getItem("bill_idem");
+  const idem = existingIdem || crypto.randomUUID();
+  sessionStorage.setItem("bill_idem", idem);
+
+  setLoading(true);
+  try {
+    await axiosClient.post(
+      "/bills/electricity/",
+      {
         provider: disco,
         meter_number: meterNumber,
         amount: elecAmount,
         meter_type: meterType,
-      });
-      goHomeAfterSuccess("Electricity payment successful");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Payment failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+        idempotency_key: idem,
+      },
+      { headers: { "Idempotency-Key": idem } }
+    );
+
+    sessionStorage.removeItem("bill_idem");
+    goHomeAfterSuccess("Electricity payment successful");
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Payment failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handlePayCable = async () => {
-    if (!smartcard) return toast.error("Enter smartcard number");
-    if (!cablePackage) return toast.error("Please select a package");
-    if (loading) return;
+  if (!smartcard) return toast.error("Enter smartcard number");
+  if (!cablePackage) return toast.error("Please select a package");
+  if (loading) return;
 
-    setLoading(true);
-    try {
-      await axiosClient.post("/bills/cable/", {
+  const existingIdem = sessionStorage.getItem("bill_idem");
+  const idem = existingIdem || crypto.randomUUID();
+  sessionStorage.setItem("bill_idem", idem);
+
+  setLoading(true);
+  try {
+    await axiosClient.post(
+      "/bills/cable/",
+      {
         provider: cableProvider,
         smartcard_number: smartcard,
         amount: cablePackage.amount,
         package_name: cablePackage.name,
-      });
-      goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Payment failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+        idempotency_key: idem,
+      },
+      { headers: { "Idempotency-Key": idem } }
+    );
+
+    sessionStorage.removeItem("bill_idem");
+    goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Payment failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const currentCablePackages =
     CABLE_PROVIDERS.find((p) => p.id === cableProvider)?.packages || [];
