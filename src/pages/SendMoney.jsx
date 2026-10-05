@@ -66,8 +66,7 @@ export default function SendMoney() {
   setPendingUser(selectedUser);
   setPendingAmount(amount);
 
-  // Pass the key into the PIN modal flow
-  setPendingIdem(idem);
+  // No setPendingIdem here
 
   setPinMode("verify");
   setShowPinModal(true);
@@ -81,55 +80,74 @@ export default function SendMoney() {
   };
 
   const handlePinVerified = async (pin) => {
-    if (pinMode === "set") {
-      try {
-        const res = await axiosClient.post("create-pin/", { pin });
-        savePinToken(res.data);
-        localStorage.setItem("HAS_PIN", "true");
-        toast.success("PIN created");
-        setShowPinModal(false);
-      } catch (err) {
-        toast.error(err.response?.data?.error || "Could not create PIN");
-      }
-      return;
-    }
-
-    if (!pendingUser?.username) {
-      toast.error("Recipient lost. Please try again.");
-      return;
-    }
-
-    let pinToken = localStorage.getItem("PIN_TOKEN");
-    if (!pinToken) {
-      try {
-        const res = await axiosClient.post("verify-pin/", { pin });
-        pinToken = savePinToken(res.data);
-      } catch (err) {
-        toast.error(err.response?.data?.error || "PIN token missing. Please try again.");
-        return;
-      }
-    }
-    if (!pinToken) {
-      toast.error("PIN token missing. Please try again.");
-      return;
-    }
-
-    setBusy(true);
+  if (pinMode === "set") {
     try {
-      await axiosClient.post("send-money/", {
+      const res = await axiosClient.post("create-pin/", { pin });
+      savePinToken(res.data);
+      localStorage.setItem("HAS_PIN", "true");
+      toast.success("PIN created");
+      setShowPinModal(false);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Could not create PIN");
+    }
+    return;
+  }
+
+  if (!pendingUser?.username) {
+    toast.error("Recipient lost. Please try again.");
+    return;
+  }
+
+  let pinToken = localStorage.getItem("PIN_TOKEN");
+  if (!pinToken) {
+    try {
+      const res = await axiosClient.post("verify-pin/", { pin });
+      pinToken = savePinToken(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "PIN token missing. Please try again.");
+      return;
+    }
+  }
+  if (!pinToken) {
+    toast.error("PIN token missing. Please try again.");
+    return;
+  }
+
+  // --- IDEMPOTENCY KEY (must exist from handleSend) ---
+  const idem = sessionStorage.getItem("send_idem");
+  if (!idem) {
+    toast.error("Idempotency key missing. Start the transfer again.");
+    return;
+  }
+
+  setBusy(true);
+  try {
+    await axiosClient.post(
+      "send-money/",
+      {
         recipient: pendingUser.username,
         amount: pendingAmount,
         pin,
         pin_token: pinToken,
-      });
-      localStorage.removeItem("PIN_TOKEN");
-      toast.success("Transfer successful");
-      navigate("/");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Transfer failed");
-      setBusy(false);
-    }
-  };
+        idempotency_key: idem,
+      },
+      {
+        headers: { "Idempotency-Key": idem },
+      }
+    );
+
+    // Clear key only after success
+    sessionStorage.removeItem("send_idem");
+    localStorage.removeItem("PIN_TOKEN");
+
+    toast.success("Transfer successful");
+    navigate("/");
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Transfer failed");
+    setBusy(false);
+  }
+};
+
 
   return (
     <div style={styles.page}>
