@@ -22,6 +22,7 @@ export default function SendMoney() {
 
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
   const [lastRecipient, setLastRecipient] = useState("");
+  
 
   useEffect(() => {
     const hasPin = localStorage.getItem("HAS_PIN");
@@ -66,8 +67,7 @@ export default function SendMoney() {
   setPendingUser(selectedUser);
   setPendingAmount(amount);
 
-  // Pass the key into the PIN modal flow
-  setPendingIdem(idem);
+  // No pendingIdem state needed
 
   setPinMode("verify");
   setShowPinModal(true);
