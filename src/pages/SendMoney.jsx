@@ -45,20 +45,34 @@ export default function SendMoney() {
   };
 
   const handleSend = () => {
-    if (busy) return;
-    if (!selectedUser) {
-      toast.error("Select a recipient first");
-      return;
-    }
-    if (!amount || Number(amount) <= 0) {
-      toast.error("Enter a valid amount");
-      return;
-    }
-    setPendingUser(selectedUser);
-    setPendingAmount(amount);
-    setPinMode("verify");
-    setShowPinModal(true);
-  };
+  if (busy) return;
+
+  if (!selectedUser) {
+    toast.error("Select a recipient first");
+    return;
+  }
+
+  if (!amount || Number(amount) <= 0) {
+    toast.error("Enter a valid amount");
+    return;
+  }
+
+  // --- IDEMPOTENCY KEY (one per tap) ---
+  const existingIdem = sessionStorage.getItem("send_idem");
+  const idem = existingIdem || crypto.randomUUID();
+  sessionStorage.setItem("send_idem", idem);
+
+  // Store pending info for the PIN modal
+  setPendingUser(selectedUser);
+  setPendingAmount(amount);
+
+  // Pass the key into the PIN modal flow
+  setPendingIdem(idem);
+
+  setPinMode("verify");
+  setShowPinModal(true);
+};
+
 
   const savePinToken = (data) => {
     const token = data?.token || data?.pin_token || "";
