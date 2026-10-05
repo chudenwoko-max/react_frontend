@@ -83,22 +83,23 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
       `}</style>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button
-          onClick={onMenuClick}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            lineHeight: 1,
-            padding: 4,
-          }}
-          className="menu-tip"
-          data-tip={isSidebarOpen ? "Close menu" : "Open menu"}
-          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
-        >
-          {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-        </button>
-      </div>
+  <button
+    onClick={onMenuClick}
+    style={{
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+      lineHeight: 1,
+      padding: 4,
+    }}
+    className={isSidebarOpen ? undefined : "menu-tip"}
+    data-tip={isSidebarOpen ? undefined : "Open menu"}
+    aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+  >
+    {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+  </button>
+</div>
+
 
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <span style={{ fontSize: 15, color: "#0F172A", fontWeight: 600 }}>
