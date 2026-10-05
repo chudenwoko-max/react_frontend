@@ -27,27 +27,47 @@ export default function Withdraw() {
   };
 
   const handlePinVerified = async (pin) => {
-    setLoading(true);
-    try {
-      const pinRes = await axiosClient.post("verify-pin/", { pin });
-      const pinToken = pinRes.data.pin_token || pinRes.data.token;
-      if (!pinToken) {
-        toast.error("PIN token missing");
-        setLoading(false);
-        return;
-      }
-      await axiosClient.post("wallet/withdraw/", {
+  setLoading(true);
+  try {
+    // Verify PIN and get token
+    const pinRes = await axiosClient.post("verify-pin/", { pin });
+    const pinToken = pinRes.data.pin_token || pinRes.data.token;
+    if (!pinToken) {
+      toast.error("PIN token missing");
+      setLoading(false);
+      return;
+    }
+
+    // --- IDEMPOTENCY KEY (one per tap) ---
+    const idem =
+      sessionStorage.getItem("withdraw_idem") || crypto.randomUUID();
+    sessionStorage.setItem("withdraw_idem", idem);
+
+    // Withdraw request WITH idempotency header
+    await axiosClient.post(
+      "wallet/withdraw/",
+      {
         amount,
         pin,
         pin_token: pinToken,
-      });
-      toast.success("Withdrawal submitted");
-      navigate("/");
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Withdrawal failed");
-      setLoading(false);
-    }
-  };
+        idempotency_key: idem,
+      },
+      {
+        headers: { "Idempotency-Key": idem },
+      }
+    );
+
+    // Clear key only after success
+    sessionStorage.removeItem("withdraw_idem");
+
+    toast.success("Withdrawal submitted");
+    navigate("/");
+  } catch (error) {
+    toast.error(error.response?.data?.error || "Withdrawal failed");
+    setLoading(false);
+  }
+};
+
 
   return (
     <div style={styles.page}>
