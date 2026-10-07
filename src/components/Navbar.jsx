@@ -53,6 +53,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
   const handleLogout = async () => {
     try {
       await axiosClient.post("logout/");
+      window.location.href = "/login";
     } catch (e) {
       console.log(e);
     }
