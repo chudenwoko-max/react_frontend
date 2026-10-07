@@ -8,30 +8,30 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined); // undefined = loading
   const navigate = useNavigate();
 
-  // Load user from token on startup
+  // PATCH: session check is GET profile/ with the cookie, not ACCESS_TOKEN in localStorage.
+  // 200 stays signed in. 401 (after the axios refresh retry) means logged out.
   useEffect(() => {
-    const token = localStorage.getItem("ACCESS_TOKEN");
-
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
+    let gone = false;
     axiosClient
       .get("profile/")
       .then((res) => {
-        setUser(res.data);
+        if (!gone) setUser(res.data?.user || res.data);
       })
       .catch(() => {
-        localStorage.removeItem("ACCESS_TOKEN");
-        localStorage.removeItem("REFRESH_TOKEN");
-        setUser(null);
+        if (!gone) setUser(null);
       });
+    return () => {
+      gone = true;
+    };
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("ACCESS_TOKEN");
-    localStorage.removeItem("REFRESH_TOKEN");
+  const logout = async () => {
+    try {
+      // PATCH: server clears payhost_access and payhost_refresh. Do not touch localStorage.
+      await axiosClient.post("logout/");
+    } catch (e) {
+      console.log(e);
+    }
     setUser(null);
     navigate("/login", { replace: true });
   };
