@@ -27,9 +27,16 @@ export default function Login() {
   setLoading(true);
 
   try {
+    let fingerprint = localStorage.getItem("device_fingerprint");
+    if (!fingerprint) {
+      fingerprint = crypto.randomUUID();
+      localStorage.setItem("device_fingerprint", fingerprint);
+    }
+
     const res = await axiosClient.post("login/", {
       username: username.trim(),
       password,
+      device_fingerprint: fingerprint,
     });
 
     if (res.data.requires_2fa) {
