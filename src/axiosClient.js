@@ -5,57 +5,47 @@ const API_BASE_URL = "https://api.payhost.dev";
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
   timeout: 30000,
+  // PATCH: send and accept payhost_access / payhost_refresh cookies on every request.
+  // Without this, the browser will not attach the login cookies and every call looks logged out.
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-const getToken = async (key) => localStorage.getItem(key);
-
-const deleteToken = async (key) => {
-  localStorage.removeItem(key);
-};
-
-axiosClient.interceptors.request.use(async (config) => {
-  try {
-    const token = await getToken("ACCESS_TOKEN");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch (e) {
-    console.log("Error reading token:", e);
-  }
-  return config;
-});
+// PATCH: removed the request interceptor that read ACCESS_TOKEN from localStorage
+// and set Authorization: Bearer. Web auth is the cookie now. Mobile still sends
+// the header itself; this web client must not.
 
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // PATCH: on 401, refresh via the cookie instead of posting a stored refresh token.
+    // Skip refresh and logout URLs so a failed refresh cannot loop.
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("token/refresh/") &&
+      !originalRequest.url?.includes("logout/")
+    ) {
       originalRequest._retry = true;
 
       try {
-        const refresh = await getToken("REFRESH_TOKEN");
-
-        if (!refresh) {
-          await deleteToken("ACCESS_TOKEN");
-          await deleteToken("REFRESH_TOKEN");
-          return Promise.reject(error);
-        }
-
-        const res = await axios.post(`${API_BASE_URL}/api/token/refresh/`, {
-          refresh,
-        });
-
-        const newAccess = res.data.access;
-        localStorage.setItem("ACCESS_TOKEN", newAccess);
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        // Empty body: cookie_token_refresh reads payhost_refresh from the cookie.
+        await axios.post(
+          `${API_BASE_URL}/api/token/refresh/`,
+          {},
+          { withCredentials: true }
+        );
+        // New access cookie is set. Retry the original call; no Authorization header to rewrite.
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        await deleteToken("ACCESS_TOKEN");
-        await deleteToken("REFRESH_TOKEN");
+        // Refresh cookie missing or expired. Send the browser to login.
+        // Do not touch localStorage; tokens are not stored there anymore.
+        window.location.href = "/login";
         return Promise.reject(refreshError);
       }
     }

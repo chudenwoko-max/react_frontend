@@ -50,6 +50,15 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
     };
   }, [user, setUser]);
 
+  const handleLogout = async () => {
+    try {
+      await axiosClient.post("logout/");
+    } catch (e) {
+      console.log(e);
+    }
+    window.location.href = "/login";
+  };
+
   return (
     <header
       style={{
@@ -83,23 +92,22 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
       `}</style>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-  <button
-    onClick={onMenuClick}
-    style={{
-      background: "transparent",
-      border: "none",
-      cursor: "pointer",
-      lineHeight: 1,
-      padding: 4,
-    }}
-    className={isSidebarOpen ? undefined : "menu-tip"}
-    data-tip={isSidebarOpen ? undefined : "Open menu"}
-    aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
-  >
-    {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-  </button>
-</div>
-
+        <button
+          onClick={onMenuClick}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            lineHeight: 1,
+            padding: 4,
+          }}
+          className={isSidebarOpen ? undefined : "menu-tip"}
+          data-tip={isSidebarOpen ? undefined : "Open menu"}
+          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+        >
+          {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+        </button>
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <span style={{ fontSize: 15, color: "#0F172A", fontWeight: 600 }}>
@@ -107,11 +115,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         </span>
 
         <button
-          onClick={() => {
-            localStorage.removeItem("ACCESS_TOKEN");
-            localStorage.removeItem("REFRESH_TOKEN");
-            window.location.href = "/login";
-          }}
+          onClick={handleLogout}
           style={{
             padding: "8px 14px",
             background: "#0F172A",
