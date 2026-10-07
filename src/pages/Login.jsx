@@ -16,73 +16,69 @@ export default function Login() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+ const handleLogin = async (e) => {
+  e.preventDefault();
 
-    if (!username.trim() || !password) {
-      toast.error("Please enter username and password");
-      return;
-    }
+  if (!username.trim() || !password) {
+    toast.error("Please enter username and password");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const res = await axiosClient.post("/2fa/login/", {
-        username: username.trim(),
-        password,
-      });
+  try {
+    const res = await axiosClient.post("login/", {
+      username: username.trim(),
+      password,
+    });
 
-      if (res.data.requires_2fa) {
-        setRequires2FA(true);
-        setUserId(res.data.user_id);
-        setDebugOtp(res.data.debug_otp || "");
-        toast.success("OTP sent. Please enter the code.");
-      } else {
-        localStorage.setItem("ACCESS_TOKEN", res.data.access);
-        localStorage.setItem("REFRESH_TOKEN", res.data.refresh);
-        setUser(res.data.user);
-        toast.success("Welcome back!");
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.log("FULL ERROR RESPONSE:", err.response?.data);
-      toast.error(
-        err.response?.data?.error ||
-          err.response?.data?.detail ||
-          "Login failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-
-    if (!otp || otp.length !== 6) {
-      toast.error("Please enter the 6-digit OTP");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await axiosClient.post("/2fa/verify/", {
-        user_id: userId,
-        code: otp,
-      });
-
-      localStorage.setItem("ACCESS_TOKEN", res.data.access);
-      localStorage.setItem("REFRESH_TOKEN", res.data.refresh);
+    if (res.data.requires_2fa) {
+      setRequires2FA(true);
+      setUserId(res.data.user_id);
+      setDebugOtp(res.data.debug_otp || "");
+      toast.success("OTP sent. Please enter the code.");
+    } else {
       setUser(res.data.user);
-      toast.success("Login successful!");
+      toast.success("Welcome back!");
       navigate("/dashboard");
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Invalid or expired OTP");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.log("FULL ERROR RESPONSE:", err.response?.data);
+    toast.error(
+      err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Login failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleVerifyOTP = async (e) => {
+  e.preventDefault();
+
+  if (!otp || otp.length !== 6) {
+    toast.error("Please enter the 6-digit OTP");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await axiosClient.post("verify-2fa/", {
+      user_id: userId,
+      code: otp,
+    });
+
+    setUser(res.data.user);
+    toast.success("Login successful!");
+    navigate("/dashboard");
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Invalid or expired OTP");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={styles.page}>
