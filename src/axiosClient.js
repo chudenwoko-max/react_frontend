@@ -24,6 +24,8 @@ axiosClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     const url = error.config?.url || "";
+
+    // _skipRefresh: a failed refresh must not start another refresh.
     if (error.config?._skipRefresh || refreshTried || url.includes("refresh/")) {
       if (!onLoginPage()) window.location.href = "/login";
       return Promise.reject(error);
@@ -32,7 +34,12 @@ axiosClient.interceptors.response.use(
     if (error.response?.status === 401) {
       refreshTried = true;
       try {
-        await axiosClient.post("token/refresh/", {}, { _skipRefresh: true });
+        // Force credentials on this call. got: [] means this request was not credentialed.
+        await axiosClient.post(
+          "token/refresh/",
+          {},
+          { _skipRefresh: true, withCredentials: true }
+        );
         return axiosClient(error.config);
       } catch (err) {
         if (!onLoginPage()) window.location.href = "/login";
