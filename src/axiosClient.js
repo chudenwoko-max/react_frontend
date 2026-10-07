@@ -5,48 +5,43 @@ const API_BASE_URL = "https://api.payhost.dev";
 const axiosClient = axios.create({
   baseURL: `${API_BASE_URL}/api/`,
   timeout: 30000,
-  // PATCH: send and accept payhost_access / payhost_refresh cookies on every request.
-  // Without this, the browser will not attach the login cookies and every call looks logged out.
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// PATCH: removed the request interceptor that read ACCESS_TOKEN from localStorage
-// and set Authorization: Bearer. Web auth is the cookie now. Mobile still sends
-// the header itself; this web client must not.
+// One failed refresh ends it. The API cannot cancel the next browser call.
+let refreshTried = false;
+
+function onLoginPage() {
+  return window.location.pathname.startsWith("/login");
+}
 
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   async (error) => {
-    const originalRequest = error.config;
+    const url = error.config?.url || "";
 
-    // PATCH: on 401, refresh via the cookie instead of posting a stored refresh token.
-    // Skip refresh and logout URLs so a failed refresh cannot loop.
-    if (
-      error.response?.status === 401 &&
-      originalRequest &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes("token/refresh/") &&
-      !originalRequest.url?.includes("logout/")
-    ) {
-      originalRequest._retry = true;
+    // refresh/ 400, or a second 401 after we already tried: stop. Do not post refresh again.
+    if (refreshTried || url.includes("refresh/")) {
+      if (!onLoginPage()) window.location.href = "/login";
+      return Promise.reject(error);
+    }
 
+    if (error.response?.status === 401) {
+      refreshTried = true;
       try {
-        // Empty body: cookie_token_refresh reads payhost_refresh from the cookie.
+        // Real route is token/refresh/. It must read payhost_refresh from the cookie.
         await axios.post(
           `${API_BASE_URL}/api/token/refresh/`,
           {},
           { withCredentials: true }
         );
-        // New access cookie is set. Retry the original call; no Authorization header to rewrite.
-        return axiosClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh cookie missing or expired. Send the browser to login.
-        // Do not touch localStorage; tokens are not stored there anymore.
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
+        return axiosClient(error.config);
+      } catch (err) {
+        if (!onLoginPage()) window.location.href = "/login";
+        return Promise.reject(err);
       }
     }
 
