@@ -5,33 +5,22 @@ import axiosClient from "../axiosClient";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(undefined); // undefined = loading
+  const [user, setUser] = useState(undefined);
   const navigate = useNavigate();
 
-  // Load user from token on startup
   useEffect(() => {
-    const token = localStorage.getItem("ACCESS_TOKEN");
-
-    if (!token) {
-      setUser(null);
-      return;
-    }
-
     axiosClient
       .get("profile/")
-      .then((res) => {
-        setUser(res.data);
-      })
-      .catch(() => {
-        localStorage.removeItem("ACCESS_TOKEN");
-        localStorage.removeItem("REFRESH_TOKEN");
-        setUser(null);
-      });
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null));
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("ACCESS_TOKEN");
-    localStorage.removeItem("REFRESH_TOKEN");
+  const logout = async () => {
+    try {
+      await axiosClient.post("logout/");
+    } catch {
+      // Cookie may already be gone.
+    }
     setUser(null);
     navigate("/login", { replace: true });
   };
