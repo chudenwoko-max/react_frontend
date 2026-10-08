@@ -35,11 +35,11 @@ const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
   headers: {
-  "Content-Type": "application/json",
-  // CHANGE: login is exempt. Money routes require X-Payhost-Client, not only X-Client.
-  "X-Client": "mobile",
-  "X-Payhost-Client": "mobile",
-},
+    "Content-Type": "application/json",
+    // CHANGE: login is exempt. Money routes require X-Payhost-Client, not only X-Client.
+    "X-Client": "mobile",
+    "X-Payhost-Client": "mobile",
+  },
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
@@ -121,7 +121,6 @@ axiosClient.interceptors.response.use(
       _retry401?: boolean;
     };
 
-    // ---- API Reachability Signals ----
     const noResponse = !error.response;
     const timedOut = error.code === "ECONNABORTED";
     const status = error.response?.status;
@@ -132,7 +131,6 @@ axiosClient.interceptors.response.use(
       DeviceEventEmitter.emit(API_REACHABLE);
     }
 
-    // ---- 401 → Refresh token ----
     if (status === 401 && original && !original._retry401) {
       original._retry401 = true;
 
@@ -159,7 +157,6 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    // ---- Retry GET requests (timeout / 500 / 503 / 429) ----
     // CHANGE: POST is not retried here. A money retry must reuse the same Idempotency-Key from the screen helper.
     if (shouldRetry(error) && original) {
       original.__retried = true;
@@ -170,8 +167,6 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// ---------------- SINGLE-FLIGHT FOR GET ----------------
 
 const rawGet = axiosClient.get.bind(axiosClient);
 
