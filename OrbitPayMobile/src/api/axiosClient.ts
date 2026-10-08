@@ -34,11 +34,7 @@ const deleteToken = async (key: string) => {
 const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-    // CHANGE: login already sent this per call. Default it so wallet calls send it too.
-    "X-Client": "mobile",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
@@ -120,7 +116,6 @@ axiosClient.interceptors.response.use(
       _retry401?: boolean;
     };
 
-    // ---- API Reachability Signals ----
     const noResponse = !error.response;
     const timedOut = error.code === "ECONNABORTED";
     const status = error.response?.status;
@@ -131,7 +126,6 @@ axiosClient.interceptors.response.use(
       DeviceEventEmitter.emit(API_REACHABLE);
     }
 
-    // ---- 401 → Refresh token ----
     if (status === 401 && original && !original._retry401) {
       original._retry401 = true;
 
@@ -159,7 +153,6 @@ axiosClient.interceptors.response.use(
     }
 
     // ---- Retry GET requests (timeout / 500 / 503 / 429) ----
-    // CHANGE: POST is not retried here. A money retry must reuse the same Idempotency-Key from the screen helper.
     if (shouldRetry(error) && original) {
       original.__retried = true;
       await new Promise((r) => setTimeout(r, 400));
@@ -169,6 +162,7 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 // ---------------- SINGLE-FLIGHT FOR GET ----------------
 
