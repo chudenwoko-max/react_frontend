@@ -34,12 +34,7 @@ const deleteToken = async (key: string) => {
 const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-    // CHANGE: login is exempt. Money routes require X-Payhost-Client, not only X-Client.
-    "X-Client": "mobile",
-    "X-Payhost-Client": "mobile",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
@@ -157,7 +152,7 @@ axiosClient.interceptors.response.use(
       }
     }
 
-    // CHANGE: POST is not retried here. A money retry must reuse the same Idempotency-Key from the screen helper.
+    // ---- Retry GET requests (timeout / 500 / 503 / 429) ----
     if (shouldRetry(error) && original) {
       original.__retried = true;
       await new Promise((r) => setTimeout(r, 400));
@@ -167,6 +162,9 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+
+// ---------------- SINGLE-FLIGHT FOR GET ----------------
 
 const rawGet = axiosClient.get.bind(axiosClient);
 
