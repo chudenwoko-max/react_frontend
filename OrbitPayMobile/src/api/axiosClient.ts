@@ -4,8 +4,9 @@ import * as SecureStore from "expo-secure-store";
 import { singleFlight } from "./singleFlight";
 import { DeviceEventEmitter } from "react-native";
 
-export const API_UNREACHABLE = "orbitpay:api-unreachable";
-export const API_REACHABLE = "orbitpay:api-reachable";
+// CHANGE: product name is Payhost. Importers of these constants do not need a call-site edit.
+export const API_UNREACHABLE = "payhost:api-unreachable";
+export const API_REACHABLE = "payhost:api-reachable";
 
 const baseURL =
   process.env.EXPO_PUBLIC_API_URL ||
@@ -33,7 +34,11 @@ const deleteToken = async (key: string) => {
 const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    // CHANGE: login already sent this per call. Default it so wallet calls send it too.
+    "X-Client": "mobile",
+  },
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
@@ -43,6 +48,21 @@ axiosClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // CHANGE: money routes require Idempotency-Key. Screens keep storing reference_id; copy it when the header is absent.
+  if (!config.headers["Idempotency-Key"]) {
+    let body = config.data;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        body = null;
+      }
+    }
+    const key = (config as { idempotencyKey?: string }).idempotencyKey || body?.reference_id;
+    if (key) config.headers["Idempotency-Key"] = key;
+  }
+
   return config;
 });
 
@@ -139,6 +159,7 @@ axiosClient.interceptors.response.use(
     }
 
     // ---- Retry GET requests (timeout / 500 / 503 / 429) ----
+    // CHANGE: POST is not retried here. A money retry must reuse the same Idempotency-Key from the screen helper.
     if (shouldRetry(error) && original) {
       original.__retried = true;
       await new Promise((r) => setTimeout(r, 400));
@@ -148,7 +169,6 @@ axiosClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 
 // ---------------- SINGLE-FLIGHT FOR GET ----------------
 
