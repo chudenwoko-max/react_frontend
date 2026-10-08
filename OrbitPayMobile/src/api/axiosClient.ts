@@ -35,10 +35,11 @@ const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
   headers: {
-    "Content-Type": "application/json",
-    // CHANGE: login already sent this per call. Default it so wallet calls send it too.
-    "X-Client": "mobile",
-  },
+  "Content-Type": "application/json",
+  // CHANGE: login is exempt. Money routes require X-Payhost-Client, not only X-Client.
+  "X-Client": "mobile",
+  "X-Payhost-Client": "mobile",
+},
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
