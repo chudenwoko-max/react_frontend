@@ -25,209 +25,195 @@ import {
 import Toast from "react-native-toast-message";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
 
-
 const HIGH_VALUE_THRESHOLD = 50000;
 
 export default function SendScreen() {
-    const { logout } = useAuth();
+  const { logout } = useAuth();
   const { selectedUser } = useLocalSearchParams<{ selectedUser?: string }>();
   const [sendMode] = useState<"user" | "bank">("user");
   const [recipient, setRecipient] = useState(selectedUser || "");
-    const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
   const [amount, setAmount] = useState("");
   const [pin, setPin] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHighValue, setIsHighValue] = useState(false);
-    const [remainingToday, setRemainingToday] = useState<string | null>(null);
+  const [remainingToday, setRemainingToday] = useState<string | null>(null);
   const [singleLimit, setSingleLimit] = useState<string | null>(null);
 
-    useEffect(() => {
-  axiosClient
-    .get("favorites/")
-    .then((res) => {
-      const rows = Array.isArray(res.data)
-        ? res.data
-        : res.data.results || res.data.favorites || [];
-      setFavorites(rows);
-    })
-    .catch(() => setFavorites([]));
+  useEffect(() => {
+    axiosClient
+      .get("favorites/")
+      .then((res) => {
+        const rows = Array.isArray(res.data)
+          ? res.data
+          : res.data.results || res.data.favorites || [];
+        setFavorites(rows);
+      })
+      .catch(() => setFavorites([]));
 
-  axiosClient
-    .get("kyc/")
-    .then((res) => {
-      setRemainingToday(res.data.remaining_today || null);
-      setSingleLimit(res.data.limits?.single_send_ngn || null);
-    })
-    .catch(() => {});
-
-      axiosClient.get("kyc/").then((res) => {
-      setRemainingToday(res.data.remaining_today || null);
-      setSingleLimit(res.data.limits?.single_send_ngn || null);
-    }).catch(() => {});
-}, []);
-
+    // CHANGE: one kyc/ read. The effect used to call it twice.
+    axiosClient
+      .get("kyc/")
+      .then((res) => {
+        setRemainingToday(res.data.remaining_today || null);
+        setSingleLimit(res.data.limits?.single_send_ngn || null);
+      })
+      .catch(() => {});
+  }, []);
 
   const favHandle = (f: any) =>
     f.recipient_username || f.username || f.recipient?.username || "";
 
-  const favLabel = (f: any) =>
-    f.nickname || favHandle(f) || "User";
-  
+  const favLabel = (f: any) => f.nickname || favHandle(f) || "User";
 
- const handleSend = async () => {
-  if (sendMode === "bank") {
-    setError("Bank send is unavailable until Paystack Transfers is enabled.");
-    return;
-  }
-
-  if (!amount || !pin) {
-    setError("Please fill in amount and PIN");
-    return;
-  }
-  if (!recipient) {
-    setError("Please fill in recipient, amount and PIN");
-    return;
-  }
-
-  const numericAmount = Number(amount);
-  if (isNaN(numericAmount) || numericAmount <= 0) {
-    setError("Please enter a valid amount");
-    return;
-  }
-
-  // ⭐ RESTORED — guard belongs here (NOT around create-pin / send-money)
-  const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
-  if (!guard.ok) return;
-
-  setLoading(true);
-  setError("");
-
-  try {
-    // ⭐ PATCH: ensure PIN is always a string
-    const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
-    const pinToken = tokenRes.data.pin_token;
-    if (!pinToken) throw new Error("Could not get PIN token");
-
-    let highValueToken = null;
-
-    if (numericAmount >= HIGH_VALUE_THRESHOLD) {
-      setIsHighValue(true);
-
-      const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
-        amount: numericAmount,
-        recipient,
-      });
-      highValueToken = confirmRes.data.high_value_token;
-
-      let confirmed = false;
-      if (Platform.OS === "web") {
-        confirmed = window.confirm(
-          `You are about to send ₦${numericAmount.toLocaleString()}. Confirm this is correct.`
-        );
-      } else {
-        confirmed = await new Promise((resolve) => {
-          Alert.alert(
-            "High Value Transfer",
-            `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
-            [
-              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-              { text: "Confirm", onPress: () => resolve(true) },
-            ]
-          );
-        });
-      }
-
-      if (!confirmed) {
-        setLoading(false);
-        return;
-      }
-    }
-
-    // ⭐ PATCH: sanitized operationKey (storage key only)
-    const operationKey = `send_user_${recipient}_${numericAmount}`;
-    const reference_id = await getOrCreateReferenceId(operationKey);
-
-    const payload: any = {
-      destination: "user",
-      recipient,
-      amount: numericAmount,
-      pin: String(pin), // ⭐ enforce string
-      pin_token: pinToken,
-      note: note || "",
-      description: note || "Money Transfer",
-      reference_id,
-    };
-
-    if (highValueToken) payload.high_value_token = highValueToken;
-
-    const res = await axiosClient.post("send-money/", payload);
-
-    await clearReferenceId(operationKey);
-    DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-
-    const message = res.data.message || "Money sent successfully.";
-    if (Platform.OS === "web") {
-      Toast.show({
-        type: "success",
-        text1: res.data?.idempotent ? "Already processed" : "Transfer submitted",
-        text2: message,
-      });
-    } else {
-      Alert.alert("Success", message);
-    }
-
-    setRecipient("");
-    setAmount("");
-    setPin("");
-    setNote("");
-
-    setTimeout(() => {
-      router.replace("/(tabs)");
-    }, 600);
-  } catch (err: any) {
-    const status = err.response?.status;
-    const data = err.response?.data;
-
-    // ⭐ PATCH: handle session revocation cleanly
-    if (status === 401) {
-      await logout();
-      router.replace("/(auth)/login");
+  const handleSend = async () => {
+    if (sendMode === "bank") {
+      setError("Bank send is unavailable until Paystack Transfers is enabled.");
       return;
     }
 
-    // ⭐ PATCH: include err.message + status
-    const raw =
-      data?.error ||
-      data?.detail ||
-      `${err.message || "Unknown error"} (status: ${status || "N/A"})`;
+    if (!amount || !pin) {
+      setError("Please fill in amount and PIN");
+      return;
+    }
+    if (!recipient) {
+      setError("Please fill in recipient, amount and PIN");
+      return;
+    }
 
-    const message =
-      status === 502 || status === 403
-        ? data?.error ||
-          "Bank send is unavailable until Paystack Transfers is enabled."
-        : raw;
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
 
-    setError(typeof message === "string" ? message : JSON.stringify(message));
-  } finally {
-    setLoading(false);
-    setIsHighValue(false);
-  }
-};
+    const guard = await requireTransactionGuard(numericAmount, SEND_GUARD_AMOUNT);
+    if (!guard.ok) return;
 
+    setLoading(true);
+    setError("");
 
+    try {
+      const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
+      const pinToken = tokenRes.data.pin_token;
+      if (!pinToken) throw new Error("Could not get PIN token");
+
+      let highValueToken = null;
+
+      if (numericAmount >= HIGH_VALUE_THRESHOLD) {
+        setIsHighValue(true);
+
+        const confirmRes = await axiosClient.post("send-money/high-value-confirm/", {
+          amount: numericAmount,
+          recipient,
+        });
+        highValueToken = confirmRes.data.high_value_token;
+
+        let confirmed = false;
+        if (Platform.OS === "web") {
+          confirmed = window.confirm(
+            `You are about to send ₦${numericAmount.toLocaleString()}. Confirm this is correct.`
+          );
+        } else {
+          confirmed = await new Promise((resolve) => {
+            Alert.alert(
+              "High Value Transfer",
+              `You are about to send ₦${numericAmount.toLocaleString()}.\n\nPlease confirm this is correct.`,
+              [
+                { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+                { text: "Confirm", onPress: () => resolve(true) },
+              ]
+            );
+          });
+        }
+
+        if (!confirmed) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      const operationKey = `send_user_${recipient}_${numericAmount}`;
+      const reference_id = await getOrCreateReferenceId(operationKey);
+
+      const payload: any = {
+        destination: "user",
+        recipient,
+        amount: numericAmount,
+        pin: String(pin),
+        pin_token: pinToken,
+        note: note || "",
+        description: note || "Money Transfer",
+        reference_id,
+      };
+
+      if (highValueToken) payload.high_value_token = highValueToken;
+
+      const res = await axiosClient.post("send-money/", payload);
+
+      await clearReferenceId(operationKey);
+      DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+
+      const message = res.data.message || "Money sent successfully.";
+      if (Platform.OS === "web") {
+        Toast.show({
+          type: "success",
+          text1: res.data?.idempotent ? "Already processed" : "Transfer submitted",
+          text2: message,
+        });
+      } else {
+        Alert.alert("Success", message);
+      }
+
+      setRecipient("");
+      setAmount("");
+      setPin("");
+      setNote("");
+
+      setTimeout(() => {
+        router.replace("/(tabs)");
+      }, 600);
+    } catch (err: any) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      if (status === 401) {
+        await logout();
+        router.replace("/(auth)/login");
+        return;
+      }
+
+      const raw =
+        data?.error ||
+        data?.detail ||
+        `${err.message || "Unknown error"} (status: ${status || "N/A"})`;
+
+      const message =
+        status === 502 || status === 403
+          ? data?.error ||
+            "Bank send is unavailable until Paystack Transfers is enabled."
+          : raw;
+
+      setError(typeof message === "string" ? message : JSON.stringify(message));
+    } finally {
+      setLoading(false);
+      setIsHighValue(false);
+    }
+  };
 
   return (
-  <KeyboardAvoidingView
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
-    style={styles.container}
-  >
-    <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Send Money</Text>
-      <Text style={styles.subtitle}>Transfer to another OrbitPay user</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Send Money</Text>
+        {/* CHANGE: product name is Payhost. */}
+        <Text style={styles.subtitle}>Transfer to another Payhost user</Text>
 
-              {singleLimit ? (
+        {singleLimit ? (
           <Text style={{ color: "#64748B", marginBottom: 12 }}>
             Limit ₦{Number(singleLimit).toLocaleString()} per send
             {remainingToday != null
@@ -236,121 +222,122 @@ export default function SendScreen() {
           </Text>
         ) : null}
 
-      <View style={styles.modeRow}>
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[styles.modeBtn, sendMode === "user" && styles.modeBtnOn]}
+            onPress={() => {}}
+          >
+            {/* CHANGE: product name is Payhost. */}
+            <Text style={[styles.modeText, sendMode === "user" && styles.modeTextOn]}>
+              Payhost user
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, { opacity: 0.5 }]}
+            disabled
+            onPress={() => {}}
+          >
+            <Text style={styles.modeText}>Bank account (Soon)</Text>
+          </TouchableOpacity>
+        </View>
+
+        {Number(amount) >= HIGH_VALUE_THRESHOLD && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              High-value transfer (₦50,000+). Extra confirmation required.
+            </Text>
+          </View>
+        )}
+
+        {favorites.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: "#64748B", marginBottom: 8, fontWeight: "600" }}>
+              Favorites
+            </Text>
+            {favorites.map((f) => (
+              <TouchableOpacity
+                key={f.id || favHandle(f)}
+                onPress={() => setRecipient(favHandle(f))}
+                style={{
+                  backgroundColor: "#E2E8F0",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontWeight: "700", color: "#0F172A" }}>
+                  {favLabel(f)}
+                </Text>
+                <Text style={{ color: "#64748B" }}>@{favHandle(f)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <TouchableOpacity
-          style={[styles.modeBtn, sendMode === "user" && styles.modeBtnOn]}
-          onPress={() => {}}
+          onPress={() =>
+            router.push({
+              pathname: "/search-users",
+              params: { returnTo: "send" },
+            })
+          }
+          activeOpacity={0.7}
         >
-          <Text style={[styles.modeText, sendMode === "user" && styles.modeTextOn]}>
-            Orbit user
-          </Text>
+          <View pointerEvents="none">
+            <TextInput
+              label="Recipient Username"
+              value={recipient}
+              mode="outlined"
+              style={styles.input}
+              right={<TextInput.Icon icon="magnify" />}
+            />
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeBtn, { opacity: 0.5 }]}
-          disabled
-          onPress={() => {}}
+
+        <TextInput
+          label="Amount (NGN)"
+          value={amount}
+          onChangeText={setAmount}
+          mode="outlined"
+          keyboardType="numeric"
+          style={styles.input}
+        />
+        <TextInput
+          label="Transaction PIN"
+          value={pin}
+          onChangeText={setPin}
+          mode="outlined"
+          secureTextEntry
+          keyboardType="numeric"
+          style={styles.input}
+        />
+        <TextInput
+          label="Note (optional)"
+          value={note}
+          onChangeText={setNote}
+          mode="outlined"
+          style={styles.input}
+        />
+
+        {error ? (
+          <HelperText type="error" visible>
+            {error}
+          </HelperText>
+        ) : null}
+
+        <Button
+          mode="contained"
+          onPress={handleSend}
+          loading={loading}
+          disabled={loading}
+          style={styles.button}
+          contentStyle={{ paddingVertical: 6 }}
         >
-          <Text style={styles.modeText}>Bank account (Soon)</Text>
-        </TouchableOpacity>
-      </View>
-
-      {Number(amount) >= HIGH_VALUE_THRESHOLD && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningText}>
-            High-value transfer (₦50,000+). Extra confirmation required.
-          </Text>
-        </View>
-      )}
-
-      {favorites.length > 0 && (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: "#64748B", marginBottom: 8, fontWeight: "600" }}>
-            Favorites
-          </Text>
-          {favorites.map((f) => (
-            <TouchableOpacity
-              key={f.id || favHandle(f)}
-              onPress={() => setRecipient(favHandle(f))}
-              style={{
-                backgroundColor: "#E2E8F0",
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 8,
-              }}
-            >
-              <Text style={{ fontWeight: "700", color: "#0F172A" }}>
-                {favLabel(f)}
-              </Text>
-              <Text style={{ color: "#64748B" }}>@{favHandle(f)}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      <TouchableOpacity
-        onPress={() =>
-          router.push({
-            pathname: "/search-users",
-            params: { returnTo: "send" },
-          })
-        }
-        activeOpacity={0.7}
-      >
-        <View pointerEvents="none">
-          <TextInput
-            label="Recipient Username"
-            value={recipient}
-            mode="outlined"
-            style={styles.input}
-            right={<TextInput.Icon icon="magnify" />}
-          />
-        </View>
-      </TouchableOpacity>
-
-      <TextInput
-        label="Amount (NGN)"
-        value={amount}
-        onChangeText={setAmount}
-        mode="outlined"
-        keyboardType="numeric"
-        style={styles.input}
-      />
-      <TextInput
-        label="Transaction PIN"
-        value={pin}
-        onChangeText={setPin}
-        mode="outlined"
-        secureTextEntry
-        keyboardType="numeric"
-        style={styles.input}
-      />
-      <TextInput
-        label="Note (optional)"
-        value={note}
-        onChangeText={setNote}
-        mode="outlined"
-        style={styles.input}
-      />
-
-      {error ? (
-        <HelperText type="error" visible>
-          {error}
-        </HelperText>
-      ) : null}
-
-      <Button
-        mode="contained"
-        onPress={handleSend}
-        loading={loading}
-        disabled={loading}
-        style={styles.button}
-        contentStyle={{ paddingVertical: 6 }}
-      >
-        {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
-      </Button>
-    </ScrollView>
-  </KeyboardAvoidingView>
-);
+          {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
+        </Button>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
