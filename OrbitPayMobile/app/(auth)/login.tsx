@@ -8,16 +8,16 @@ import axiosClient from "../../src/api/axiosClient";
 import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
 
 export default function LoginScreen() {
-const { login, completeLogin } = useAuth();   // ⭐ PATCHED
-const [username, setUsername] = useState("");
-const [password, setPassword] = useState("");
-const [loading, setLoading] = useState(false);
-const [error, setError] = useState("");
-const [show2FA, setShow2FA] = useState(false);
-const [otpCode, setOtpCode] = useState("");
-const [userId, setUserId] = useState<number | null>(null);
+  const { completeLogin } = useAuth();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [show2FA, setShow2FA] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [userId, setUserId] = useState<number | null>(null);
 
-      const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!username || !password) {
       setError("Please fill in all fields");
       return;
@@ -35,13 +35,17 @@ const [userId, setUserId] = useState<number | null>(null);
 
       const fingerprint = await getDeviceFingerprint();
 
-      const res = await axiosClient.post("login/", {
-        username,
-        password,
-        device_fingerprint: fingerprint,
-        device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
-        device_type: Platform.OS,
-      });
+      const res = await axiosClient.post(
+        "login/",
+        {
+          username,
+          password,
+          device_fingerprint: fingerprint,
+          device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
+          device_type: Platform.OS,
+        },
+        { headers: { "X-Client": "mobile" } }
+      );
 
       if (res.data.requires_2fa) {
         setUserId(res.data.user_id);
@@ -53,7 +57,6 @@ const [userId, setUserId] = useState<number | null>(null);
       await completeLogin(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
     } catch (error: any) {
-      console.log("FULL LOGIN ERROR:", error);
       let message = "Unable to log in. Please try again.";
       if (error.response) {
         message =
@@ -70,6 +73,7 @@ const [userId, setUserId] = useState<number | null>(null);
       setLoading(false);
     }
   };
+
   const handleVerify2FA = async () => {
     if (!otpCode || otpCode.length !== 6) {
       setError("Please enter the 6-digit code");
@@ -80,12 +84,18 @@ const [userId, setUserId] = useState<number | null>(null);
     setError("");
 
     try {
-      const res = await axiosClient.post("2fa/verify-login/", {
-        user_id: userId,
-        code: otpCode,
-      });
+      const fingerprint = await getDeviceFingerprint();
+      const res = await axiosClient.post(
+        "verify-2fa/",
+        {
+          user_id: userId,
+          code: otpCode,
+          device_fingerprint: fingerprint,
+        },
+        { headers: { "X-Client": "mobile" } }
+      );
 
-      await login(res.data.access, res.data.refresh);
+      await completeLogin(res.data.access, res.data.refresh);
       router.replace("/(tabs)");
     } catch (error: any) {
       setError(error.response?.data?.error || "Invalid authentication code");
@@ -100,43 +110,46 @@ const [userId, setUserId] = useState<number | null>(null);
       style={styles.container}
     >
       <View style={styles.inner}>
-                  <Image
-            source={require("../../assets/orbitpay-logo.png")}
-            style={{
-              width: 200,
-              height: 56,
-              resizeMode: "contain",
-              alignSelf: "center",
-              marginBottom: 8,
-            }}
-          />
-        <Text style={styles.subtitle}>Sign in to your account</Text>
-
-        <TextInput
-          label="Username"
-          value={username}
-          onChangeText={setUsername}
-          mode="outlined"
-          autoCapitalize="none"
-          style={styles.input}
+        <Image
+          source={require("../../assets/orbitpay-logo.png")}
+          style={{
+            width: 200,
+            height: 56,
+            resizeMode: "contain",
+            alignSelf: "center",
+            marginBottom: 8,
+          }}
         />
+        <Text style={styles.subtitle}>
+          {show2FA ? "Enter the email code" : "Sign in to your account"}
+        </Text>
 
-        <TextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          mode="outlined"
-          secureTextEntry
-          style={styles.input}
-        />
-
-        {show2FA && (
+        {!show2FA ? (
+          <>
+            <TextInput
+              label="Username"
+              value={username}
+              onChangeText={setUsername}
+              mode="outlined"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            <TextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              mode="outlined"
+              secureTextEntry
+              style={styles.input}
+            />
+          </>
+        ) : (
           <>
             <Text style={{ marginBottom: 12, color: "#64748B" }}>
-              Enter the 6-digit code from your authenticator app
+              Enter the 6-digit code sent to your email.
             </Text>
             <TextInput
-              label="Authentication Code"
+              label="Email code"
               value={otpCode}
               onChangeText={setOtpCode}
               mode="outlined"
@@ -182,32 +195,10 @@ const [userId, setUserId] = useState<number | null>(null);
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  inner: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    textAlign: "center",
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 8,
-  },
-  subtitle: {
-    textAlign: "center",
-    color: "#64748B",
-    marginBottom: 32,
-  },
-  input: {
-    marginBottom: 16,
-  },
-  button: {
-    marginTop: 8,
-    borderRadius: 10,
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  inner: { flex: 1, justifyContent: "center", padding: 24 },
+  title: { textAlign: "center", fontWeight: "700", color: "#0F172A", marginBottom: 8 },
+  subtitle: { textAlign: "center", color: "#64748B", marginBottom: 32 },
+  input: { marginBottom: 16 },
+  button: { marginTop: 8, borderRadius: 10 },
 });
-
