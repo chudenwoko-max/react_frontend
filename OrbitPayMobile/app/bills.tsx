@@ -113,17 +113,25 @@ export default function BillsScreen() {
 
   setLoading(true);
 
+  // CHANGE: one stored key per bill attempt. Date.now() made every retry a new payment.
+  const operationKey = `bill_${type}_${provider}_${customerId}_${Number(amount)}`;
+
   try {
+    const reference_id = await getOrCreateReferenceId(operationKey);
     const payload: any = {
       bill_type: type,
       provider,
       amount: Number(amount),
       customer_id: customerId,
       package_name: "",
-      reference_id: `bill-${Date.now()}`,
+      reference_id,
     };
 
+    // Client copies reference_id onto Idempotency-Key. No extra header needed here.
     const res = await axiosClient.post("bills/pay/", payload);
+
+    // CHANGE: clear only after a resolved success, so a timeout keeps the same key.
+    await clearReferenceId(operationKey);
 
     const message = res.data?.message || `${type} payment successful`;
 
@@ -139,7 +147,7 @@ export default function BillsScreen() {
   } catch (err: any) {
     const status = err?.response?.status;
 
-    // ⭐ NEW PATCH: session revoked → logout + redirect
+    // Refresh already failed in axiosClient. This only sends the user to login.
     if (status === 401) {
       await logout();
       router.replace("/(auth)/login");
