@@ -573,12 +573,12 @@ export default function Dashboard() {
       contentContainerStyle={{ paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Image
-        source={require("../../assets/payhost-logo.png")}
-        style={styles.wordmark}
-        accessibilityLabel="Payhost"
-      />
       <View style={styles.headerRow}>
+        <Image
+          source={require("../../assets/payhost-logo.png")}
+          style={styles.wordmark}
+          accessibilityLabel="Payhost"
+        />
         <Text style={styles.greetLine} numberOfLines={1}>
           {greetingForNow()}, {username || "there"}!
         </Text>
@@ -772,23 +772,19 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 60 },
+  container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 16 },
   wordmark: {
-    height: 56,
-    width: 280,
+    height: 36,
+    width: 132,
     resizeMode: "contain",
-    alignSelf: "flex-start",
-    marginBottom: 8,
-    marginLeft: -4,
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-    gap: 16,
+    marginBottom: 16,
+    gap: 12,
   },
-  greetLine: { flex: 1, color: "#0F172A", fontSize: 28, fontFamily: SERIF, paddingRight: 12 },
+  greetLine: { flex: 1, color: "#0F172A", fontSize: 22, fontFamily: SERIF },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 12 },
   iconButton: { padding: 6, position: "relative" },
