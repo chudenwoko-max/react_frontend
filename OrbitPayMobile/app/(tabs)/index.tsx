@@ -775,15 +775,15 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 16 },
-  wordmark: { height: 72, width: 264, resizeMode: "contain" },
+  wordmark: { height: 72, width: 150, resizeMode: "contain", marginRight: 8, marginLeft: -12 },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  brandRow: { flexDirection: "row", alignItems: "center", flex: 1, gap: 16 },
-  greetLine: { flex: 1, color: "#0F172A", fontSize: 22, fontFamily: SERIF },
+  brandRow: { flexDirection: "row", alignItems: "center", flex: 1, gap: 0 },
+  greetLine: { color: "#0F172A", fontSize: 22, fontFamily: SERIF },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 12 },
   iconButton: { padding: 6, position: "relative" },
