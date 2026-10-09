@@ -40,7 +40,7 @@ export default function OrbitAIChat() {
   const createNewSession = async () => {
     try {
       const res = await axiosClient.post("chat/sessions/", {
-        title: "Orbit AI Chat",
+        title: "Payhost AI Chat",
       });
       setSessionId(res.data.id);
     } catch (error: any) {
@@ -116,7 +116,7 @@ export default function OrbitAIChat() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Orbit AI</Text>
+        <Text style={styles.headerTitle}>Payhost AI</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -131,7 +131,7 @@ export default function OrbitAIChat() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="planet" size={60} color="#6C63FF" />
-            <Text style={styles.emptyTitle}>Hi, I’m Orbit AI</Text>
+            <Text style={styles.emptyTitle}>Hi, I’m Payhost AI</Text>
             <Text style={styles.emptyText}>
               Ask me anything about your balance, spending, savings, or
               transactions.
@@ -176,7 +176,7 @@ export default function OrbitAIChat() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Ask Orbit AI anything..."
+            placeholder="Ask Payhost AI anything..."
             placeholderTextColor="#999"
             value={input}
             onChangeText={setInput}

@@ -163,7 +163,7 @@ export const QuickActions = memo(function QuickActions() {
             />
           </View>
           <Text style={styles.actionText} numberOfLines={2}>
-            Orbit AI
+            Payhost AI
           </Text>
         </TouchableOpacity>
       </View>
