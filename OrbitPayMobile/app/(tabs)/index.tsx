@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   DeviceEventEmitter,
+  Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
@@ -42,6 +43,16 @@ type Transaction = {
   created_at?: string;
   category?: string;
 };
+
+// CHANGE: website greeting is Georgia-style serif.
+const SERIF = Platform.OS === "web" ? "Georgia, 'Times New Roman', serif" : "serif";
+
+function greetingForNow() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 function formatNgn(amount: number) {
   return Number(amount).toLocaleString("en-NG", {
@@ -121,9 +132,7 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingWithdraw, setPendingWithdraw] = useState<any>(null);
   const [cancellingWithdraw, setCancellingWithdraw] = useState(false);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
-    []
-  );
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [monthSpent, setMonthSpent] = useState(0);
   const [monthReceived, setMonthReceived] = useState(0);
   const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
@@ -132,14 +141,12 @@ export default function Dashboard() {
   const [weeklyInsight, setWeeklyInsight] = useState<any>(null);
   const [savingsSuggestion, setSavingsSuggestion] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<
-    "all" | "sent" | "received" | "bills" | "others"
-  >("all");
+  const [filterType, setFilterType] = useState<"all" | "sent" | "received" | "bills" | "others">("all");
   const [cashflowAlert, setCashflowAlert] = useState<any>(null);
   const isFirstLoad = useRef(true);
   const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [kycLimits, setKycLimits] = useState<any>(null);
-  
+  const [username, setUsername] = useState("");
 
   const refreshFinancials = useCallback(async () => {
     try {
@@ -172,7 +179,7 @@ export default function Dashboard() {
         return;
       }
       setWeeklyInsight({
-        title: weekly.title || "Orbit Insight · This week",
+        title: weekly.title || "Payhost Insight · This week",
         message: weekly.body || weekly.message || "",
         save_reason: weekly.save_reason || "",
         suggested_save: weekly.suggested_save,
@@ -199,9 +206,7 @@ export default function Dashboard() {
   const acceptSuggestion = async () => {
     if (!savingsSuggestion?.id) return;
     try {
-      await axiosClient.post(
-        `savings/suggestions/${savingsSuggestion.id}/accept/`
-      );
+      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/accept/`);
       setSavingsSuggestion(null);
       await fetchSavingsGoals();
     } catch (error) {
@@ -212,9 +217,7 @@ export default function Dashboard() {
   const dismissSuggestion = async () => {
     if (!savingsSuggestion?.id) return;
     try {
-      await axiosClient.post(
-        `savings/suggestions/${savingsSuggestion.id}/dismiss/`
-      );
+      await axiosClient.post(`savings/suggestions/${savingsSuggestion.id}/dismiss/`);
       setSavingsSuggestion(null);
     } catch (error) {
       console.log("Dismiss suggestion error:", error);
@@ -272,7 +275,6 @@ export default function Dashboard() {
     for (const tx of rows) {
       const type = String(tx.type || tx.transaction_type || "").toLowerCase();
       if (!SPEND_TYPES.has(type)) continue;
-
       const d = new Date(tx.created_at);
       d.setHours(0, 0, 0, 0);
       const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
@@ -301,16 +303,12 @@ export default function Dashboard() {
       });
       const data = res.data || {};
       const daily = Array.isArray(data.daily) ? data.daily : [];
-
       const spends = daily
         .slice()
-        .sort((a: any, b: any) =>
-          String(a.date || "").localeCompare(String(b.date || ""))
-        )
+        .sort((a: any, b: any) => String(a.date || "").localeCompare(String(b.date || "")))
         .slice(-7)
         .map((d: { spend?: number }) => Number(d.spend) || 0);
       while (spends.length < 7) spends.unshift(0);
-
       setWeeklyData(spends);
       setPendingWithdraw(data.pending_withdraw || null);
       setMonthSpent(Number(data.spend) || 0);
@@ -371,6 +369,18 @@ export default function Dashboard() {
         setKycLimits(res.data.limits || null);
       })
       .catch(() => setKycStatus(null));
+
+    axiosClient
+      .get("profile/")
+      .then((res) => {
+        const name =
+          res.data?.username ||
+          res.data?.user?.username ||
+          res.data?.full_name ||
+          "";
+        setUsername(name);
+      })
+      .catch(() => setUsername(""));
   }, []);
 
   useFocusEffect(
@@ -404,15 +414,12 @@ export default function Dashboard() {
   const cancelPendingWithdraw = async () => {
     if (!pendingWithdraw?.reference) return;
     setCancellingWithdraw(true);
-
     try {
       await axiosClient.post("wallet/withdraw/cancel/", {
         reference_id: pendingWithdraw.reference,
       });
-
       setPendingWithdraw(null);
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
-
       await Promise.all([
         refreshFinancials(),
         fetchSnapshot(),
@@ -421,23 +428,18 @@ export default function Dashboard() {
     } catch (e: any) {
       const status = e?.response?.status;
       const data = e?.response?.data;
-
       if (status === 401) {
         await logout();
         router.replace("/(auth)/login");
         return;
       }
-
       if (status === 409) {
         Alert.alert(
           "Already queued",
           data?.error || "Transfer already queued at Paystack. Wait for webhook."
         );
       } else {
-        Alert.alert(
-          "Cancel failed",
-          data?.error || "Could not cancel this withdrawal."
-        );
+        Alert.alert("Cancel failed", data?.error || "Could not cancel this withdrawal.");
       }
     } finally {
       setCancellingWithdraw(false);
@@ -458,7 +460,6 @@ export default function Dashboard() {
 
   const filteredTransactions = useMemo(() => {
     let filtered = recentTransactions;
-
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -468,13 +469,11 @@ export default function Dashboard() {
           (tx.category || "").toLowerCase().includes(query)
       );
     }
-
     if (filterType !== "all") {
       filtered = filtered.filter((tx) => {
         const type = (tx.type || tx.transaction_type || "").toLowerCase();
         const desc = (tx.description || tx.note || "").toLowerCase();
         const category = (tx.category || "").toLowerCase();
-
         const isCredit =
           type === "credit" ||
           type === "fund" ||
@@ -484,20 +483,11 @@ export default function Dashboard() {
           desc.includes("received") ||
           desc.includes("wallet funding") ||
           desc.includes("funded");
-
         if (filterType === "sent")
-          return (
-            !isCredit &&
-            !desc.includes("bill") &&
-            !desc.includes("withdraw") &&
-            type !== "withdraw"
-          );
+          return !isCredit && !desc.includes("bill") && !desc.includes("withdraw") && type !== "withdraw";
         if (filterType === "received") return isCredit;
         if (filterType === "bills")
-          return (
-            desc.includes("bill") ||
-            ["electricity", "cable", "data", "airtime"].includes(category)
-          );
+          return desc.includes("bill") || ["electricity", "cable", "data", "airtime"].includes(category);
         if (filterType === "others")
           return (
             !isCredit &&
@@ -509,7 +499,6 @@ export default function Dashboard() {
         return true;
       });
     }
-
     return filtered;
   }, [recentTransactions, searchQuery, filterType]);
 
@@ -517,7 +506,6 @@ export default function Dashboard() {
     const type = (item.type || item.transaction_type || "").toLowerCase();
     const description = (item.description || item.note || "").toLowerCase();
     const category = (item.category || "other").toLowerCase();
-
     const isCredit =
       type === "credit" ||
       type === "fund" ||
@@ -527,24 +515,15 @@ export default function Dashboard() {
       description.includes("received") ||
       description.includes("wallet funding") ||
       description.includes("funded");
-
     const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
-
     return (
       <TouchableOpacity
         key={item.id || item.reference_id}
         style={styles.txCard}
-        onPress={() =>
-          router.push(`/transaction/${item.id || item.reference_id}`)
-        }
+        onPress={() => router.push(`/transaction/${item.id || item.reference_id}`)}
         activeOpacity={0.7}
       >
-        <View
-          style={[
-            styles.txIcon,
-            { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" },
-          ]}
-        >
+        <View style={[styles.txIcon, { backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2" }]}>
           <MaterialCommunityIcons
             name={isCredit ? "arrow-down" : "arrow-up"}
             size={18}
@@ -562,19 +541,13 @@ export default function Dashboard() {
               </Text>
             </View>
             <Text style={styles.txDate}>
-              {item.created_at
-                ? new Date(item.created_at).toLocaleDateString()
-                : "—"}
+              {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
             </Text>
           </View>
         </View>
-        <Text
-          style={[styles.txAmount, { color: isCredit ? "#16A34A" : "#DC2626" }]}
-        >
+        <Text style={[styles.txAmount, { color: isCredit ? "#16A34A" : "#DC2626" }]}>
           {isCredit ? "+" : "-"}₦
-          {Number(item.amount).toLocaleString("en-NG", {
-            minimumFractionDigits: 2,
-          })}
+          {Number(item.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}
         </Text>
       </TouchableOpacity>
     );
@@ -584,31 +557,31 @@ export default function Dashboard() {
   void recent;
   void kycLimits;
 
+  const kycCopy =
+    kycStatus === "approved"
+      ? "Identity verified"
+      : kycStatus === "pending"
+        ? "Verification pending. Send and pay stay off until review finishes."
+        : kycStatus === "rejected"
+          ? "Verification rejected. Update your BVN or government ID."
+          : "A BVN or government ID is required before send and pay unlock.";
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
-        
+        <Text style={styles.greetLine} numberOfLines={1}>
+          {greetingForNow()}, {username || "there"}!
+        </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push("/notifications")}
-          >
-            <MaterialCommunityIcons
-              name="bell-outline"
-              size={22}
-              color="#0F172A"
-            />
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notifications")}>
+            <MaterialCommunityIcons name="bell-outline" size={22} color="#0F172A" />
             {unreadCount > 0 ? (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? "9+" : String(unreadCount)}
-                </Text>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
               </View>
             ) : null}
           </TouchableOpacity>
@@ -618,44 +591,37 @@ export default function Dashboard() {
         </View>
       </View>
 
-      {kycStatus === "pending" ||
-      kycStatus === "approved" ||
-      kycStatus === "rejected" ? (
-        <View
-          style={{
-            backgroundColor:
-              kycStatus === "approved"
-                ? "#DCFCE7"
-                : kycStatus === "rejected"
-                  ? "#FEE2E2"
-                  : "#FEF3C7",
-            borderRadius: 12,
-            padding: 14,
-            marginBottom: 16,
-          }}
-        >
-          <Text
-            style={{
-              fontWeight: "700",
+      {/* CHANGE: short identity notice. Funding and history stay open. */}
+      <TouchableOpacity
+        disabled={kycStatus === "approved"}
+        onPress={() => router.push("/kyc")}
+        style={[
+          styles.kycBanner,
+          kycStatus === "approved"
+            ? styles.kycApproved
+            : kycStatus === "rejected"
+              ? styles.kycRejected
+              : styles.kycPending,
+        ]}
+      >
+        <Text
+          style={[
+            styles.kycText,
+            {
               color:
                 kycStatus === "approved"
                   ? "#166534"
                   : kycStatus === "rejected"
                     ? "#991B1B"
                     : "#92400E",
-            }}
-          >
-            {kycStatus === "approved"
-              ? "Identity verified"
-              : kycStatus === "rejected"
-                ? "Verification rejected"
-                : "Verification pending"}
-          </Text>
-        </View>
-      ) : null}
+            },
+          ]}
+        >
+          {kycCopy}
+        </Text>
+      </TouchableOpacity>
 
       <BalanceCard balance={balance} loading={loading} />
-
       <PendingWithdrawBanner
         pending={pendingWithdraw}
         onCancel={cancelPendingWithdraw}
@@ -666,41 +632,25 @@ export default function Dashboard() {
         <View
           style={[
             styles.cashflowCard,
-            cashflowAlert.level === "critical"
-              ? styles.cashflowCritical
-              : styles.cashflowWarning,
+            cashflowAlert.level === "critical" ? styles.cashflowCritical : styles.cashflowWarning,
           ]}
         >
-          <Text style={styles.cashflowLabel}>
-            {cashflowAlert.title || "Cashflow"}
-          </Text>
-          <Text style={styles.insightMessage}>
-            {cashflowAlert.message || cashflowAlert.body || ""}
-          </Text>
+          <Text style={styles.cashflowLabel}>{cashflowAlert.title || "Cashflow"}</Text>
+          <Text style={styles.insightMessage}>{cashflowAlert.message || cashflowAlert.body || ""}</Text>
         </View>
       ) : null}
 
       {weeklyInsight &&
-      (weeklyInsight.message ||
-        weeklyInsight.save_reason ||
-        weeklyInsight.suggested_save != null) ? (
+      (weeklyInsight.message || weeklyInsight.save_reason || weeklyInsight.suggested_save != null) ? (
         <View style={styles.insightCard}>
           <View style={styles.insightHeader}>
-            <MaterialCommunityIcons
-              name="lightbulb-outline"
-              size={18}
-              color="#C2410C"
-            />
+            <MaterialCommunityIcons name="lightbulb-outline" size={18} color="#C2410C" />
             <Text style={styles.insightLabel}>Insight</Text>
           </View>
           <Text style={styles.insightTitle}>{weeklyInsight.title}</Text>
-          {weeklyInsight.message ? (
-            <Text style={styles.insightMessage}>{weeklyInsight.message}</Text>
-          ) : null}
+          {weeklyInsight.message ? <Text style={styles.insightMessage}>{weeklyInsight.message}</Text> : null}
           {weeklyInsight.save_reason ? (
-            <Text style={[styles.insightMessage, { marginTop: 8 }]}>
-              {weeklyInsight.save_reason}
-            </Text>
+            <Text style={[styles.insightMessage, { marginTop: 8 }]}>{weeklyInsight.save_reason}</Text>
           ) : null}
           {weeklyInsight.suggested_save != null ? (
             <Text style={[styles.insightMessage, { marginTop: 8 }]}>
@@ -714,22 +664,13 @@ export default function Dashboard() {
         <View style={styles.suggestionCard}>
           <Text style={styles.suggestionLabel}>Savings suggestion</Text>
           <Text style={styles.insightMessage}>
-            {savingsSuggestion.message ||
-              savingsSuggestion.title ||
-              savingsSuggestion.body ||
-              ""}
+            {savingsSuggestion.message || savingsSuggestion.title || savingsSuggestion.body || ""}
           </Text>
           <View style={styles.suggestionActions}>
-            <TouchableOpacity
-              style={styles.dismissBtn}
-              onPress={dismissSuggestion}
-            >
+            <TouchableOpacity style={styles.dismissBtn} onPress={dismissSuggestion}>
               <Text style={styles.dismissText}>Dismiss</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.acceptBtn}
-              onPress={acceptSuggestion}
-            >
+            <TouchableOpacity style={styles.acceptBtn} onPress={acceptSuggestion}>
               <Text style={styles.acceptText}>Accept</Text>
             </TouchableOpacity>
           </View>
@@ -737,11 +678,8 @@ export default function Dashboard() {
       ) : null}
 
       <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
-
       <WalletsGrid wallets={wallets} />
-
       <QuickActions />
-
       <WeeklyChart weeklyData={weeklyData} />
 
       {savingsGoals.length > 0 ? (
@@ -794,23 +732,14 @@ export default function Dashboard() {
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterTabs}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterTabs}>
         {(["all", "sent", "received", "bills", "others"] as const).map((f) => (
           <TouchableOpacity
             key={f}
             style={[styles.filterTab, filterType === f && styles.filterTabActive]}
             onPress={() => setFilterType(f)}
           >
-            <Text
-              style={[
-                styles.filterTabText,
-                filterType === f && styles.filterTabTextActive,
-              ]}
-            >
+            <Text style={[styles.filterTabText, filterType === f && styles.filterTabTextActive]}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -825,32 +754,19 @@ export default function Dashboard() {
         </>
       ) : filteredTransactions.length === 0 ? (
         <View style={styles.emptyCard}>
-          <MaterialCommunityIcons
-            name="swap-horizontal"
-            size={28}
-            color="#94A3B8"
-          />
+          <MaterialCommunityIcons name="swap-horizontal" size={28} color="#94A3B8" />
           <Text style={styles.emptyText}>No transactions yet</Text>
-          <Text style={styles.emptySubText}>
-            Fund, send, or pay a merchant to see activity here.
-          </Text>
+          <Text style={styles.emptySubText}>Fund, send, or pay a merchant to see activity here.</Text>
         </View>
       ) : (
-        <View style={styles.txList}>
-          {filteredTransactions.map(renderTransaction)}
-        </View>
+        <View style={styles.txList}>{filteredTransactions.map(renderTransaction)}</View>
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    padding: 20,
-    paddingTop: 60,
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 60 },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -858,6 +774,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 16,
   },
+  greetLine: { flex: 1, color: "#0F172A", fontSize: 28, fontFamily: SERIF, paddingRight: 12 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 12 },
   iconButton: { padding: 6, position: "relative" },
@@ -873,8 +790,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 4,
   },
-  badgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
-  logoutText: { fontSize: 15, fontWeight: "600", color: "#DC2626" },
+  badgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700", fontFamily: SERIF },
+  logoutText: { fontSize: 15, fontWeight: "600", color: "#DC2626", fontFamily: SERIF },
+  kycBanner: { borderRadius: 12, padding: 14, marginBottom: 16 },
+  kycPending: { backgroundColor: "#FEF3C7" },
+  kycApproved: { backgroundColor: "#DCFCE7" },
+  kycRejected: { backgroundColor: "#FEE2E2" },
+  kycText: { fontFamily: SERIF, fontWeight: "700" },
   insightCard: {
     backgroundColor: "#FFF7ED",
     borderRadius: 16,
@@ -883,20 +805,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  insightHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    gap: 8,
-  },
-  insightLabel: { fontSize: 14, fontWeight: "600", color: "#C2410C" },
-  insightTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-  },
-  insightMessage: { fontSize: 14, lineHeight: 20, color: "#475569" },
+  insightHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10, gap: 8 },
+  insightLabel: { fontSize: 14, fontWeight: "600", color: "#C2410C", fontFamily: SERIF },
+  insightTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 6, fontFamily: SERIF },
+  insightMessage: { fontSize: 14, lineHeight: 20, color: "#475569", fontFamily: SERIF },
   suggestionCard: {
     backgroundColor: "#ECFDF5",
     borderRadius: 16,
@@ -905,144 +817,43 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
-  suggestionLabel: { fontSize: 14, fontWeight: "600", color: "#0F766E" },
-  cashflowCard: {
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-  },
+  suggestionLabel: { fontSize: 14, fontWeight: "600", color: "#0F766E", fontFamily: SERIF },
+  cashflowCard: { borderRadius: 16, padding: 18, marginBottom: 20, borderWidth: 1 },
   cashflowWarning: { backgroundColor: "#FFFBEB", borderColor: "#FDE68A" },
   cashflowCritical: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
-  cashflowLabel: { fontSize: 14, fontWeight: "600" },
-  suggestionActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 16,
-  },
-  acceptBtn: {
-    backgroundColor: "#0D9488",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  acceptText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  dismissBtn: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  dismissText: { color: "#475569", fontSize: 13, fontWeight: "600" },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  seeAll: { fontSize: 14, color: "#0284C7", fontWeight: "600" },
-  goalCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    width: 200,
-    marginRight: 12,
-  },
-  goalTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 8,
-  },
-  goalAmount: { fontSize: 13, color: "#64748B", marginBottom: 10 },
-  progressBar: {
-    height: 6,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 6,
-  },
+  cashflowLabel: { fontSize: 14, fontWeight: "600", fontFamily: SERIF },
+  suggestionActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 16 },
+  acceptBtn: { backgroundColor: "#0D9488", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
+  acceptText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700", fontFamily: SERIF },
+  dismissBtn: { backgroundColor: "#F1F5F9", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16 },
+  dismissText: { color: "#475569", fontSize: 13, fontWeight: "600", fontFamily: SERIF },
+  sectionTitle: { fontSize: 18, fontWeight: "600", color: "#0F172A", marginBottom: 16, fontFamily: SERIF },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12, marginTop: 8 },
+  seeAll: { fontSize: 14, color: "#0284C7", fontWeight: "600", fontFamily: SERIF },
+  goalCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 16, width: 200, marginRight: 12 },
+  goalTitle: { fontSize: 15, fontWeight: "600", color: "#0F172A", marginBottom: 8, fontFamily: SERIF },
+  goalAmount: { fontSize: 13, color: "#64748B", marginBottom: 10, fontFamily: SERIF },
+  progressBar: { height: 6, backgroundColor: "#E2E8F0", borderRadius: 3, overflow: "hidden", marginBottom: 6 },
   progressFill: { height: "100%", backgroundColor: "#16A34A", borderRadius: 3 },
-  goalProgress: { fontSize: 12, color: "#16A34A", fontWeight: "600" },
+  goalProgress: { fontSize: 12, color: "#16A34A", fontWeight: "600", fontFamily: SERIF },
   txList: { gap: 10 },
-  txCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-  },
-  txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
+  txCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 14, padding: 14 },
+  txIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center", marginRight: 12 },
   txInfo: { flex: 1, marginRight: 8 },
-  txTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
-  txMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 8,
-  },
+  txTitle: { fontSize: 14, fontWeight: "600", color: "#0F172A", fontFamily: SERIF },
+  txMetaRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 8 },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  categoryBadgeText: { fontSize: 11, fontWeight: "600" },
-  txDate: { fontSize: 12, color: "#94A3B8" },
-  txAmount: { fontSize: 14, fontWeight: "700" },
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: { marginTop: 12, color: "#94A3B8", fontSize: 15 },
-  emptySubText: {
-    marginTop: 8,
-    color: "#94A3B8",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  skeletonTxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-  },
-  skeletonCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#E2E8F0",
-    marginRight: 12,
-  },
+  categoryBadgeText: { fontSize: 11, fontWeight: "600", fontFamily: SERIF },
+  txDate: { fontSize: 12, color: "#94A3B8", fontFamily: SERIF },
+  txAmount: { fontSize: 14, fontWeight: "700", fontFamily: SERIF },
+  emptyCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 40, alignItems: "center", justifyContent: "center" },
+  emptyText: { marginTop: 12, color: "#94A3B8", fontSize: 15, fontFamily: SERIF },
+  emptySubText: { marginTop: 8, color: "#94A3B8", fontSize: 12, textAlign: "center", fontFamily: SERIF },
+  skeletonTxRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderRadius: 14, padding: 14, marginBottom: 10 },
+  skeletonCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#E2E8F0", marginRight: 12 },
   skeletonTxLines: { flex: 1 },
-  skeletonLineShort: {
-    height: 12,
-    width: "55%",
-    backgroundColor: "#E2E8F0",
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  skeletonLineMedium: {
-    height: 12,
-    width: "80%",
-    backgroundColor: "#F1F5F9",
-    borderRadius: 6,
-  },
+  skeletonLineShort: { height: 12, width: "55%", backgroundColor: "#E2E8F0", borderRadius: 6, marginBottom: 10 },
+  skeletonLineMedium: { height: 12, width: "80%", backgroundColor: "#F1F5F9", borderRadius: 6 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1053,13 +864,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    fontSize: 14,
-    color: "#0F172A",
-  },
+  searchInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 14, color: "#0F172A", fontFamily: SERIF },
   filterTabs: { marginBottom: 16, paddingVertical: 8 },
   filterTab: {
     paddingHorizontal: 14,
@@ -1071,6 +876,6 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   filterTabActive: { backgroundColor: "#0F172A", borderColor: "#0F172A" },
-  filterTabText: { fontSize: 13, fontWeight: "600", color: "#64748B" },
+  filterTabText: { fontSize: 13, fontWeight: "600", color: "#64748B", fontFamily: SERIF },
   filterTabTextActive: { color: "#FFFFFF" },
 });
