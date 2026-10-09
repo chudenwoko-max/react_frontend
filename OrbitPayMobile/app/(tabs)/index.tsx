@@ -574,14 +574,16 @@ export default function Dashboard() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
-        <Image
-          source={require("../../assets/payhost-logo.png")}
-          style={styles.wordmark}
-          accessibilityLabel="Payhost"
-        />
-        <Text style={styles.greetLine} numberOfLines={1}>
-          {greetingForNow()}, {username || "there"}!
-        </Text>
+        <View style={styles.brandRow}>
+          <Image
+            source={require("../../assets/payhost-logo.png")}
+            style={styles.wordmark}
+            accessibilityLabel="Payhost"
+          />
+          <Text style={styles.greetLine} numberOfLines={1}>
+            {greetingForNow()}, {username || "there"}!
+          </Text>
+        </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/notifications")}>
             <MaterialCommunityIcons name="bell-outline" size={22} color="#0F172A" />
@@ -773,17 +775,14 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 16 },
-  wordmark: {
-    height: 36,
-    width: 132,
-    resizeMode: "contain",
-  },
+  wordmark: { height: 72, width: 264, resizeMode: "contain" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
-    gap: 12,
   },
+  brandRow: { flexDirection: "row", alignItems: "center", flex: 1, gap: 16 },
   greetLine: { flex: 1, color: "#0F172A", fontSize: 22, fontFamily: SERIF },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoutButton: { paddingVertical: 6, paddingHorizontal: 12 },
