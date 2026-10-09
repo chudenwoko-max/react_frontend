@@ -110,16 +110,13 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.inner}>
-        <Image
-          source={require("../../assets/orbitpay-logo.png")}
-          style={{
-            width: 200,
-            height: 56,
-            resizeMode: "contain",
-            alignSelf: "center",
-            marginBottom: 8,
-          }}
-        />
+        <View style={styles.brand}>
+          <Image
+            source={require("../../assets/payhost-mark.png")}
+            style={styles.mark}
+          />
+          <Text style={styles.brandName}>Payhost</Text>
+        </View>
         <Text style={styles.subtitle}>
           {show2FA ? "Enter the email code" : "Sign in to your account"}
         </Text>
@@ -127,7 +124,7 @@ export default function LoginScreen() {
         {!show2FA ? (
           <>
             <TextInput
-              label="Username"
+              label="Username or Email"
               value={username}
               onChangeText={setUsername}
               mode="outlined"
@@ -173,7 +170,7 @@ export default function LoginScreen() {
           style={styles.button}
           contentStyle={{ paddingVertical: 6 }}
         >
-          {show2FA ? "Verify Code" : "Login"}
+          {show2FA ? "Verify Code" : "Sign In"}
         </Button>
 
         <Button
@@ -186,7 +183,7 @@ export default function LoginScreen() {
 
         <Link href="/(auth)/register" asChild>
           <Button mode="text" style={{ marginTop: 4 }}>
-            Don't have an account? Register
+            Don't have an account? Create Account
           </Button>
         </Link>
       </View>
@@ -197,7 +194,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   inner: { flex: 1, justifyContent: "center", padding: 24 },
-  title: { textAlign: "center", fontWeight: "700", color: "#0F172A", marginBottom: 8 },
+  brand: { alignItems: "center", marginBottom: 20 },
+  mark: { width: 48, height: 48, resizeMode: "contain" },
+  brandName: { marginTop: 8, fontWeight: "700", color: "#0F172A" },
   subtitle: { textAlign: "center", color: "#64748B", marginBottom: 32 },
   input: { marginBottom: 16 },
   button: { marginTop: 8, borderRadius: 10 },
