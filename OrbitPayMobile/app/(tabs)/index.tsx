@@ -775,7 +775,7 @@ export default function Dashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 16 },
-  wordmark: { height: 36, width: 132, resizeMode: "contain", marginRight: 8 },
+  wordmark: { height: 72, width: 72, resizeMode: "contain" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
