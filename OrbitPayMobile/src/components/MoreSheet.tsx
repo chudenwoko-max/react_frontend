@@ -64,6 +64,7 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) =>
       disappearsOnIndex={-1}
       appearsOnIndex={0}
       pressBehavior="close"
+      style={[backdropProps.style, { bottom: 64 }]}
     />
   );
 
