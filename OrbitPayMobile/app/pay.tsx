@@ -26,6 +26,7 @@ function apiError(e: any, fallback: string) {
 export default function PayMerchantScreen() {
   const [merchantId, setMerchantId] = useState("1");
   const [amount, setAmount] = useState("200");
+  const [pin, setPin] = useState("");
   const [cards, setCards] = useState<Card[]>([]);
   const [cardId, setCardId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,23 +85,31 @@ export default function PayMerchantScreen() {
   };
 
   const payWallet = async () => {
-    if (busy) return;
-    const merchant_id = parsedMerchant();
-    const amt = parsedAmount();
-    if (merchant_id == null || amt == null) return;
-    setBusy(true);
-    try {
-      await axiosClient.post("merchant/pay-wallet/", {
-        merchant_id,
-        amount: amt,
-        description: "Wallet pay",
-      });
-      finishOk();
-    } catch (e: any) {
-      Alert.alert("Error", apiError(e, "Wallet pay failed"));
-      setBusy(false);
-    }
-  };
+  if (busy) return;
+  const merchant_id = parsedMerchant();
+  const amt = parsedAmount();
+  if (merchant_id == null || amt == null) return;
+
+  // CHANGE: pay-wallet/ returned 400 because pin was absent.
+  if (!pin) {
+    Alert.alert("PIN required", "Enter your PIN");
+    return;
+  }
+
+  setBusy(true);
+  try {
+    await axiosClient.post("merchant/pay-wallet/", {
+      merchant_id,
+      amount: amt,
+      description: "Wallet pay",
+      pin: String(pin),
+    });
+    finishOk();
+  } catch (e: any) {
+    Alert.alert("Error", apiError(e, "Wallet pay failed"));
+    setBusy(false);
+  }
+};
 
   const payCheckout = async () => {
     if (busy) return;
@@ -164,6 +173,15 @@ export default function PayMerchantScreen() {
         value={amount}
         onChangeText={setAmount}
         keyboardType="decimal-pad"
+      />
+
+      <Text style={styles.label}>PIN</Text>
+      <TextInput
+        style={styles.input}
+        value={pin}
+        onChangeText={setPin}
+        keyboardType="number-pad"
+        secureTextEntry
       />
 
       <TouchableOpacity style={styles.btn} onPress={payWallet} disabled={busy}>
