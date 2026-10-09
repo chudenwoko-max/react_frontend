@@ -10,6 +10,7 @@ import {
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import Toast from "react-native-toast-message";
 
 export default function KycScreen() {
   const [fullName, setFullName] = useState("");
@@ -69,12 +70,14 @@ export default function KycScreen() {
         bvn: bvnDigits,
         id_number: idDigits,
       });
-      setStatus("pending");
-      Alert.alert(
-        "Submitted",
-        "Submitted for manual review. Payhost does not verify BVN or NIN with a bureau yet.",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
+            setStatus("pending");
+      // CHANGE: toast, then homepage. The homepage banner is the pending state.
+      Toast.show({
+        type: "success",
+        text1: "Submitted",
+        text2: "Verification is pending review.",
+      });
+      router.replace("/(tabs)");
     } catch (err: any) {
       console.log("KYC submit error:", err.response?.data);
       const message =

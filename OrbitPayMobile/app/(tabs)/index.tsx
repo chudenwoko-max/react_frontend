@@ -137,8 +137,9 @@ export default function Dashboard() {
   >("all");
   const [cashflowAlert, setCashflowAlert] = useState<any>(null);
   const isFirstLoad = useRef(true);
-  const [kycStatus, setKycStatus] = useState("unverified");
+  const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [kycLimits, setKycLimits] = useState<any>(null);
+  
 
   const refreshFinancials = useCallback(async () => {
     try {
@@ -365,12 +366,11 @@ export default function Dashboard() {
     axiosClient
       .get("kyc/")
       .then((res) => {
-        setKycStatus(
-          String(res.data.status || res.data.kyc_status || "unverified").toLowerCase()
-        );
+        const status = res.data?.status || res.data?.kyc_status;
+        setKycStatus(typeof status === "string" ? status.toLowerCase() : null);
         setKycLimits(res.data.limits || null);
       })
-      .catch(() => setKycStatus("unverified"));
+      .catch(() => setKycStatus(null));
   }, []);
 
   useFocusEffect(
@@ -582,7 +582,6 @@ export default function Dashboard() {
 
   void snapshot;
   void recent;
-  void kycStatus;
   void kycLimits;
 
   return (
@@ -618,6 +617,42 @@ export default function Dashboard() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {kycStatus === "pending" ||
+      kycStatus === "approved" ||
+      kycStatus === "rejected" ? (
+        <View
+          style={{
+            backgroundColor:
+              kycStatus === "approved"
+                ? "#DCFCE7"
+                : kycStatus === "rejected"
+                  ? "#FEE2E2"
+                  : "#FEF3C7",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontWeight: "700",
+              color:
+                kycStatus === "approved"
+                  ? "#166534"
+                  : kycStatus === "rejected"
+                    ? "#991B1B"
+                    : "#92400E",
+            }}
+          >
+            {kycStatus === "approved"
+              ? "Identity verified"
+              : kycStatus === "rejected"
+                ? "Verification rejected"
+                : "Verification pending"}
+          </Text>
+        </View>
+      ) : null}
 
       <BalanceCard balance={balance} loading={loading} />
 
