@@ -44,6 +44,7 @@ export default function BillsScreen() {
   const [type, setType] = useState("airtime");
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
+  const [pin, setPin] = useState("");
   const [meter, setMeter] = useState("");
   const [smartcard, setSmartcard] = useState("");
   const [provider, setProvider] = useState("");
@@ -111,12 +112,23 @@ export default function BillsScreen() {
     return;
   }
 
+  // CHANGE: bills/pay/ rejects a missing pin_token.
+  if (!pin) {
+    setError("Enter your PIN");
+    return;
+  }
+
   setLoading(true);
 
   // CHANGE: one stored key per bill attempt. Date.now() made every retry a new payment.
   const operationKey = `bill_${type}_${provider}_${customerId}_${Number(amount)}`;
 
   try {
+    // CHANGE: same PIN exchange send-money already uses.
+    const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
+    const pinToken = tokenRes.data.pin_token;
+    if (!pinToken) throw new Error("Could not get PIN token");
+
     const reference_id = await getOrCreateReferenceId(operationKey);
     const payload: any = {
       bill_type: type,
@@ -124,6 +136,8 @@ export default function BillsScreen() {
       amount: Number(amount),
       customer_id: customerId,
       package_name: "",
+      pin: String(pin),
+      pin_token: pinToken,
       reference_id,
     };
 
@@ -256,6 +270,15 @@ export default function BillsScreen() {
         onChangeText={setAmount}
         mode="outlined"
         keyboardType="numeric"
+        style={styles.input}
+      />
+      <TextInput
+        label="Transaction PIN"
+        value={pin}
+        onChangeText={setPin}
+        mode="outlined"
+        keyboardType="number-pad"
+        secureTextEntry
         style={styles.input}
       />
       {singleLimit ? (
