@@ -573,7 +573,6 @@ export default function Dashboard() {
       contentContainerStyle={{ paddingBottom: 40 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* CHANGE: website word image, 28px, left. Login keeps payhost-mark.png. */}
       <Image
         source={require("../../assets/payhost-logo.png")}
         style={styles.wordmark}
@@ -775,11 +774,12 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 20, paddingTop: 60 },
   wordmark: {
-    height: 28,
-    width: 140,
+    height: 56,
+    width: 280,
     resizeMode: "contain",
     alignSelf: "flex-start",
-    marginBottom: 12,
+    marginBottom: 8,
+    marginLeft: -4,
   },
   headerRow: {
     flexDirection: "row",
