@@ -90,7 +90,6 @@ export default function PayMerchantScreen() {
   const amt = parsedAmount();
   if (merchant_id == null || amt == null) return;
 
-  // CHANGE: pay-wallet/ returned 400 because pin was absent.
   if (!pin) {
     Alert.alert("PIN required", "Enter your PIN");
     return;
@@ -98,11 +97,17 @@ export default function PayMerchantScreen() {
 
   setBusy(true);
   try {
+    // CHANGE: pay-wallet/ returned "PIN token missing" with pin alone.
+    const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
+    const pinToken = tokenRes.data.pin_token;
+    if (!pinToken) throw new Error("Could not get PIN token");
+
     await axiosClient.post("merchant/pay-wallet/", {
       merchant_id,
       amount: amt,
       description: "Wallet pay",
       pin: String(pin),
+      pin_token: pinToken,
     });
     finishOk();
   } catch (e: any) {
