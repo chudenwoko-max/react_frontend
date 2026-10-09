@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Tabs, usePathname } from "expo-router";
+import { Tabs, usePathname, router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   TouchableOpacity,
@@ -72,20 +72,20 @@ export default function TabsLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Tabs
+    <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#0F172A",
           tabBarInactiveTintColor: "#94A3B8",
           tabBarStyle: {
-            height: 60,
+            height: 64,
             paddingBottom: 8,
             paddingTop: 6,
             backgroundColor: "#FFFFFF",
             borderTopWidth: 1,
             borderTopColor: "#E2E8F0",
           },
+          tabBarLabelStyle: { fontSize: 11 },
         }}
       >
         <Tabs.Screen
@@ -98,111 +98,53 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="send"
+          options={{
+            title: "Send",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="send" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="bills"
+          options={{
+            title: "Airtime & Data",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="cellphone" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="fund"
+          options={{
+            title: "Bills",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="file-document-outline" size={size} color={color} />
+            ),
+            tabBarButton: (props) => (
+              <TouchableOpacity style={props.style} onPress={() => router.push("/(tabs)/bills")}>
+                {props.children}
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="wallet"
           options={{
-            title: "Wallet",
+            title: "Menu",
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="wallet" size={size} color={color} />
+              <MaterialCommunityIcons name="menu" size={size} color={color} />
+            ),
+            tabBarButton: (props) => (
+              <TouchableOpacity style={props.style} onPress={toggleSheet}>
+                {props.children}
+              </TouchableOpacity>
             ),
           }}
         />
-        <Tabs.Screen
-          name="history"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Profile",
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="account" size={size} color={color} />
-            ),
-          }}
-        />
-
-        {/* Hidden screens */}
-        <Tabs.Screen name="send" options={{ href: null }} />
-        <Tabs.Screen name="fund" options={{ href: null }} />
-      </Tabs>
-
-      {/* Floating Menu Button – ONLY on Home page */}
-      {isHomePage && (
-        <View style={styles.menuContainer}>
-          {showTooltip && (
-            <View style={styles.tooltip}>
-              <Text style={styles.tooltipText}>MENU</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={toggleSheet}
-            onPressIn={() => setShowTooltip(true)}
-            onPressOut={() => setShowTooltip(false)}
-            {...(Platform.OS === "web" && {
-              onMouseEnter: () => setShowTooltip(true),
-              onMouseLeave: () => setShowTooltip(false),
-            })}
-          >
-            <MaterialCommunityIcons name="dots-grid" size={26} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <MoreSheet
-        ref={bottomSheetRef}
-        // @ts-ignore
-        onChange={(index: number) => setIsSheetOpen(index >= 0)}
-      />
-
-      {/* ===== PIN Modal (connect your existing one) ===== */}
-      <PinModal
-        visible={showPinModal}
-        onSuccess={() => {
-          setShowPinModal(false);
-          unlockManually(); // ← unlocks the app
-        }}
-        onClose={() => setShowPinModal(false)}
-        title="Enter Transaction PIN to Unlock"
-      />
-    </GestureHandlerRootView>
+        <Tabs.Screen name="history" options={{ href: null }} />
+        <Tabs.Screen name="profile" options={{ href: null }} />
+    </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  menuContainer: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    zIndex: 100,
-    alignItems: "center",
-  },
-  menuButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#0F172A",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  tooltip: {
-    position: "absolute",
-    top: 62,
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  tooltipText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-});
