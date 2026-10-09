@@ -72,7 +72,8 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
+    <>
+      <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#0F172A",
@@ -145,6 +146,11 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="history" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
-    </Tabs>
+      </Tabs>
+      <MoreSheet
+        ref={bottomSheetRef}
+        onChange={(index) => setIsSheetOpen(index >= 0)}
+      />
+      </>
   );
 }

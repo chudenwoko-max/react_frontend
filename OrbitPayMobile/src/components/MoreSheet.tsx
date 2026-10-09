@@ -10,6 +10,8 @@ import { router } from "expo-router";
 const menuItems = [
   { icon: "send", label: "Send Money", route: "/(tabs)/send", color: "#0284C7" },
   { icon: "plus", label: "Fund Wallet", route: "/(tabs)/fund", color: "#16A34A" },
+  { icon: "wallet-outline", label: "Wallet", route: "/(tabs)/wallet", color: "#0F172A" },
+  { icon: "account-outline", label: "Profile", route: "/(tabs)/profile", color: "#1E40AF" },
   { icon: "cash-plus", label: "Request Money", route: "/request-money", color: "#D97706" },
   { icon: "piggy-bank", label: "Savings Goals", route: "/savings", color: "#7C3AED" },
   { icon: "receipt", label: "Bill Payments", route: "/bills", color: "#DC2626" },
@@ -37,9 +39,8 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) =>
   const snapPoints = useMemo(() => ["55%", "85%"], []);
 
   const handlePress = (route: string) => {
-    // @ts-ignore
-    ref?.current?.close();
     router.push(route as any);
+    ref?.current?.close();
   };
 
   const renderBackdrop = (backdropProps: any) => (
