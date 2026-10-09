@@ -14,6 +14,10 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
+import {
+  getOrCreateReferenceId,
+  clearReferenceId,
+} from "../../src/utils/idempotency";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PENDING_REF_KEY = "pending_funding_reference";
@@ -145,48 +149,53 @@ export default function FundWalletScreen() {
   }, [reference]);
 
   // Initialize funding
-  const handleInitialize = async () => {
-    if (hasPending || loading) return;
+ const handleInitialize = async () => {
+  if (hasPending || loading) return;
 
-    if (!amount || isNaN(Number(amount)) || Number(amount) < 100) {
-      Alert.alert("Invalid Amount", "Minimum funding amount is ₦100");
+  if (!amount || isNaN(Number(amount)) || Number(amount) < 100) {
+    Alert.alert("Invalid Amount", "Minimum funding amount is ₦100");
+    return;
+  }
+
+  setLoading(true);
+
+  // CHANGE: initialize/ requires Idempotency-Key. The old reference existed only after Paystack replied.
+  const operationKey = `fund_${Number(amount)}`;
+
+  try {
+    const reference_id = await getOrCreateReferenceId(operationKey);
+    const res = await axiosClient.post("wallet/fund/initialize/", {
+      amount: Number(amount),
+      reference_id,
+    });
+
+    const { authorization_url, reference: ref } = res.data;
+
+    await AsyncStorage.setItem(PENDING_REF_KEY, ref);
+    await AsyncStorage.setItem(PENDING_AMOUNT_KEY, amount);
+
+    setReference(ref);
+    setCheckoutUrl(authorization_url);
+
+    // CHANGE: checkout started, so the next amount can get a new key. A failed initialize keeps this one.
+    await clearReferenceId(operationKey);
+
+    await Linking.openURL(authorization_url);
+  } catch (error: any) {
+    if (error?.response?.status === 401) {
+      await logout();
+      router.replace("/(auth)/login");
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const res = await axiosClient.post("wallet/fund/initialize/", {
-        amount: Number(amount),
-        reference_id: reference || undefined,
-      });
-
-      const { authorization_url, reference: ref } = res.data;
-
-      await AsyncStorage.setItem(PENDING_REF_KEY, ref);
-      await AsyncStorage.setItem(PENDING_AMOUNT_KEY, amount);
-
-      setReference(ref);
-      setCheckoutUrl(authorization_url);
-
-      await Linking.openURL(authorization_url);
-    } catch (error: any) {
-
-      // ⭐ PATCH: Handle revoked/expired session
-      if (error?.response?.status === 401) {
-        await logout();
-        router.replace("/(auth)/login");
-        return;
-      }
-
-      Alert.alert(
-        "Error",
-        error?.response?.data?.error || "Failed to initialize payment"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    Alert.alert(
+      "Error",
+      error?.response?.data?.error || "Failed to initialize payment"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const clearPendingLocal = async () => {
     await AsyncStorage.multiRemove([
