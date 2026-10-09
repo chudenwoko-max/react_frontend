@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Tabs, usePathname, router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
 import MoreSheet from "../../src/components/MoreSheet";
@@ -17,6 +19,22 @@ import { useAuth } from "../../src/context/AuthContext";
 import { useBiometricLock } from "../../src/hooks/useBiometricLock";
 import BiometricLockScreen from "../../src/components/BiometricLockScreen";
 import PinModal from "../../src/components/PinModal"; // ← Import your existing PIN modal component here
+
+function TabPress({
+  style,
+  children,
+  onPress,
+}: {
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={style} onPress={onPress}>
+      {children}
+    </TouchableOpacity>
+  );
+}
 
 export default function TabsLayout() {
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -102,6 +120,17 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="home" size={size} color={color} />
             ),
+            tabBarButton: (props) => (
+              <TabPress
+                style={props.style}
+                onPress={() => {
+                  bottomSheetRef.current?.close();
+                  router.push("/(tabs)");
+                }}
+              >
+                {props.children}
+              </TabPress>
+            ),
           }}
         />
         <Tabs.Screen
@@ -111,6 +140,17 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="send" size={size} color={color} />
             ),
+            tabBarButton: (props) => (
+              <TabPress
+                style={props.style}
+                onPress={() => {
+                  bottomSheetRef.current?.close();
+                  router.push("/(tabs)/send");
+                }}
+              >
+                {props.children}
+              </TabPress>
+            ),
           }}
         />
         <Tabs.Screen
@@ -119,6 +159,17 @@ export default function TabsLayout() {
             title: "Airtime & Data",
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="cellphone" size={size} color={color} />
+            ),
+            tabBarButton: (props) => (
+              <TabPress
+                style={props.style}
+                onPress={() => {
+                  bottomSheetRef.current?.close();
+                  router.push("/(tabs)/bills");
+                }}
+              >
+                {props.children}
+              </TabPress>
             ),
           }}
         />
@@ -130,9 +181,15 @@ export default function TabsLayout() {
               <MaterialCommunityIcons name="file-document-outline" size={size} color={color} />
             ),
             tabBarButton: (props) => (
-              <TouchableOpacity style={props.style} onPress={() => router.push("/(tabs)/bills")}>
+              <TabPress
+                style={props.style}
+                onPress={() => {
+                  bottomSheetRef.current?.close();
+                  router.push("/(tabs)/bills");
+                }}
+              >
                 {props.children}
-              </TouchableOpacity>
+              </TabPress>
             ),
           }}
         />
