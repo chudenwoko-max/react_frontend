@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import {
+  getOrCreateReferenceId,
+  clearReferenceId,
+} from "../src/utils/idempotency";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 type Card = { id: number; last4: string; brand?: string };
@@ -96,19 +100,27 @@ export default function PayMerchantScreen() {
   }
 
   setBusy(true);
+
+  // CHANGE: one key per merchant pay. The view rejects a missing Idempotency-Key.
+  const operationKey = `merchant_pay_${merchant_id}_${amt}`;
+
   try {
-    // CHANGE: pay-wallet/ returned "PIN token missing" with pin alone.
     const tokenRes = await axiosClient.post("create-pin/", { pin: String(pin) });
     const pinToken = tokenRes.data.pin_token;
     if (!pinToken) throw new Error("Could not get PIN token");
 
+    const reference_id = await getOrCreateReferenceId(operationKey);
     await axiosClient.post("merchant/pay-wallet/", {
       merchant_id,
       amount: amt,
       description: "Wallet pay",
       pin: String(pin),
       pin_token: pinToken,
+      reference_id,
     });
+
+    // CHANGE: clear only after a resolved success, so a timeout keeps the same key.
+    await clearReferenceId(operationKey);
     finishOk();
   } catch (e: any) {
     Alert.alert("Error", apiError(e, "Wallet pay failed"));
