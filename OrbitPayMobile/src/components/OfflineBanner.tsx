@@ -10,7 +10,7 @@ export default function OfflineBanner() {
       <Text style={styles.text}>
         {isOffline
           ? "No internet connection"
-          : "Can't reach OrbitPay right now. Pull to refresh."}
+          : "Can't reach Payhost right now. Pull to refresh."}
       </Text>
     </View>
   );
