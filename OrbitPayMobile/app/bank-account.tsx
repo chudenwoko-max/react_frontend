@@ -268,7 +268,7 @@ export default function BankAccountScreen() {
         )}
 
         <Text style={styles.favTitle}>Saved recipients</Text>
-        <Text style={styles.favHint}>OrbitPay users you send to often</Text>
+        <Text style={styles.favHint}>Payhost users you send to often</Text>
 
         <TextInput
           style={styles.input}
