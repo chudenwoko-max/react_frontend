@@ -56,11 +56,12 @@ export default function RegisterScreen() {
       contentContainerStyle={styles.inner}
       keyboardShouldPersistTaps="handled"
     >
+      {/* CHANGE: old OrbitPay file is gone. Same mark as login. */}
       <Image
-        source={require("../../assets/orbitpay-logo.png")}
+        source={require("../../assets/payhost-mark.png")}
         style={{
-          width: 200,
-          height: 56,
+          width: 48,
+          height: 48,
           resizeMode: "contain",
           alignSelf: "center",
           marginBottom: 8,
