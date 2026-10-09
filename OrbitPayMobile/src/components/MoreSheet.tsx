@@ -40,7 +40,9 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) =>
 
   const handlePress = (route: string) => {
     router.push(route as any);
-    ref?.current?.close();
+    if (typeof ref !== "function") {
+      ref?.current?.close();
+    }
   };
 
   const renderBackdrop = (backdropProps: any) => (
@@ -58,8 +60,9 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) =>
       index={-1}
       snapPoints={snapPoints}
       enablePanDownToClose
+      bottomInset={64}
       backdropComponent={renderBackdrop}
-      onChange={onChange}                 // ← now properly forwarded
+      onChange={onChange}
       backgroundStyle={{ backgroundColor: "#FFFFFF" }}
       handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
     >
