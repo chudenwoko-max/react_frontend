@@ -42,8 +42,21 @@ export default function KycScreen() {
   }, []);
 
   const handleSubmit = async () => {
-    if (!fullName || !bvn) {
-      setError("Full name and BVN are required");
+    const bvnDigits = bvn.trim();
+    const idDigits = idNumber.trim();
+
+    if (!fullName.trim()) {
+      setError("Full name is required");
+      return;
+    }
+
+    // CHANGE: Tier 1 fintech rule is one identity, not both. Bureau lookup stays parked.
+    if (!bvnDigits && !idDigits) {
+      setError("Enter a BVN or a government ID number");
+      return;
+    }
+    if (bvnDigits && bvnDigits.length !== 11) {
+      setError("BVN must be 11 digits");
       return;
     }
 
@@ -52,14 +65,14 @@ export default function KycScreen() {
 
     try {
       await axiosClient.post("kyc/submit/", {
-        full_name: fullName,
-        bvn: bvn,
-        id_number: idNumber || "",
+        full_name: fullName.trim(),
+        bvn: bvnDigits,
+        id_number: idDigits,
       });
       setStatus("pending");
       Alert.alert(
         "Submitted",
-        "Your KYC documents have been submitted for review.",
+        "Submitted for manual review. Payhost does not verify BVN or NIN with a bureau yet.",
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (err: any) {
@@ -86,7 +99,7 @@ export default function KycScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       <Text style={styles.title}>Verify Identity</Text>
       <Text style={styles.subtitle}>
-        Complete KYC to unlock higher limits
+        Enter a BVN or a government ID number. One is enough for this review.
       </Text>
 
       {status && (
@@ -96,7 +109,6 @@ export default function KycScreen() {
         </View>
       )}
 
-      {/* ⭐ PATCH: Show rejection reason under status box */}
       {status === "rejected" && rejectionReason ? (
         <Text style={{ color: "#B91C1C", marginBottom: 16 }}>
           {rejectionReason}
@@ -127,7 +139,7 @@ export default function KycScreen() {
       />
 
       <TextInput
-        label="BVN"
+        label="BVN (11 digits)"
         value={bvn}
         onChangeText={setBvn}
         mode="outlined"
@@ -137,7 +149,7 @@ export default function KycScreen() {
       />
 
       <TextInput
-        label="ID Number (optional)"
+        label="Government ID number (NIN, passport, licence, or voter card)"
         value={idNumber}
         onChangeText={setIdNumber}
         mode="outlined"
@@ -156,9 +168,7 @@ export default function KycScreen() {
         loading={loading}
         style={styles.button}
         contentStyle={{ paddingVertical: 6 }}
-
-        // ⭐ PATCH: Allow resubmission when rejected
-        disabled={status === "approved" || status === "pending"}
+        disabled={!canSubmit || status === "approved" || status === "pending"}
       >
         {status === "approved"
           ? "Already Verified"
