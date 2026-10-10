@@ -5,8 +5,7 @@ import {
   authenticateWithBiometrics,
 } from "../utils/biometric";
 
-// CHANGE: 20s while testing. Put back to 5 * 60 * 1000 after it locks.
-const IDLE_MS = 20 * 1000;
+const IDLE_MS = 5 * 60 * 1000;
 
 export function useBiometricLock(isLoggedIn: boolean) {
   const [isLocked, setIsLocked] = useState(false);
