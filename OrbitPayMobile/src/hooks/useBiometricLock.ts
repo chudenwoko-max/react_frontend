@@ -1,15 +1,39 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import {
   isBiometricEnabled,
   authenticateWithBiometrics,
 } from "../utils/biometric";
+
+const IDLE_MS = 5 * 60 * 1000;
 
 export function useBiometricLock(isLoggedIn: boolean) {
   const [isLocked, setIsLocked] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const appState = useRef(AppState.currentState);
   const shouldLockOnActive = useRef(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearIdle = () => {
+    if (idleTimer.current) {
+      clearTimeout(idleTimer.current);
+      idleTimer.current = null;
+    }
+  };
+
+  const armIdle = useCallback(() => {
+    clearIdle();
+    if (!isLoggedIn) return;
+    idleTimer.current = setTimeout(() => {
+      setIsLocked(true);
+    }, IDLE_MS);
+  }, [isLoggedIn]);
+
+  // CHANGE: any touch resets the 5-minute idle lock.
+  const recordActivity = useCallback(() => {
+    if (!isLoggedIn || isLocked) return;
+    armIdle();
+  }, [isLoggedIn, isLocked, armIdle]);
 
   const checkAndPossiblyLock = useCallback(async () => {
     if (!isLoggedIn) {
@@ -20,11 +44,7 @@ export function useBiometricLock(isLoggedIn: boolean) {
 
     try {
       const enabled = await isBiometricEnabled();
-      if (enabled) {
-        setIsLocked(true);
-      } else {
-        setIsLocked(false);
-      }
+      setIsLocked(!!enabled);
     } catch (e) {
       console.log("Biometric check error:", e);
       setIsLocked(false);
@@ -33,14 +53,13 @@ export function useBiometricLock(isLoggedIn: boolean) {
     }
   }, [isLoggedIn]);
 
-  // Initial check + AppState listener
   useEffect(() => {
     checkAndPossiblyLock();
+    armIdle();
 
     const subscription = AppState.addEventListener(
       "change",
       async (nextAppState: AppStateStatus) => {
-        // Going to background / inactive
         if (
           appState.current === "active" &&
           nextAppState.match(/inactive|background/)
@@ -48,41 +67,54 @@ export function useBiometricLock(isLoggedIn: boolean) {
           shouldLockOnActive.current = true;
         }
 
-        // Coming back to active
         if (
           appState.current.match(/inactive|background/) &&
           nextAppState === "active"
         ) {
           if (shouldLockOnActive.current && isLoggedIn) {
             const enabled = await isBiometricEnabled();
-            if (enabled) {
-              setIsLocked(true);
-            }
+            if (enabled) setIsLocked(true);
           }
           shouldLockOnActive.current = false;
+          armIdle();
         }
 
         appState.current = nextAppState;
       }
     );
 
+    // CHANGE: Expo web does not reliably fire AppState. Listen for real input.
+    let removeWeb: (() => void) | undefined;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const onInput = () => recordActivity();
+      window.addEventListener("pointerdown", onInput);
+      window.addEventListener("keydown", onInput);
+      removeWeb = () => {
+        window.removeEventListener("pointerdown", onInput);
+        window.removeEventListener("keydown", onInput);
+      };
+    }
+
     return () => {
       subscription.remove();
+      removeWeb?.();
+      clearIdle();
     };
-  }, [isLoggedIn, checkAndPossiblyLock]);
+  }, [isLoggedIn, checkAndPossiblyLock, armIdle, recordActivity]);
 
   const unlockWithBiometrics = async (): Promise<boolean> => {
-    const result = await authenticateWithBiometrics("Unlock OrbitPay");
+    const result = await authenticateWithBiometrics("Unlock Payhost");
     if (result.success) {
       setIsLocked(false);
+      armIdle();
       return true;
     }
     return false;
   };
 
   const unlockManually = () => {
-    // Call this after successful PIN entry
     setIsLocked(false);
+    armIdle();
   };
 
   return {
@@ -90,6 +122,7 @@ export function useBiometricLock(isLoggedIn: boolean) {
     isChecking,
     unlockWithBiometrics,
     unlockManually,
-    setIsLocked, // rarely needed
+    recordActivity,
+    setIsLocked,
   };
 }

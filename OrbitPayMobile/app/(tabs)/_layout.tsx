@@ -50,6 +50,7 @@ export default function TabsLayout() {
     isChecking,
     unlockWithBiometrics,
     unlockManually,
+    recordActivity,
   } = useBiometricLock(isLoggedIn);
 
   const pathname = usePathname();
@@ -90,7 +91,10 @@ export default function TabsLayout() {
   }
 
   return (
-    <>
+    <GestureHandlerRootView
+      style={{ flex: 1 }}
+      onTouchStart={recordActivity}
+    >
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -214,6 +218,6 @@ export default function TabsLayout() {
         ref={bottomSheetRef}
         onChange={(index) => setIsSheetOpen(index >= 0)}
       />
-      </>
+    </GestureHandlerRootView>
   );
 }
