@@ -13,63 +13,55 @@ import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 
 export default function SetPinScreen() {
+  const [currentPin, setCurrentPin] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSetPin = async () => {
-  if (!pin || !confirmPin) {
-    setError("Please fill in both fields");
-    return;
-  }
-
-  if (pin.length < 4) {
-    setError("PIN must be at least 4 digits");
-    return;
-  }
-
-  if (pin !== confirmPin) {
-    setError("PINs do not match");
-    return;
-  }
-
-  setLoading(true);
-  setError("");
-
-  try {
-    // Try the most common correct endpoints + payload
-    let res;
-    try {
-      res = await axiosClient.post("set-pin/", {
-        pin: pin,
-        confirm_pin: confirmPin,
-      });
-    } catch {
-      res = await axiosClient.post("create-pin/", {
-        pin: pin,
-        confirm_pin: confirmPin,
-      });
+    if (!pin || !confirmPin) {
+      setError("Enter and confirm the new PIN");
+      return;
+    }
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+    if (pin !== confirmPin) {
+      setError("PINs do not match");
+      return;
     }
 
-    // Web-friendly success message
-    window.alert(res.data.message || "PIN set successfully!");
+    setLoading(true);
+    setError("");
 
-    setPin("");
-    setConfirmPin("");
-    router.back();
-  } catch (err: any) {
-    console.log("Set PIN error:", err.response?.data);
-    const message =
-      err.response?.data?.error ||
-      err.response?.data?.detail ||
-      err.response?.data?.message ||
-      "Failed to set PIN. Please try again.";
-    setError(message);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      // CHANGE: current PIN is the step-up. create-pin/ is not a fallback.
+      const res = await axiosClient.post("set-pin/", {
+        pin: String(pin),
+        confirm_pin: String(confirmPin),
+        current_pin: currentPin ? String(currentPin) : undefined,
+      });
+
+      const message = res.data?.message || "PIN set successfully";
+      if (Platform.OS === "web") window.alert(message);
+      else Alert.alert("PIN updated", message);
+
+      setCurrentPin("");
+      setPin("");
+      setConfirmPin("");
+      router.back();
+    } catch (err: any) {
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        "Failed to set PIN. Please try again.";
+      setError(String(message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -77,30 +69,41 @@ export default function SetPinScreen() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Set Your PIN</Text>
-        
+        <Text style={styles.title}>Change PIN</Text>
+        <Text style={styles.subtitle}>
+          Enter your current PIN. Leave it blank only if you have never set one.
+        </Text>
+
         <TextInput
-          label="PIN"
+          label="Current PIN"
+          value={currentPin}
+          onChangeText={setCurrentPin}
+          secureTextEntry
+          keyboardType="numeric"
+          maxLength={4}
+          style={styles.input}
+        />
+        <TextInput
+          label="New PIN"
           value={pin}
           onChangeText={setPin}
           secureTextEntry
           keyboardType="numeric"
-          maxLength={6}
+          maxLength={4}
           style={styles.input}
         />
-        
         <TextInput
-          label="Confirm PIN"
+          label="Confirm new PIN"
           value={confirmPin}
           onChangeText={setConfirmPin}
           secureTextEntry
           keyboardType="numeric"
-          maxLength={6}
+          maxLength={4}
           style={styles.input}
         />
-        
-        {error && <HelperText type="error">{error}</HelperText>}
-        
+
+        {error ? <HelperText type="error">{error}</HelperText> : null}
+
         <Button
           mode="contained"
           onPress={handleSetPin}
@@ -108,7 +111,7 @@ export default function SetPinScreen() {
           disabled={loading}
           style={styles.button}
         >
-          Set PIN
+          Update PIN
         </Button>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -116,23 +119,10 @@ export default function SetPinScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  input: {
-    marginBottom: 15,
-  },
-  button: {
-    marginTop: 20,
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  scrollContent: { padding: 20, paddingTop: 40 },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 8, textAlign: "center", color: "#0F172A" },
+  subtitle: { fontSize: 14, color: "#64748B", textAlign: "center", marginBottom: 20 },
+  input: { marginBottom: 15 },
+  button: { marginTop: 20 },
 });
