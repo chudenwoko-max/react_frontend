@@ -5,57 +5,40 @@ import {
   authenticateWithBiometrics,
 } from "../utils/biometric";
 
-const IDLE_MS = 5 * 60 * 1000;
+// CHANGE: 20s while testing. Put back to 5 * 60 * 1000 after it locks.
+const IDLE_MS = 20 * 1000;
 
 export function useBiometricLock(isLoggedIn: boolean) {
   const [isLocked, setIsLocked] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const appState = useRef(AppState.currentState);
   const shouldLockOnActive = useRef(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivity = useRef(Date.now());
 
-  const clearIdle = () => {
-    if (idleTimer.current) {
-      clearTimeout(idleTimer.current);
-      idleTimer.current = null;
-    }
-  };
-
-  const armIdle = useCallback(() => {
-    clearIdle();
-    if (!isLoggedIn) return;
-    idleTimer.current = setTimeout(() => {
-      setIsLocked(true);
-    }, IDLE_MS);
-  }, [isLoggedIn]);
-
-  // CHANGE: any touch resets the 5-minute idle lock.
   const recordActivity = useCallback(() => {
-    if (!isLoggedIn || isLocked) return;
-    armIdle();
-  }, [isLoggedIn, isLocked, armIdle]);
+    lastActivity.current = Date.now();
+  }, []);
 
-  const checkAndPossiblyLock = useCallback(async () => {
+  useEffect(() => {
     if (!isLoggedIn) {
       setIsLocked(false);
       setIsChecking(false);
       return;
     }
 
-    try {
-      const enabled = await isBiometricEnabled();
-      setIsLocked(!!enabled);
-    } catch (e) {
-      console.log("Biometric check error:", e);
-      setIsLocked(false);
-    } finally {
-      setIsChecking(false);
-    }
-  }, [isLoggedIn]);
+    isBiometricEnabled()
+      .then((enabled) => setIsLocked(!!enabled))
+      .catch(() => setIsLocked(false))
+      .finally(() => setIsChecking(false));
 
-  useEffect(() => {
-    checkAndPossiblyLock();
-    armIdle();
+    // CHANGE: check idle on an interval so a cleared timeout cannot skip the lock.
+    const interval = setInterval(() => {
+      const idleFor = Date.now() - lastActivity.current;
+      if (idleFor >= IDLE_MS) {
+        console.log("Payhost idle lock");
+        setIsLocked(true);
+      }
+    }, 5000);
 
     const subscription = AppState.addEventListener(
       "change",
@@ -66,27 +49,25 @@ export function useBiometricLock(isLoggedIn: boolean) {
         ) {
           shouldLockOnActive.current = true;
         }
-
         if (
           appState.current.match(/inactive|background/) &&
-          nextAppState === "active"
+          nextAppState === "active" &&
+          shouldLockOnActive.current &&
+          isLoggedIn
         ) {
-          if (shouldLockOnActive.current && isLoggedIn) {
-            const enabled = await isBiometricEnabled();
-            if (enabled) setIsLocked(true);
-          }
+          const enabled = await isBiometricEnabled();
+          if (enabled) setIsLocked(true);
           shouldLockOnActive.current = false;
-          armIdle();
         }
-
         appState.current = nextAppState;
       }
     );
 
-    // CHANGE: Expo web does not reliably fire AppState. Listen for real input.
     let removeWeb: (() => void) | undefined;
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      const onInput = () => recordActivity();
+      const onInput = () => {
+        lastActivity.current = Date.now();
+      };
       window.addEventListener("pointerdown", onInput);
       window.addEventListener("keydown", onInput);
       removeWeb = () => {
@@ -96,17 +77,17 @@ export function useBiometricLock(isLoggedIn: boolean) {
     }
 
     return () => {
+      clearInterval(interval);
       subscription.remove();
       removeWeb?.();
-      clearIdle();
     };
-  }, [isLoggedIn, checkAndPossiblyLock, armIdle, recordActivity]);
+  }, [isLoggedIn]);
 
   const unlockWithBiometrics = async (): Promise<boolean> => {
     const result = await authenticateWithBiometrics("Unlock Payhost");
     if (result.success) {
       setIsLocked(false);
-      armIdle();
+      lastActivity.current = Date.now();
       return true;
     }
     return false;
@@ -114,7 +95,7 @@ export function useBiometricLock(isLoggedIn: boolean) {
 
   const unlockManually = () => {
     setIsLocked(false);
-    armIdle();
+    lastActivity.current = Date.now();
   };
 
   return {
