@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -43,32 +44,34 @@ export default function BiometricLockScreen({
         <MaterialCommunityIcons name="fingerprint" size={72} color="#0F172A" />
       </View>
 
-      <Text style={styles.title}>OrbitPay is Locked</Text>
+      <Text style={styles.title}>Payhost is Locked</Text>
       <Text style={styles.subtitle}>
         Authenticate to access your account
       </Text>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={handleBiometric}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <>
-            <MaterialCommunityIcons
-              name="fingerprint"
-              size={22}
-              color="#FFFFFF"
-            />
-            <Text style={styles.primaryButtonText}>Unlock with Biometrics</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      {Platform.OS !== "web" ? (
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleBiometric}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name="fingerprint"
+                size={22}
+                color="#FFFFFF"
+              />
+              <Text style={styles.primaryButtonText}>Unlock with Biometrics</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      ) : null}
 
       <TouchableOpacity style={styles.secondaryButton} onPress={onUsePin}>
-        <Text style={styles.secondaryButtonText}>Use Transaction PIN</Text>
+        <Text style={styles.secondaryButtonText}>Use PIN</Text>
       </TouchableOpacity>
     </View>
   );

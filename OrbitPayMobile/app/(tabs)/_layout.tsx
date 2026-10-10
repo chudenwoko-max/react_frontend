@@ -83,10 +83,21 @@ export default function TabsLayout() {
   // Biometric Lock Screen
   if (isLoggedIn && isLocked) {
     return (
-      <BiometricLockScreen
-        onUnlockWithBiometrics={unlockWithBiometrics}
-        onUsePin={() => setShowPinModal(true)}
-      />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <BiometricLockScreen
+          onUnlockWithBiometrics={unlockWithBiometrics}
+          onUsePin={() => setShowPinModal(true)}
+        />
+        <PinModal
+          visible={showPinModal}
+          onSuccess={() => {
+            setShowPinModal(false);
+            unlockManually();
+          }}
+          onClose={() => setShowPinModal(false)}
+          title="Enter PIN to unlock Payhost"
+        />
+      </GestureHandlerRootView>
     );
   }
 
