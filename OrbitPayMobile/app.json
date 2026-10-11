@@ -29,7 +29,14 @@
         "backgroundColor": "#0F0F1A"
       },
       "package": "com.orbitpay.app",
-      "versionCode": 2
+      "versionCode": 2,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "payhost" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "name": "Payhost",
