@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { TextInput, Button, HelperText } from "react-native-paper";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import * as ScreenCapture from "expo-screen-capture";
 
 export default function SetPinScreen() {
   const [currentPin, setCurrentPin] = useState("");
@@ -18,6 +19,14 @@ export default function SetPinScreen() {
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, []);
 
   const handleSetPin = async () => {
     if (!pin || !confirmPin) {
@@ -37,7 +46,6 @@ export default function SetPinScreen() {
     setError("");
 
     try {
-      // CHANGE: current PIN is the step-up. create-pin/ is not a fallback.
       const res = await axiosClient.post("set-pin/", {
         pin: String(pin),
         confirm_pin: String(confirmPin),

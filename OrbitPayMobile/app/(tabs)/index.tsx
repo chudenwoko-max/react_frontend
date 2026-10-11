@@ -32,6 +32,7 @@ import {
   fetchRecentTransactions as fetchFinancialRecent,
   mapLedgerToHistory,
 } from "../../src/api/financials";
+import * as ScreenCapture from "expo-screen-capture";
 
 type Transaction = {
   id?: number;
@@ -45,7 +46,6 @@ type Transaction = {
   category?: string;
 };
 
-// CHANGE: website greeting is Georgia-style serif.
 const SERIF = Platform.OS === "web" ? "Georgia, 'Times New Roman', serif" : "serif";
 
 function greetingForNow() {
@@ -148,6 +148,14 @@ export default function Dashboard() {
   const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [kycLimits, setKycLimits] = useState<any>(null);
   const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, []);
 
   const refreshFinancials = useCallback(async () => {
     try {
@@ -599,7 +607,6 @@ export default function Dashboard() {
         </View>
       </View>
 
-      {/* CHANGE: short identity notice. Funding and history stay open. */}
       <TouchableOpacity
         disabled={kycStatus === "approved"}
         onPress={() => router.push("/kyc")}
