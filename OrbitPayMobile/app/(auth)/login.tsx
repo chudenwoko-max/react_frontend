@@ -6,7 +6,9 @@ import { Link, router } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
+import { getPlayIntegrityToken } from "../../src/security/playIntegrity";
 
+const integrity_token = await getPlayIntegrityToken("login");
 export default function LoginScreen() {
   const { completeLogin } = useAuth();
   const [username, setUsername] = useState("");
@@ -18,61 +20,64 @@ export default function LoginScreen() {
   const [userId, setUserId] = useState<number | null>(null);
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      setError("Please fill in all fields");
+  if (!username || !password) {
+    setError("Please fill in all fields");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+
+  try {
+    if (username.trim().startsWith("eyJ") || password.startsWith("eyJ")) {
+      setError("Enter your username and password, not a token");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError("");
+    const fingerprint = await getDeviceFingerprint();
+    const integrity_token =
+      Platform.OS === "web" ? null : await getPlayIntegrityToken("login");
 
-    try {
-      if (username.trim().startsWith("eyJ") || password.startsWith("eyJ")) {
-        setError("Enter your username and password, not a token");
-        setLoading(false);
-        return;
-      }
+    const res = await axiosClient.post(
+      "login/",
+      {
+        username,
+        password,
+        device_fingerprint: fingerprint,
+        device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
+        device_type: Platform.OS,
+        integrity_token,
+      },
+      { headers: { "X-Client": "mobile" } }
+    );
 
-      const fingerprint = await getDeviceFingerprint();
-
-      const res = await axiosClient.post(
-        "login/",
-        {
-          username,
-          password,
-          device_fingerprint: fingerprint,
-          device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
-          device_type: Platform.OS,
-        },
-        { headers: { "X-Client": "mobile" } }
-      );
-
-      if (res.data.requires_2fa) {
-        setUserId(res.data.user_id);
-        setShow2FA(true);
-        setLoading(false);
-        return;
-      }
-
-      await completeLogin(res.data.access, res.data.refresh);
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      let message = "Unable to log in. Please try again.";
-      if (error.response) {
-        message =
-          error.response.data?.error ||
-          error.response.data?.detail ||
-          JSON.stringify(error.response.data);
-      } else if (error.request) {
-        message = "Network error. Cannot reach the server.";
-      } else {
-        message = error.message || message;
-      }
-      setError(message);
-    } finally {
+    if (res.data.requires_2fa) {
+      setUserId(res.data.user_id);
+      setShow2FA(true);
       setLoading(false);
+      return;
     }
-  };
+
+    await completeLogin(res.data.access, res.data.refresh);
+    router.replace("/(tabs)");
+  } catch (error: any) {
+    let message = "Unable to log in. Please try again.";
+    if (error.response) {
+      message =
+        error.response.data?.error ||
+        error.response.data?.detail ||
+        JSON.stringify(error.response.data);
+    } else if (error.request) {
+      message = "Network error. Cannot reach the server.";
+    } else {
+      message = error.message || message;
+    }
+    setError(message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleVerify2FA = async () => {
     if (!otpCode || otpCode.length !== 6) {
