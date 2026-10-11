@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Stack, router } from "expo-router";
-import { Platform } from "react-native";
+import { Platform, Alert } from "react-native";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { PaperProvider } from "react-native-paper";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -16,6 +16,7 @@ import { refreshFinancialsFromPush } from "../src/notifications/refreshOnPush";
 import { ConnectivityProvider } from "../src/network/connectivity";
 import OfflineBanner from "../src/components/OfflineBanner";
 import FrozenBanner from "../src/components/FrozenBanner";
+import { isDeviceCompromised } from "../src/security/deviceIntegrity";
 
 Sentry.init({
   dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
@@ -29,7 +30,6 @@ async function setupSslPinning() {
   if (Platform.OS === "web") return;
 
   try {
-    // CHANGE: pin the live host. Leaf + WE1 intermediate. -1 is suspended.
     await initializeSslPinning({
       "api.payhost.dev": {
         includeSubdomains: false,
@@ -87,6 +87,18 @@ function PushBootstrap() {
 function RootLayout() {
   useEffect(() => {
     setupSslPinning();
+  }, []);
+
+  // CHANGE: warn on a rooted Android device. Web and iOS skip this.
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    isDeviceCompromised().then((rooted) => {
+      if (!rooted) return;
+      Alert.alert(
+        "Security warning",
+        "This device appears to be rooted. Send and pay may be blocked."
+      );
+    });
   }, []);
 
   return (
