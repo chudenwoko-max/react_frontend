@@ -28,6 +28,10 @@ async function ensureAndroidChannel() {
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (Platform.OS === "web") return null;
+  // CHANGE: no google-services.json yet. A throw here closes the release APK.
+  return null;
+  // existing body stays below, unused until FCM is added
+
   if (!Device.isDevice) return null;
 
   await ensureAndroidChannel();

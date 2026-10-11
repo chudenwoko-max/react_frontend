@@ -52,18 +52,20 @@ function PushBootstrap() {
   useEffect(() => {
     if (Platform.OS === "web") return;
 
-    Notifications.getLastNotificationResponseAsync().then((res) => {
-      if (!res) return;
-      const data = res.notification.request.content.data as Record<string, any>;
-      router.push(getNotificationRoute(data) as any);
-    });
+    Notifications.getLastNotificationResponseAsync()
+      .then((res) => {
+        if (!res) return;
+        const data = res.notification.request.content.data as Record<string, any>;
+        router.push(getNotificationRoute(data) as any);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
     if (!isLoggedIn) return;
 
-    registerForPushNotificationsAsync();
+    registerForPushNotificationsAsync().catch(() => {});
 
     const received = Notifications.addNotificationReceivedListener(() => {
       refreshFinancialsFromPush();
