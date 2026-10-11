@@ -17,7 +17,6 @@ import { ConnectivityProvider } from "../src/network/connectivity";
 import OfflineBanner from "../src/components/OfflineBanner";
 import FrozenBanner from "../src/components/FrozenBanner";
 
-
 Sentry.init({
   dsn: "https://4f64489cf6806e487c89c606372d43ce@o4511941551652864.ingest.de.sentry.io/4511941563121744",
   tracesSampleRate: 0.2,
@@ -30,19 +29,19 @@ async function setupSslPinning() {
   if (Platform.OS === "web") return;
 
   try {
+    // CHANGE: pin the live host. Leaf + WE1 intermediate. -1 is suspended.
     await initializeSslPinning({
-      "currency-cvt-fintech-1.onrender.com": {
+      "api.payhost.dev": {
         includeSubdomains: false,
         publicKeyHashes: [
-          "fizfE9JVlzlRplEx7epXfqW9enrbLvwF/LU26XTPEG4=",
+          "C1RbnFiYxRh0fMyHEKkY0EgusH7PR5fKvh8I9fJsyfc=",
           "kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=",
-          "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=",
         ],
       },
     });
-    console.log("✅ SSL Pinning initialized successfully");
+    console.log("SSL pinning initialized");
   } catch (error) {
-    console.warn("SSL Pinning initialization failed:", error);
+    console.warn("SSL pinning initialization failed:", error);
   }
 }
 
@@ -84,6 +83,7 @@ function PushBootstrap() {
 
   return null;
 }
+
 function RootLayout() {
   useEffect(() => {
     setupSslPinning();
@@ -95,7 +95,7 @@ function RootLayout() {
         <AuthProvider>
           <PaperProvider>
             <OfflineBanner />
-            <FrozenBanner />   
+            <FrozenBanner />
             <PushBootstrap />
             <Stack screenOptions={{ headerShown: false }} />
             <Toast />
@@ -105,6 +105,5 @@ function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
 
 export default Sentry.wrap(RootLayout);
