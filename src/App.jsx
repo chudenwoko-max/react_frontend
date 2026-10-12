@@ -32,6 +32,7 @@ import ScheduledTransfers from "./pages/ScheduledTransfers";
 import Support from "./pages/Support";
 import Statements from "./pages/Statements";
 import PayMerchant from "./pages/PayMerchant";
+import ResetPassword from "./pages/ResetPassword";
 
 const host = window.location.hostname;
 const isMarketing =
@@ -78,6 +79,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
