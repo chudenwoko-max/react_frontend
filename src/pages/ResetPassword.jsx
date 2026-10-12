@@ -31,6 +31,7 @@ export default function ResetPassword() {
       await axiosClient.post("password-reset/confirm/", {
         token,
         new_password: password,
+        confirm_password: confirm,
       });
       navigate("/login");
     } catch (err) {
