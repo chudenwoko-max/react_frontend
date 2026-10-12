@@ -16,8 +16,11 @@ axiosClient.defaults.headers.common["X-Payhost-Client"] = "web";
 
 let refreshTried = false;
 
-function onLoginPage() {
-  return window.location.pathname.startsWith("/login");
+function onPublicPage() {
+  const path = window.location.pathname;
+  return path.startsWith("/login")
+    || path.startsWith("/reset-password")
+    || path.startsWith("/register");
 }
 
 axiosClient.interceptors.response.use(
@@ -27,7 +30,7 @@ axiosClient.interceptors.response.use(
 
     // _skipRefresh: a failed refresh must not start another refresh.
     if (error.config?._skipRefresh || refreshTried || url.includes("refresh/")) {
-      if (!onLoginPage()) window.location.href = "/login";
+      if (!onPublicPage()) window.location.href = "/login";
       return Promise.reject(error);
     }
 
@@ -42,7 +45,7 @@ axiosClient.interceptors.response.use(
         );
         return axiosClient(error.config);
       } catch (err) {
-        if (!onLoginPage()) window.location.href = "/login";
+        if (!onPublicPage()) window.location.href = "/login";
         return Promise.reject(err);
       }
     }

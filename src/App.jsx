@@ -74,7 +74,6 @@ function AppShell() {
     </Route>
   );
 }
-
 function App() {
   return (
     <Routes>
@@ -87,7 +86,7 @@ function App() {
       {isMarketing ? (
         <Route path="/" element={<Landing />} />
       ) : (
-        AppShell()
+        <Route path="/*" element={<AppShell />} />
       )}
     </Routes>
   );
