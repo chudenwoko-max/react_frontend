@@ -14,6 +14,7 @@ export default function SendMoney() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const [limits, setLimits] = useState(null);
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinMode, setPinMode] = useState("verify");
@@ -29,6 +30,11 @@ export default function SendMoney() {
       setPinMode("set");
       setShowPinModal(true);
     }
+
+    axiosClient
+      .get("limits/")
+      .then((res) => setLimits(res.data))
+      .catch((err) => console.error("Could not load transfer limits:", err));
   }, []);
 
   const handleSearch = (e) => {
@@ -154,6 +160,12 @@ export default function SendMoney() {
       <div style={styles.header}>
         <h1 style={styles.title}>Send Money</h1>
         <p style={styles.subtitle}>Transfer funds to friends and family instantly</p>
+        {limits && (
+          <p>
+            Limit ₦{Number(limits.per_send_limit).toLocaleString()} per send · ₦
+            {Number(limits.remaining_today).toLocaleString()} left today
+          </p>
+        )}
       </div>
 
       <div style={styles.card}>
