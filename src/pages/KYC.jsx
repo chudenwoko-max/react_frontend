@@ -24,6 +24,7 @@ export default function KYC() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [kycStatus, setKycStatus] = useState(null);
+  const [limits, setLimits] = useState(null);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -47,6 +48,7 @@ export default function KYC() {
       try {
         const res = await axiosClient.get("/kyc/");
         setKycStatus(res.data);
+        setLimits(res.data.limits || null);
         setFormData((prev) => ({
           ...prev,
           ...res.data,
@@ -109,28 +111,35 @@ export default function KYC() {
 
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  const handleSubmit = async () => {
+  const handleUpgrade = async (e) => {
+    e.preventDefault();
     const error = validateStep();
     if (error) {
       toast.error(error);
       return;
     }
     setLoading(true);
-    const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      if (formData[key] !== null && formData[key] !== "") {
-        data.append(key, formData[key]);
-      }
-    });
+    const upgradeFormData = new FormData();
+    const nin = (formData.nin || "").trim();
+    const idFile = formData.government_id;
+    const poaFile = formData.proof_of_address;
+    const selfieFile = formData.selfie;
+    if (nin) upgradeFormData.append("nin", nin);
+    if (idFile) upgradeFormData.append("government_id", idFile);
+    if (poaFile) upgradeFormData.append("proof_of_address", poaFile);
+    if (selfieFile) upgradeFormData.append("selfie", selfieFile);
 
     try {
-      const res = await axiosClient.post("/kyc/submit/", data, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const { data } = await axiosClient.post("/kyc/upgrade/", upgradeFormData);
+      setLimits({
+        tier: data.tier,
+        daily_send_limit: data.daily_send_limit,
+        per_send_limit: data.per_send_limit,
+        remaining_today: data.remaining_today,
       });
-      toast.success("KYC submitted successfully");
-      setKycStatus(res.data.data || { status: "pending" });
+      toast.success("Limits upgraded successfully");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to submit KYC");
+      toast.error(err.response?.data?.error || "Failed to upgrade limits");
     } finally {
       setLoading(false);
     }
@@ -169,6 +178,12 @@ export default function KYC() {
         <p style={styles.subtitle}>
           Required fields are marked with an asterisk. This raises your limits. It does not open a bank account.
         </p>
+        {limits && (
+          <p style={styles.subtitle}>
+            Tier {limits.tier} · ₦{Number(limits.per_send_limit).toLocaleString()} per send · ₦
+            {Number(limits.remaining_today).toLocaleString()} left today
+          </p>
+        )}
       </div>
 
       <div style={styles.stepper}>
@@ -388,11 +403,11 @@ export default function KYC() {
             <button onClick={nextStep} style={styles.primaryBtn}>Continue</button>
           ) : (
             <button
-              onClick={handleSubmit}
+              onClick={handleUpgrade}
               disabled={loading}
               style={{ ...styles.primaryBtn, background: loading ? "#93c5fd" : "#16a34a" }}
             >
-              {loading ? "Submitting..." : "Submit verification"}
+              {loading ? "Upgrading..." : "Upgrade limits"}
             </button>
           )}
         </div>

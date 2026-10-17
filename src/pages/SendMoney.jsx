@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
@@ -8,6 +8,7 @@ import FavoriteRecipients from "../components/FavoriteRecipients";
 import AddFavoriteModal from "../components/AddFavoriteModal";
 
 export default function SendMoney() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
@@ -30,12 +31,14 @@ export default function SendMoney() {
       setPinMode("set");
       setShowPinModal(true);
     }
+  }, []);
 
+  useEffect(() => {
     axiosClient
       .get("limits/")
       .then((res) => setLimits(res.data))
       .catch((err) => console.error("Could not load transfer limits:", err));
-  }, []);
+  }, [location.key]);
 
   const handleSearch = (e) => {
     const value = e.target.value;

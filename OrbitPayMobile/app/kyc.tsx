@@ -8,18 +8,46 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { TextInput, Button, HelperText } from "react-native-paper";
-import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import axiosClient from "../src/api/axiosClient";
 import Toast from "react-native-toast-message";
 
+type KycLimits = {
+  tier?: number | string;
+  daily_send_limit?: number;
+  per_send_limit?: number;
+  remaining_today?: number;
+  label?: string;
+  single_send_ngn?: number;
+  daily_send_ngn?: number;
+  fx_enabled?: boolean;
+};
+
+function appendImage(
+  formData: FormData,
+  fieldName: string,
+  asset: ImagePicker.ImagePickerAsset,
+  fallbackName: string,
+) {
+  const nativeFormData = formData as unknown as {
+    append(name: string, value: string | { uri: string; name: string; type: string }): void;
+  };
+  nativeFormData.append(fieldName, {
+    uri: asset.uri,
+    name: asset.fileName || fallbackName,
+    type: asset.mimeType || "image/jpeg",
+  });
+}
+
 export default function KycScreen() {
-  const [fullName, setFullName] = useState("");
-  const [bvn, setBvn] = useState("");
-  const [idNumber, setIdNumber] = useState("");
+  const [nin, setNin] = useState("");
+  const [idDocument, setIdDocument] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [proofOfAddress, setProofOfAddress] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [selfie, setSelfie] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
-  const [limits, setLimits] = useState<any>(null);
+  const [limits, setLimits] = useState<KycLimits | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [canSubmit, setCanSubmit] = useState(true);
   const [error, setError] = useState("");
@@ -42,22 +70,33 @@ export default function KycScreen() {
     fetchStatus();
   }, []);
 
-  const handleSubmit = async () => {
-    const bvnDigits = bvn.trim();
-    const idDigits = idNumber.trim();
+  const pickImage = async (
+    label: string,
+    setAsset: (asset: ImagePicker.ImagePickerAsset) => void,
+  ) => {
+    setError("");
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setAsset(result.assets[0]);
+      }
+    } catch (err) {
+      console.error(`Could not select ${label}:`, err);
+      setError(`Could not select ${label}. Please try again.`);
+    }
+  };
 
-    if (!fullName.trim()) {
-      setError("Full name is required");
+  const handleUpgrade = async () => {
+    const ninDigits = nin.trim();
+    if (ninDigits && !/^\d{11}$/.test(ninDigits)) {
+      setError("NIN must be 11 digits");
       return;
     }
-
-    // CHANGE: Tier 1 fintech rule is one identity, not both. Bureau lookup stays parked.
-    if (!bvnDigits && !idDigits) {
-      setError("Enter a BVN or a government ID number");
-      return;
-    }
-    if (bvnDigits && bvnDigits.length !== 11) {
-      setError("BVN must be 11 digits");
+    if (!ninDigits && !idDocument && !proofOfAddress && !selfie) {
+      setError("Enter a NIN or select at least one document");
       return;
     }
 
@@ -65,25 +104,38 @@ export default function KycScreen() {
     setError("");
 
     try {
-      await axiosClient.post("kyc/submit/", {
-        full_name: fullName.trim(),
-        bvn: bvnDigits,
-        id_number: idDigits,
+      const formData = new FormData();
+      if (ninDigits) formData.append("nin", ninDigits);
+      if (idDocument) {
+        appendImage(formData, "government_id", idDocument, "id.jpg");
+      }
+      if (proofOfAddress) {
+        appendImage(formData, "proof_of_address", proofOfAddress, "poa.jpg");
+      }
+      if (selfie) {
+        appendImage(formData, "selfie", selfie, "selfie.jpg");
+      }
+
+      const { data } = await axiosClient.post("kyc/upgrade/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-            setStatus("pending");
-      // CHANGE: toast, then homepage. The homepage banner is the pending state.
+
+      setLimits({
+        tier: data.tier,
+        daily_send_limit: data.daily_send_limit,
+        per_send_limit: data.per_send_limit,
+        remaining_today: data.remaining_today,
+      });
       Toast.show({
         type: "success",
-        text1: "Submitted",
-        text2: "Verification is pending review.",
+        text1: "Limits upgraded",
+        text2: `Your account is now Tier ${data.tier}.`,
       });
-      router.replace("/(tabs)");
     } catch (err: any) {
-      console.log("KYC submit error:", err.response?.data);
       const message =
         err.response?.data?.error ||
         err.response?.data?.detail ||
-        "Failed to submit KYC. Please try again.";
+        "Failed to upgrade limits. Please try again.";
       setError(message);
     } finally {
       setLoading(false);
@@ -98,11 +150,14 @@ export default function KycScreen() {
     );
   }
 
+  const dailyLimit = limits?.daily_send_limit ?? limits?.daily_send_ngn;
+  const perSendLimit = limits?.per_send_limit ?? limits?.single_send_ngn;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       <Text style={styles.title}>Verify Identity</Text>
       <Text style={styles.subtitle}>
-        Enter a BVN or a government ID number. One is enough for this review.
+        Provide your NIN and any requested identity documents to upgrade your limits.
       </Text>
 
       {status && (
@@ -120,44 +175,69 @@ export default function KycScreen() {
 
       {limits && (
         <View style={styles.statusBox}>
-          <Text style={styles.statusLabel}>Limits · {limits.label || "Basic"}</Text>
-          <Text style={styles.statusValue}>
-            ₦{Number(limits.single_send_ngn).toLocaleString()} per send
+          <Text style={styles.statusLabel}>
+            Limits · Tier {limits.tier ?? limits.label ?? "Basic"}
           </Text>
-          <Text style={{ color: "#64748B", marginTop: 4 }}>
-            ₦{Number(limits.daily_send_ngn).toLocaleString()} per day
-          </Text>
-          <Text style={{ color: "#64748B", marginTop: 4 }}>
-            {limits.fx_enabled ? "FX convert enabled" : "FX convert after approval"}
-          </Text>
+          {perSendLimit != null && (
+            <Text style={styles.statusValue}>
+              ₦{Number(perSendLimit).toLocaleString()} per send
+            </Text>
+          )}
+          {dailyLimit != null && (
+            <Text style={{ color: "#64748B", marginTop: 4 }}>
+              ₦{Number(dailyLimit).toLocaleString()} per day
+            </Text>
+          )}
+          {limits.remaining_today != null && (
+            <Text style={{ color: "#64748B", marginTop: 4 }}>
+              ₦{Number(limits.remaining_today).toLocaleString()} left today
+            </Text>
+          )}
+          {limits.fx_enabled != null && (
+            <Text style={{ color: "#64748B", marginTop: 4 }}>
+              {limits.fx_enabled ? "FX convert enabled" : "FX convert after approval"}
+            </Text>
+          )}
         </View>
       )}
 
       <TextInput
-        label="Full Name"
-        value={fullName}
-        onChangeText={setFullName}
-        mode="outlined"
-        style={styles.input}
-      />
-
-      <TextInput
-        label="BVN (11 digits)"
-        value={bvn}
-        onChangeText={setBvn}
+        label="NIN (11 digits)"
+        value={nin}
+        onChangeText={setNin}
         mode="outlined"
         keyboardType="numeric"
         maxLength={11}
         style={styles.input}
       />
 
-      <TextInput
-        label="Government ID number (NIN, passport, licence, or voter card)"
-        value={idNumber}
-        onChangeText={setIdNumber}
+      <Text style={styles.uploadLabel}>Government ID image</Text>
+      <Button
         mode="outlined"
-        style={styles.input}
-      />
+        onPress={() => pickImage("government ID", setIdDocument)}
+        style={styles.uploadButton}
+      >
+        {idDocument?.fileName || (idDocument ? "Image selected" : "Choose government ID image")}
+      </Button>
+
+      <Text style={styles.uploadLabel}>Proof of address</Text>
+      <Button
+        mode="outlined"
+        onPress={() => pickImage("proof of address", setProofOfAddress)}
+        style={styles.uploadButton}
+      >
+        {proofOfAddress?.fileName ||
+          (proofOfAddress ? "Image selected" : "Choose proof of address image")}
+      </Button>
+
+      <Text style={styles.uploadLabel}>Selfie</Text>
+      <Button
+        mode="outlined"
+        onPress={() => pickImage("selfie", setSelfie)}
+        style={styles.uploadButton}
+      >
+        {selfie?.fileName || (selfie ? "Image selected" : "Choose selfie image")}
+      </Button>
 
       {error ? (
         <HelperText type="error" visible={true}>
@@ -167,17 +247,19 @@ export default function KycScreen() {
 
       <Button
         mode="contained"
-        onPress={handleSubmit}
+        onPress={handleUpgrade}
         loading={loading}
         style={styles.button}
         contentStyle={{ paddingVertical: 6 }}
-        disabled={!canSubmit || status === "approved" || status === "pending"}
+        disabled={
+          status === "pending" ||
+          (status !== "approved" && !canSubmit) ||
+          loading
+        }
       >
-        {status === "approved"
-          ? "Already Verified"
-          : status === "pending"
+        {status === "pending"
           ? "Pending Review"
-          : "Submit KYC"}
+          : "Upgrade Limits"}
       </Button>
     </ScrollView>
   );
@@ -227,6 +309,16 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 16,
+  },
+  uploadLabel: {
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  uploadButton: {
+    marginBottom: 16,
+    borderRadius: 10,
   },
   button: {
     marginTop: 12,

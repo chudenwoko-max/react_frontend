@@ -1,5 +1,5 @@
 import { useAuth } from "../../src/context/AuthContext";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   DeviceEventEmitter,
 } from "react-native";
 import { TextInput, Button, HelperText } from "react-native-paper";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import axiosClient from "../../src/api/axiosClient";
 import {
   getOrCreateReferenceId,
@@ -44,8 +44,10 @@ export default function SendScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHighValue, setIsHighValue] = useState(false);
-  const [remainingToday, setRemainingToday] = useState<string | null>(null);
-  const [singleLimit, setSingleLimit] = useState<string | null>(null);
+  const [limits, setLimits] = useState<{
+    per_send_limit: string | null;
+    remaining_today: string | null;
+  } | null>(null);
 
   useEffect(() => {
     axiosClient
@@ -57,15 +59,33 @@ export default function SendScreen() {
         setFavorites(rows);
       })
       .catch(() => setFavorites([]));
-
-    axiosClient
-      .get("kyc/")
-      .then((res) => {
-        setRemainingToday(res.data.remaining_today || null);
-        setSingleLimit(res.data.limits?.single_send_ngn || null);
-      })
-      .catch(() => {});
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      axiosClient
+        .get("limits/")
+        .then((res) => {
+          if (!active) return;
+          const perSendLimit =
+            res.data.per_send_limit ?? res.data.limits?.single_send_ngn;
+          const remaining = res.data.remaining_today;
+          setLimits({
+            per_send_limit: perSendLimit == null ? null : String(perSendLimit),
+            remaining_today: remaining == null ? null : String(remaining),
+          });
+        })
+        .catch((err) => {
+          if (active) console.error("Could not refresh send limits:", err);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   const favHandle = (f: any) =>
     f.recipient_username || f.username || f.recipient?.username || "";
@@ -231,11 +251,11 @@ export default function SendScreen() {
             : "Transfer to another Payhost user"}
         </Text>
 
-        {singleLimit ? (
+        {limits?.per_send_limit != null ? (
           <Text style={{ color: "#64748B", marginBottom: 12 }}>
-            Limit ₦{Number(singleLimit).toLocaleString()} per send
-            {remainingToday != null
-              ? ` · ₦${Number(remainingToday).toLocaleString()} left today`
+            Limit ₦{Number(limits.per_send_limit).toLocaleString()} per send
+            {limits.remaining_today != null
+              ? ` · ₦${Number(limits.remaining_today).toLocaleString()} left today`
               : ""}
           </Text>
         ) : null}
