@@ -403,7 +403,7 @@ export default function SendScreen() {
           </HelperText>
         ) : null}
 
-        {showClearHold ? (
+        {showClearHold || /new device hold/i.test(error) ? (
           <ClearHoldButton
             onCleared={() => {
               setShowClearHold(false);

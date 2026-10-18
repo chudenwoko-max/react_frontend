@@ -1,4 +1,6 @@
 function hasHoldIndicator(value) {
+  if (/\bnew device hold\b/i.test(value.replace(/[_-]+/g, " "))) return true;
+
   return /\b(?:payment|transaction|account)\b.{0,40}\bhold\b|\bhold\b.{0,40}\b(?:payment|transaction|account)\b/i.test(
     value.replace(/[_-]+/g, " ")
   );

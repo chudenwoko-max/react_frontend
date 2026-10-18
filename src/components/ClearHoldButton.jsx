@@ -7,7 +7,7 @@ function errorMessage(error, fallback) {
   return data?.error || data?.detail || data?.message || fallback;
 }
 
-export function ClearHoldButton() {
+export function ClearHoldButton({ onCleared }) {
   const [step, setStep] = useState("idle");
   const [otp, setOtp] = useState("");
   const [pin, setPin] = useState("");
@@ -18,7 +18,9 @@ export function ClearHoldButton() {
     setLoading(true);
     setMsg("");
     try {
-      await axiosClient.post("payment-hold/request-clear/");
+      await axiosClient.post("payment-hold/request-clear/", null, {
+        headers: { "X-Payhost-Client": "web" },
+      });
       setStep("otp");
       setMsg("Code sent to your email.");
     } catch (error) {
@@ -37,11 +39,16 @@ export function ClearHoldButton() {
     setLoading(true);
     setMsg("");
     try {
-      await axiosClient.post("payment-hold/verify-clear/", { otp: otp.trim(), pin });
+      await axiosClient.post(
+        "payment-hold/verify-clear/",
+        { otp: otp.trim(), pin: pin.trim() || undefined },
+        { headers: { "X-Payhost-Client": "web" } }
+      );
       setMsg("Payment hold cleared.");
       setStep("idle");
       setOtp("");
       setPin("");
+      onCleared?.();
     } catch (error) {
       setMsg(errorMessage(error, "Invalid code"));
     } finally {
@@ -66,15 +73,16 @@ export function ClearHoldButton() {
         type="text"
         inputMode="numeric"
         autoComplete="one-time-code"
-        placeholder="Email code"
+        placeholder="6-digit code"
         value={otp}
         onChange={(event) => setOtp(event.target.value)}
+        maxLength={6}
         disabled={loading}
       />
       <input
         type="password"
         autoComplete="current-password"
-        placeholder="PIN (optional)"
+        placeholder="Transaction PIN (optional)"
         value={pin}
         onChange={(event) => setPin(event.target.value)}
         disabled={loading}

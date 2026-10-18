@@ -259,7 +259,9 @@ export default function SendMoney() {
         <button onClick={handleSend} disabled={busy} style={styles.sendBtn}>
           {busy ? "Sending..." : "Continue"}
         </button>
-        {showClearHold && <ClearHoldButton />}
+        {showClearHold && (
+          <ClearHoldButton onCleared={() => setShowClearHold(false)} />
+        )}
       </div>
 
       <AddFavoriteModal

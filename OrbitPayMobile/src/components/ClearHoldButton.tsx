@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, View } from "react-native";
-import { Button, TextInput } from "react-native-paper";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { TextInput } from "react-native-paper";
 import axiosClient from "../api/axiosClient";
 
 type ClearHoldButtonProps = {
@@ -34,9 +34,11 @@ export default function ClearHoldButton({ onCleared }: ClearHoldButtonProps) {
   const requestCode = async () => {
     setLoading(true);
     try {
-      await axiosClient.post("payment-hold/request-clear/");
+      await axiosClient.post("payment-hold/request-clear/", null, {
+        headers: { "X-Client": "mobile" },
+      });
       setStep("otp");
-      Alert.alert("Code sent", "Check your email.");
+      Alert.alert("Code sent", "Check your email for the 6-digit code.");
     } catch (error) {
       Alert.alert("Error", getErrorMessage(error, "Could not send code"));
     } finally {
@@ -52,7 +54,11 @@ export default function ClearHoldButton({ onCleared }: ClearHoldButtonProps) {
 
     setLoading(true);
     try {
-      await axiosClient.post("payment-hold/verify-clear/", { otp: otp.trim(), pin });
+      await axiosClient.post(
+        "payment-hold/verify-clear/",
+        { otp: otp.trim(), pin: pin.trim() || undefined },
+        { headers: { "X-Client": "mobile" } }
+      );
       Alert.alert("Success", "Payment hold cleared.");
       setStep("idle");
       setOtp("");
@@ -67,39 +73,64 @@ export default function ClearHoldButton({ onCleared }: ClearHoldButtonProps) {
 
   if (step === "idle") {
     return (
-      <Button mode="outlined" onPress={requestCode} loading={loading} disabled={loading}>
-        Verify to unlock now
-      </Button>
+      <TouchableOpacity style={styles.btn} onPress={requestCode} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.btnText}>Verify to unlock now</Text>
+        )}
+      </TouchableOpacity>
     );
   }
 
   return (
-    <View>
+    <View style={styles.box}>
+      <Text style={styles.label}>Enter the code sent to your email</Text>
       <TextInput
-        label="Email code"
+        style={styles.input}
+        placeholder="6-digit code"
         value={otp}
         onChangeText={setOtp}
         keyboardType="number-pad"
-        autoCapitalize="none"
-        style={{ marginTop: 12 }}
+        maxLength={6}
+        editable={!loading}
       />
       <TextInput
-        label="PIN (optional)"
+        style={styles.input}
+        placeholder="Transaction PIN (optional)"
         value={pin}
         onChangeText={setPin}
         secureTextEntry
         keyboardType="number-pad"
-        style={{ marginTop: 12 }}
+        editable={!loading}
       />
-      <Button
-        mode="contained"
-        onPress={verify}
-        loading={loading}
-        disabled={loading}
-        style={{ marginTop: 12 }}
-      >
-        Clear hold
-      </Button>
+      <TouchableOpacity style={styles.btn} onPress={verify} disabled={loading}>
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.btnText}>Clear hold</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  btn: {
+    backgroundColor: "#111",
+    padding: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 8,
+  },
+  btnText: { color: "#fff", fontWeight: "600" },
+  box: { marginVertical: 12 },
+  label: { marginBottom: 6, fontSize: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+});
