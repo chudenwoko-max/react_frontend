@@ -24,6 +24,8 @@ import {
 } from "../../src/security/transactionGuard";
 import Toast from "react-native-toast-message";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
+import ClearHoldButton from "../../src/components/ClearHoldButton";
+import { isPaymentHoldError } from "../../src/utils/paymentHold";
 
 const HIGH_VALUE_THRESHOLD = 50000;
 
@@ -43,6 +45,7 @@ export default function SendScreen() {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showClearHold, setShowClearHold] = useState(false);
   const [isHighValue, setIsHighValue] = useState(false);
   const [limits, setLimits] = useState<{
     per_send_limit: string | null;
@@ -192,7 +195,10 @@ export default function SendScreen() {
 
       if (highValueToken) payload.high_value_token = highValueToken;
 
-      const res = await axiosClient.post("send-money/", payload);
+      const res = await axiosClient.post("send-money/", payload).catch((err: unknown) => {
+        if (isPaymentHoldError(err)) setShowClearHold(true);
+        throw err;
+      });
 
       await clearReferenceId(operationKey);
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
@@ -395,6 +401,16 @@ export default function SendScreen() {
           <HelperText type="error" visible>
             {error}
           </HelperText>
+        ) : null}
+
+        {showClearHold ? (
+          <ClearHoldButton
+            onCleared={() => {
+              setShowClearHold(false);
+              setError("");
+              DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+            }}
+          />
         ) : null}
 
         <Button

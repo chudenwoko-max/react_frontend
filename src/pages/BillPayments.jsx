@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
+import { ClearHoldButton } from "../components/ClearHoldButton";
+import { isPaymentHoldError } from "../utils/paymentHold";
 
 const NETWORKS = [
   { id: "MTN", name: "MTN", color: "#ffcc00" },
@@ -87,6 +89,7 @@ export default function BillPayments() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("airtime");
   const [loading, setLoading] = useState(false);
+  const [showClearHold, setShowClearHold] = useState(false);
   const [history, setHistory] = useState([]);
 
   const [provider, setProvider] = useState("MTN");
@@ -145,6 +148,7 @@ export default function BillPayments() {
     sessionStorage.removeItem("bill_idem");
     goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
   } catch (err) {
+    if (isPaymentHoldError(err)) setShowClearHold(true);
     toast.error(err.response?.data?.error || "Purchase failed");
   } finally {
     setLoading(false);
@@ -178,6 +182,7 @@ export default function BillPayments() {
     sessionStorage.removeItem("bill_idem");
     goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
   } catch (err) {
+    if (isPaymentHoldError(err)) setShowClearHold(true);
     toast.error(err.response?.data?.error || "Purchase failed");
   } finally {
     setLoading(false);
@@ -211,6 +216,7 @@ export default function BillPayments() {
     sessionStorage.removeItem("bill_idem");
     goHomeAfterSuccess("Electricity payment successful");
   } catch (err) {
+    if (isPaymentHoldError(err)) setShowClearHold(true);
     toast.error(err.response?.data?.error || "Payment failed");
   } finally {
     setLoading(false);
@@ -244,6 +250,7 @@ export default function BillPayments() {
     sessionStorage.removeItem("bill_idem");
     goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
   } catch (err) {
+    if (isPaymentHoldError(err)) setShowClearHold(true);
     toast.error(err.response?.data?.error || "Payment failed");
   } finally {
     setLoading(false);
@@ -278,6 +285,7 @@ export default function BillPayments() {
       </div>
 
       <div style={styles.card}>
+        {showClearHold && <ClearHoldButton />}
         {activeTab === "airtime" && (
           <div>
             <label style={styles.label}>Select Network</label>

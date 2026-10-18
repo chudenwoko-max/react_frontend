@@ -29,6 +29,8 @@ import {
 } from "../src/security/transactionGuard";
 import { Alert, Platform, DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
+import ClearHoldButton from "../src/components/ClearHoldButton";
+import { isPaymentHoldError } from "../src/utils/paymentHold";
 
 type VirtualCard = {
   id: number;
@@ -50,6 +52,7 @@ export default function BillsScreen() {
   const [provider, setProvider] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showClearHold, setShowClearHold] = useState(false);
 
   const [paymentSource, setPaymentSource] =
     useState<"wallet" | "card">("wallet");
@@ -142,7 +145,10 @@ export default function BillsScreen() {
     };
 
     // Client copies reference_id onto Idempotency-Key. No extra header needed here.
-    const res = await axiosClient.post("bills/pay/", payload);
+    const res = await axiosClient.post("bills/pay/", payload).catch((err: unknown) => {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      throw err;
+    });
 
     // CHANGE: clear only after a resolved success, so a timeout keeps the same key.
     await clearReferenceId(operationKey);
@@ -391,6 +397,16 @@ export default function BillsScreen() {
       )}
 
       {error ? <HelperText type="error">{error}</HelperText> : null}
+
+      {showClearHold ? (
+        <ClearHoldButton
+          onCleared={() => {
+            setShowClearHold(false);
+            setError("");
+            DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+          }}
+        />
+      ) : null}
 
       <Button
         mode="contained"

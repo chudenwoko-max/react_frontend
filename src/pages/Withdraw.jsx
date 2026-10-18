@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 import PinModal from "../components/PinModal";
+import { ClearHoldButton } from "../components/ClearHoldButton";
+import { isPaymentHoldError } from "../utils/paymentHold";
 
 export default function Withdraw() {
   const navigate = useNavigate();
@@ -10,6 +12,7 @@ export default function Withdraw() {
   const [method, setMethod] = useState("bank");
   const [loading, setLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const [showClearHold, setShowClearHold] = useState(false);
 
   const quickAmounts = [1000, 2000, 5000, 10000, 20000, 50000];
 
@@ -63,6 +66,7 @@ export default function Withdraw() {
     toast.success("Withdrawal submitted");
     navigate("/");
   } catch (error) {
+    if (isPaymentHoldError(error)) setShowClearHold(true);
     toast.error(error.response?.data?.error || "Withdrawal failed");
     setLoading(false);
   }
@@ -141,6 +145,7 @@ export default function Withdraw() {
         <button onClick={handleWithdraw} disabled={loading} style={{ ...styles.withdrawBtn, opacity: loading ? 0.7 : 1 }}>
           {loading ? "Processing..." : "Withdraw Funds"}
         </button>
+        {showClearHold && <ClearHoldButton />}
       </div>
 
       <PinModal

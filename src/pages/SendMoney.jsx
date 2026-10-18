@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import PinModal from "../components/PinModal";
 import FavoriteRecipients from "../components/FavoriteRecipients";
 import AddFavoriteModal from "../components/AddFavoriteModal";
+import { ClearHoldButton } from "../components/ClearHoldButton";
+import { isPaymentHoldError } from "../utils/paymentHold";
 
 export default function SendMoney() {
   const location = useLocation();
@@ -15,6 +17,7 @@ export default function SendMoney() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showClearHold, setShowClearHold] = useState(false);
   const [limits, setLimits] = useState(null);
 
   const [showPinModal, setShowPinModal] = useState(false);
@@ -152,6 +155,7 @@ export default function SendMoney() {
     toast.success("Transfer successful");
     navigate("/");
   } catch (err) {
+    if (isPaymentHoldError(err)) setShowClearHold(true);
     toast.error(err.response?.data?.error || "Transfer failed");
     setBusy(false);
   }
@@ -255,6 +259,7 @@ export default function SendMoney() {
         <button onClick={handleSend} disabled={busy} style={styles.sendBtn}>
           {busy ? "Sending..." : "Continue"}
         </button>
+        {showClearHold && <ClearHoldButton />}
       </div>
 
       <AddFavoriteModal

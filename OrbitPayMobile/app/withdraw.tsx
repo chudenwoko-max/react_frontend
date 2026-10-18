@@ -12,6 +12,8 @@ import {
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
+import ClearHoldButton from "../src/components/ClearHoldButton";
+import { isPaymentHoldError } from "../src/utils/paymentHold";
 
 export default function WithdrawScreen() {
   const [amount, setAmount] = useState("");
@@ -20,6 +22,7 @@ export default function WithdrawScreen() {
   const [accountId, setAccountId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showClearHold, setShowClearHold] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -64,7 +67,10 @@ export default function WithdrawScreen() {
       };
       if (accountId) body.bank_account_id = accountId;
 
-      const res = await axiosClient.post("withdraw/", body);
+      const res = await axiosClient.post("withdraw/", body).catch((error: unknown) => {
+        if (isPaymentHoldError(error)) setShowClearHold(true);
+        throw error;
+      });
       DeviceEventEmitter.emit(FINANCIALS_REFRESH);
       Alert.alert(
         "Withdrawal",
@@ -140,6 +146,15 @@ export default function WithdrawScreen() {
       >
         <Text style={styles.btnText}>{busy ? "Sending…" : "Withdraw"}</Text>
       </TouchableOpacity>
+
+      {showClearHold ? (
+        <ClearHoldButton
+          onCleared={() => {
+            setShowClearHold(false);
+            DeviceEventEmitter.emit(FINANCIALS_REFRESH);
+          }}
+        />
+      ) : null}
 
       <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
         <Text style={styles.homeText}>Back to Home</Text>
