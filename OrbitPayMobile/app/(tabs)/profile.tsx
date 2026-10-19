@@ -18,6 +18,7 @@ import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import { router } from "expo-router";
 import { isAxiosError } from "axios";
+import * as SecureStore from "expo-secure-store";
 import {
   getBiometricStatus,
   isBiometricEnabled,
@@ -124,6 +125,12 @@ export default function ProfileScreen() {
       setLockError(message || "Could not lock wallet. Please try again.");
       setLockingWallet(false);
       return;
+    }
+
+    try {
+      await SecureStore.setItemAsync("WALLET_FROZEN", "true");
+    } catch (error) {
+      console.error("Could not persist the locked-wallet state:", error);
     }
 
     setLockModalVisible(false);

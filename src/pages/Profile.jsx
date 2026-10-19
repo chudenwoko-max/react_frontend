@@ -75,6 +75,11 @@ function Profile() {
       return;
     }
 
+    try {
+      localStorage.setItem("WALLET_FROZEN", "true");
+    } catch (error) {
+      console.error("Could not persist the locked-wallet state:", error);
+    }
     setLockDialogOpen(false);
     setLockPin("");
     window.alert("Wallet locked. All sessions signed out.");

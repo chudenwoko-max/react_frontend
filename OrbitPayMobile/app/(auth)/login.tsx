@@ -1,14 +1,16 @@
 import { Image } from "react-native";
-import { useState } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { TextInput, Button, Text, HelperText } from "react-native-paper";
 import { Link, router } from "expo-router";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
+import * as SecureStore from "expo-secure-store";
+import UnlockWallet from "../../src/components/UnlockWallet";
 
 export default function LoginScreen() {
-  const { completeLogin } = useAuth();
+  const { completeLogin, refreshProfile } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +18,50 @@ export default function LoginScreen() {
   const [show2FA, setShow2FA] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
+  const [walletLocked, setWalletLocked] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    SecureStore.getItemAsync("WALLET_FROZEN")
+      .then((value) => setWalletLocked(value === "true"))
+      .catch((loadError) => {
+        console.error("Could not read wallet lock state:", loadError);
+        setError("Could not check wallet status. Restart the app and try again.");
+        setWalletLocked(false);
+      });
+  }, []);
+
+  const handleWalletUnlocked = async (response: { data: Record<string, unknown> }) => {
+    try {
+      await SecureStore.deleteItemAsync("WALLET_FROZEN");
+    } catch (storageError) {
+      console.error("Could not clear saved wallet lock state:", storageError);
+    }
+    setWalletLocked(false);
+
+    const access = response.data.access;
+    const refresh = response.data.refresh;
+    if (typeof access === "string" && typeof refresh === "string") {
+      try {
+        await completeLogin(access, refresh);
+        router.replace("/(tabs)");
+        return;
+      } catch (loginError) {
+        console.error("Wallet unlocked, but automatic sign-in failed:", loginError);
+      }
+    }
+
+    try {
+      const profile = await refreshProfile();
+      if (!profile?.is_frozen) {
+        router.replace("/(tabs)");
+        return;
+      }
+    } catch {
+      // Unlock succeeds without restoring a session; continue to normal sign-in.
+    }
+
+    setError("Wallet unlocked. Sign in to continue.");
+  };
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -103,6 +149,34 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  if (walletLocked === null) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
+
+  if (walletLocked) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <View style={styles.inner}>
+          <View style={styles.brand}>
+            <Image
+              source={require("../../assets/payhost-mark.png")}
+              style={styles.mark}
+            />
+            <Text style={styles.brandName}>Payhost</Text>
+          </View>
+          <UnlockWallet onUnlocked={handleWalletUnlocked} />
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -193,6 +267,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
+  loading: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
   inner: { flex: 1, justifyContent: "center", padding: 24 },
   brand: { alignItems: "center", marginBottom: 20 },
   mark: { width: 48, height: 48, resizeMode: "contain" },

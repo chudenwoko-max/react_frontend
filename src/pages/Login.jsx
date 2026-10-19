@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axiosClient from "../axiosClient";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import UnlockWallet from "../components/UnlockWallet";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -12,9 +13,34 @@ export default function Login() {
   const [requires2FA, setRequires2FA] = useState(false);
   const [userId, setUserId] = useState(null);
   const [debugOtp, setDebugOtp] = useState("");
+  const [walletLocked, setWalletLocked] = useState(null);
 
   const { setUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setWalletLocked(localStorage.getItem("WALLET_FROZEN") === "true");
+  }, []);
+
+  const handleWalletUnlocked = async () => {
+    localStorage.removeItem("WALLET_FROZEN");
+    try {
+      const response = await axiosClient.get("profile/");
+      if (!response.data?.is_frozen) {
+        setUser(response.data);
+        navigate("/dashboard", { replace: true });
+        return true;
+      }
+      setUser(response.data);
+      return false;
+    } catch {
+      // A wallet unlock can invalidate every session, requiring a fresh sign-in.
+    }
+    setUser(null);
+    setWalletLocked(false);
+    toast.success("Wallet unlocked. Sign in to continue.");
+    return true;
+  };
 
  const handleLogin = async (e) => {
   e.preventDefault();
@@ -86,6 +112,30 @@ const handleVerifyOTP = async (e) => {
     setLoading(false);
   }
 };
+
+  if (walletLocked === null) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>Checking wallet status...</div>
+      </div>
+    );
+  }
+
+  if (walletLocked) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <img src="/payhost-mark.png" alt="Payhost" height={48} />
+            <p style={{ margin: "8px 0 0", fontWeight: 700, color: "#0F172A" }}>
+              Payhost
+            </p>
+          </div>
+          <UnlockWallet onUnlocked={handleWalletUnlocked} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>

@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null | undefined;
   login: (username: string, password: string) => Promise<any>;
   completeLogin: (access: string, refresh: string) => Promise<void>;   // ⭐ PATCHED
+  refreshProfile: () => Promise<User>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -115,6 +116,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const refreshProfile = async () => {
+    const profileRes = await axiosClient.get("profile/");
+    setUser(profileRes.data);
+    return profileRes.data;
+  };
+
   const logout = async () => {
     try {
       await unregisterPushToken();
@@ -140,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         login,
         completeLogin,   // ⭐ PATCHED
+        refreshProfile,
         logout,
         isLoading,
       }}

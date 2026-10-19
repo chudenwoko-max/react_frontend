@@ -14,11 +14,13 @@ import {
 import BottomSheet from "@gorhom/bottom-sheet";
 import MoreSheet from "../../src/components/MoreSheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as SecureStore from "expo-secure-store";
 
 import { useAuth } from "../../src/context/AuthContext";
 import { useBiometricLock } from "../../src/hooks/useBiometricLock";
 import BiometricLockScreen from "../../src/components/BiometricLockScreen";
 import PinModal from "../../src/components/PinModal"; // ← Import your existing PIN modal component here
+import UnlockWallet from "../../src/components/UnlockWallet";
 
 function TabPress({
   style,
@@ -42,7 +44,7 @@ export default function TabsLayout() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
 
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, completeLogin, refreshProfile, logout } = useAuth();
   const isLoggedIn = !!user;
 
   const {
@@ -71,11 +73,56 @@ export default function TabsLayout() {
     }
   };
 
+  const handleWalletUnlocked = async (response: { data: Record<string, unknown> }) => {
+    try {
+      await SecureStore.deleteItemAsync("WALLET_FROZEN");
+    } catch (error) {
+      console.error("Could not clear saved wallet lock state:", error);
+    }
+    const access = response.data.access;
+    const refresh = response.data.refresh;
+
+    if (typeof access === "string" && typeof refresh === "string") {
+      try {
+        await completeLogin(access, refresh);
+      } catch (error) {
+        console.error("Wallet unlocked, but automatic sign-in failed:", error);
+      }
+    }
+
+    try {
+      const profile = await refreshProfile();
+      if (!profile?.is_frozen) {
+        router.replace("/(tabs)");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.log("Wallet unlocked; session needs sign-in:", error);
+    }
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Could not clear the signed-out session:", error);
+    }
+    router.replace("/(auth)/login");
+    return true;
+  };
+
   // Loading state
   if (isLoading || isChecking) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
+
+  if (isLoggedIn && user?.is_frozen) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#F8FAFC" }}>
+        <UnlockWallet onUnlocked={handleWalletUnlocked} />
       </View>
     );
   }
