@@ -5,10 +5,14 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function Profile() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [loading2FA, setLoading2FA] = useState(false);
+  const [lockDialogOpen, setLockDialogOpen] = useState(false);
+  const [lockPin, setLockPin] = useState("");
+  const [lockingWallet, setLockingWallet] = useState(false);
+  const [lockError, setLockError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +51,34 @@ function Profile() {
     } finally {
       setLoading2FA(false);
     }
+  };
+
+  const lockWalletNow = async (event) => {
+    event.preventDefault();
+    if (lockingWallet) return;
+
+    setLockingWallet(true);
+    setLockError("");
+    try {
+      await axiosClient.post(
+        "wallet/lock/",
+        { pin: lockPin.trim() },
+        { headers: { "X-Payhost-Client": "web" } }
+      );
+    } catch (err) {
+      setLockError(
+        err.response?.data?.error ||
+          err.response?.data?.detail ||
+          "Could not lock wallet"
+      );
+      setLockingWallet(false);
+      return;
+    }
+
+    setLockDialogOpen(false);
+    setLockPin("");
+    window.alert("Wallet locked. All sessions signed out.");
+    await logout();
   };
 
   if (loading || !user) {
@@ -148,7 +180,73 @@ function Profile() {
             {loading2FA ? "Please wait..." : is2FAEnabled ? "Disable" : "Enable"}
           </button>
         </div>
+
+        <div style={styles.lockWalletItem}>
+          <div>
+            <p style={styles.securityTitle}>Lock wallet now</p>
+            <p style={styles.securityDesc}>
+              Freeze your wallet and sign out all sessions.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setLockPin("");
+              setLockError("");
+              setLockDialogOpen(true);
+            }}
+            style={styles.lockWalletBtn}
+          >
+            Lock wallet
+          </button>
+        </div>
       </div>
+
+      {lockDialogOpen && (
+        <div style={styles.modalBackdrop}>
+          <form style={styles.lockDialog} onSubmit={lockWalletNow}>
+            <h3 style={styles.lockDialogTitle}>Lock wallet now?</h3>
+            <p style={styles.lockDialogText}>
+              Your wallet will be frozen immediately, all sessions will be
+              signed out, and a confirmation email will be sent.
+            </p>
+            <label htmlFor="lock-wallet-pin" style={styles.pinLabel}>
+              PIN
+            </label>
+            <input
+              id="lock-wallet-pin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="current-password"
+              maxLength={4}
+              value={lockPin}
+              onChange={(event) => setLockPin(event.target.value)}
+              placeholder="Enter your PIN"
+              required
+              disabled={lockingWallet}
+              style={styles.pinInput}
+            />
+            {lockError && <p style={styles.lockError}>{lockError}</p>}
+            <div style={styles.lockDialogActions}>
+              <button
+                type="button"
+                onClick={() => setLockDialogOpen(false)}
+                disabled={lockingWallet}
+                style={styles.cancelLockBtn}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={lockingWallet || !lockPin.trim()}
+                style={styles.confirmLockBtn}
+              >
+                {lockingWallet ? "Locking..." : "Lock wallet"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -283,6 +381,98 @@ const styles = {
     fontSize: 13,
     color: "#6b7280",
     maxWidth: 320,
+  },
+  lockWalletItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 24,
+    paddingTop: 20,
+    borderTop: "1px solid #f3f4f6",
+  },
+  lockWalletBtn: {
+    padding: "9px 18px",
+    borderRadius: 8,
+    border: "1px solid #fecaca",
+    background: "#fef2f2",
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  modalBackdrop: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    background: "rgba(15, 23, 42, 0.55)",
+  },
+  lockDialog: {
+    width: "100%",
+    maxWidth: 400,
+    padding: 24,
+    borderRadius: 16,
+    background: "#ffffff",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+  },
+  lockDialogTitle: {
+    margin: 0,
+    color: "#111827",
+    fontSize: 20,
+  },
+  lockDialogText: {
+    color: "#4b5563",
+    fontSize: 14,
+    lineHeight: 1.5,
+    margin: "10px 0 18px",
+  },
+  pinLabel: {
+    display: "block",
+    marginBottom: 6,
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  pinInput: {
+    boxSizing: "border-box",
+    width: "100%",
+    padding: 12,
+    border: "1px solid #d1d5db",
+    borderRadius: 8,
+    fontSize: 16,
+  },
+  lockError: {
+    margin: "8px 0 0",
+    color: "#b91c1c",
+    fontSize: 13,
+  },
+  lockDialogActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  },
+  cancelLockBtn: {
+    padding: "10px 16px",
+    border: "1px solid #d1d5db",
+    borderRadius: 8,
+    background: "#ffffff",
+    color: "#374151",
+    cursor: "pointer",
+  },
+  confirmLockBtn: {
+    padding: "10px 16px",
+    border: "1px solid #b91c1c",
+    borderRadius: 8,
+    background: "#b91c1c",
+    color: "#ffffff",
+    fontWeight: 600,
+    cursor: "pointer",
   },
   toggleBtn: {
     padding: "9px 18px",

@@ -9,11 +9,15 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import axiosClient from "../../src/api/axiosClient";
 import { router } from "expo-router";
+import { isAxiosError } from "axios";
 import {
   getBiometricStatus,
   isBiometricEnabled,
@@ -28,10 +32,12 @@ export default function ProfileScreen() {
   const [biometricStatus, setBiometricStatus] = useState<BiometricStatus | null>(null);
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
   const [loadingBiometric, setLoadingBiometric] = useState(true);
-    const [kycStatus, setKycStatus] = useState("unverified");
+  const [kycStatus, setKycStatus] = useState("unverified");
   const [kycLimits, setKycLimits] = useState<any>(null);
-
-
+  const [lockModalVisible, setLockModalVisible] = useState(false);
+  const [lockPin, setLockPin] = useState("");
+  const [lockingWallet, setLockingWallet] = useState(false);
+  const [lockError, setLockError] = useState("");
 
   useEffect(() => {
     loadBiometricSettings();
@@ -90,6 +96,53 @@ export default function ProfileScreen() {
       await setBiometricEnabled(false);
       setBiometricEnabledState(false);
     }
+  };
+
+  const handleLockWallet = async () => {
+    if (lockingWallet) return;
+
+    const pin = lockPin.trim();
+    if (!pin) {
+      setLockError("Enter your PIN to lock your wallet.");
+      return;
+    }
+
+    setLockingWallet(true);
+    setLockError("");
+    try {
+      await axiosClient.post("wallet/lock/", { pin });
+    } catch (error) {
+      const data = isAxiosError<
+        { error?: string; detail?: string; message?: string } | string
+      >(error)
+        ? error.response?.data
+        : undefined;
+      const message =
+        typeof data === "string"
+          ? data
+          : data?.error || data?.detail || data?.message;
+      setLockError(message || "Could not lock wallet. Please try again.");
+      setLockingWallet(false);
+      return;
+    }
+
+    setLockModalVisible(false);
+    setLockPin("");
+    let localLogoutFailed = false;
+    try {
+      await logout();
+    } catch (error) {
+      localLogoutFailed = true;
+      console.log("Wallet locked, but local logout failed:", error);
+    }
+    setLockingWallet(false);
+    router.replace("/(auth)/login");
+    Alert.alert(
+      "Wallet locked",
+      localLogoutFailed
+        ? "Your wallet is locked and all sessions have been signed out, but this device could not clear its saved sign-in. Please restart the app."
+        : "All sessions have been signed out. A confirmation email has been sent."
+    );
   };
 
   const handleLogout = () => {
@@ -248,11 +301,88 @@ export default function ProfileScreen() {
         ))}
       </View>
 
+      <TouchableOpacity
+        accessibilityRole="button"
+        style={styles.lockWalletButton}
+        onPress={() => {
+          setLockError("");
+          setLockModalVisible(true);
+        }}
+      >
+        <MaterialCommunityIcons name="lock-alert-outline" size={20} color="#B91C1C" />
+        <View style={styles.lockWalletCopy}>
+          <Text style={styles.lockWalletTitle}>Lock wallet now</Text>
+          <Text style={styles.lockWalletSubtitle}>
+            Freeze your wallet and sign out all sessions
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color="#B91C1C" />
+      </TouchableOpacity>
+
       {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <MaterialCommunityIcons name="logout" size={20} color="#DC2626" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
+
+      <Modal
+        visible={lockModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!lockingWallet) setLockModalVisible(false);
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.lockDialog}>
+            <Text style={styles.lockDialogTitle}>Lock wallet now?</Text>
+            <Text style={styles.lockDialogText}>
+              Your wallet will be frozen immediately, all sessions will be signed
+              out, and a confirmation email will be sent.
+            </Text>
+            <TextInput
+              accessibilityLabel="Wallet PIN"
+              style={styles.pinInput}
+              placeholder="Enter your PIN"
+              keyboardType="number-pad"
+              secureTextEntry
+              value={lockPin}
+              onChangeText={setLockPin}
+              editable={!lockingWallet}
+              returnKeyType="done"
+              onSubmitEditing={handleLockWallet}
+            />
+            {lockError ? <Text style={styles.lockError}>{lockError}</Text> : null}
+            <View style={styles.lockDialogActions}>
+              <TouchableOpacity
+                style={styles.cancelLockButton}
+                disabled={lockingWallet}
+                onPress={() => {
+                  setLockPin("");
+                  setLockError("");
+                  setLockModalVisible(false);
+                }}
+              >
+                <Text style={styles.cancelLockText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmLockButton}
+                disabled={lockingWallet}
+                onPress={handleLockWallet}
+              >
+                {lockingWallet ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmLockText}>Lock wallet</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -364,6 +494,93 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#DC2626",
+  },
+  lockWalletButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  lockWalletCopy: {
+    flex: 1,
+  },
+  lockWalletTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#B91C1C",
+  },
+  lockWalletSubtitle: {
+    fontSize: 13,
+    color: "#7F1D1D",
+    marginTop: 3,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+  },
+  lockDialog: {
+    padding: 22,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+  },
+  lockDialogTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  lockDialogText: {
+    color: "#475569",
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  pinInput: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#0F172A",
+  },
+  lockError: {
+    color: "#B91C1C",
+    marginTop: 8,
+  },
+  lockDialogActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 20,
+  },
+  cancelLockButton: {
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    minHeight: 44,
+  },
+  cancelLockText: {
+    color: "#475569",
+    fontWeight: "600",
+  },
+  confirmLockButton: {
+    minWidth: 112,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    backgroundColor: "#B91C1C",
+    borderRadius: 10,
+  },
+  confirmLockText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   webBadge: {
   backgroundColor: "#E2E8F0",
