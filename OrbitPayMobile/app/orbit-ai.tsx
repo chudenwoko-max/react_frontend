@@ -63,7 +63,7 @@ export default function OrbitAIChat() {
         `chat/sessions/${sessionId}/messages/`,
         {
           message: messageText,
-          context: { system_prompt: getGuideSystemPrompt() },
+          system_prompt: getGuideSystemPrompt(),
         }
       );
 
