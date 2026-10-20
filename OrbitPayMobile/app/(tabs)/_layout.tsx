@@ -288,6 +288,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="two-factor" options={{ href: null }} />
         <Tabs.Screen name="pending-requests" options={{ href: null }} />
         <Tabs.Screen name="sessions" options={{ href: null }} />
+        <Tabs.Screen name="legal" options={{ href: null }} />
       </Tabs>
       <MoreSheet
         ref={bottomSheetRef}
