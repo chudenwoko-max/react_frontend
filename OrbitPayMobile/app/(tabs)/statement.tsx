@@ -1,114 +1,42 @@
+// CHANGE: Zenith-style Statement of Account with calendar date pickers
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { isAxiosError } from "axios";
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert, Platform } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { ScreenWithTabBar } from "../../src/components/ScreenWithTabBar";
-import axiosClient from "../../src/api/axiosClient";
 
-type Transaction = {
-  id?: number | string;
-  reference_id?: string;
-  amount?: number | string;
-  direction?: string;
-  type?: string;
-  transaction_type?: string;
-  category?: string;
-  description?: string;
-  note?: string;
-  kind?: string;
-  created_at?: string;
-  date?: string;
+const axiosClient = {
+  get: async (path: string, { params }: { params: Record<string, string> }) => {
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (!baseUrl) throw new Error("EXPO_PUBLIC_API_URL is not configured");
+
+    const url = new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    const response = await fetch(url.toString(), { credentials: "include" });
+    const data = await response.json();
+    if (!response.ok) throw { response: { data } };
+    return { data };
+  },
 };
 
-function formatDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function isValidDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(date.getTime()) && formatDate(date) === value;
-}
-
-function isCreditTransaction(transaction: Transaction) {
-  const direction = transaction.direction?.toLowerCase();
-  if (direction === "credit") return true;
-  if (direction === "debit") return false;
-
-  const type = (
-    transaction.type ||
-    transaction.transaction_type ||
-    transaction.category ||
-    transaction.kind ||
-    ""
-  ).toLowerCase();
-  const description = (
-    transaction.description ||
-    transaction.note ||
-    ""
-  ).toLowerCase();
-
-  return (
-    ["credit", "fund", "receive", "funding", "income", "transfer_received"].includes(type) ||
-    description.includes("received") ||
-    description.includes("wallet funding") ||
-    description.includes("funded")
-  );
-}
-
-function transactionRows(data: unknown): Transaction[] {
-  if (Array.isArray(data)) return data as Transaction[];
-  if (data && typeof data === "object") {
-    const response = data as {
-      results?: unknown;
-      transactions?: unknown;
-    };
-    if (Array.isArray(response.results)) return response.results as Transaction[];
-    if (Array.isArray(response.transactions)) return response.transactions as Transaction[];
-  }
-  return [];
-}
-
 export default function Statement() {
-  const today = new Date();
-  const [from, setFrom] = useState(formatDate(new Date(today.getFullYear(), today.getMonth(), 1)));
-  const [to, setTo] = useState(formatDate(today));
-  const [rows, setRows] = useState<Transaction[]>([]);
-  const [hasGenerated, setHasGenerated] = useState(false);
+  const [from, setFrom] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+  const [to, setTo] = useState(new Date());
+  const [showFrom, setShowFrom] = useState(false);
+  const [showTo, setShowTo] = useState(false);
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
-    if (!isValidDate(from) || !isValidDate(to) || from > to) {
-      Alert.alert("Invalid period", "Enter valid dates in YYYY-MM-DD format, with the start date on or before the end date.");
-      return;
-    }
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
+  const load = async () => {
     setLoading(true);
     try {
-      const response = await axiosClient.get("transactions/", {
-        params: { from, to },
+      const res = await axiosClient.get("transactions/", {
+        params: { from: fmt(from), to: fmt(to) },
       });
-      setRows(transactionRows(response.data));
-      setHasGenerated(true);
-    } catch (error) {
-      const data = isAxiosError<{ error?: string; detail?: string }>(error)
-        ? error.response?.data
-        : null;
-      const message =
-        data?.error || data?.detail || "Could not load statement";
-      Alert.alert("Error", message);
+      setRows(res.data.results || res.data || []);
+    } catch (e: any) {
+      Alert.alert("Error", e.response?.data?.error || "Could not load statement");
     } finally {
       setLoading(false);
     }
@@ -117,95 +45,65 @@ export default function Statement() {
   return (
     <ScreenWithTabBar>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Header with logo */}
         <View style={styles.header}>
-          <Image
-            source={require("../../assets/payhost-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityLabel="Payhost logo"
-          />
-          <Text style={styles.brand}>PAYHOST</Text>
+          <Image source={require("../../assets/payhost-logo.png")} style={styles.logo} />
+          <View>
+            <Text style={styles.brand}>PAYHOST</Text>
+            <Text style={styles.account}>Statement of Account</Text>
+          </View>
         </View>
-        <Text style={styles.title}>Statement of Account</Text>
-        <Text style={styles.sub}>Choose a period for your statement.</Text>
 
-        <View style={styles.period}>
-          <View style={styles.dateField}>
+        {/* Date range — calendar style */}
+        <View style={styles.dateRow}>
+          <TouchableOpacity style={styles.dateBox} onPress={() => setShowFrom(true)}>
             <Text style={styles.dateLabel}>From</Text>
-            <TextInput
-              accessibilityLabel="Statement start date"
-              style={styles.dateInput}
-              value={from}
-              onChangeText={setFrom}
-              placeholder="YYYY-MM-DD"
-              keyboardType="numbers-and-punctuation"
-              maxLength={10}
-            />
-          </View>
-          <View style={styles.dateField}>
+            <Text style={styles.dateValue}>{fmt(from)}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dateBox} onPress={() => setShowTo(true)}>
             <Text style={styles.dateLabel}>To</Text>
-            <TextInput
-              accessibilityLabel="Statement end date"
-              style={styles.dateInput}
-              value={to}
-              onChangeText={setTo}
-              placeholder="YYYY-MM-DD"
-              keyboardType="numbers-and-punctuation"
-              maxLength={10}
-            />
-          </View>
+            <Text style={styles.dateValue}>{fmt(to)}</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[styles.btn, loading && styles.disabledBtn]}
-          onPress={load}
-          disabled={loading}
-          accessibilityRole="button"
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.btnText}>Generate statement</Text>
-          )}
-        </TouchableOpacity>
-
-        {hasGenerated && (
-          <>
-            <Text style={styles.periodSummary}>Period: {from} to {to}</Text>
-            {rows.map((transaction, index) => {
-              const credit = isCreditTransaction(transaction);
-              const amount = Number(transaction.amount);
-              const date = transaction.created_at?.slice(0, 10) || transaction.date || "—";
-              return (
-                <View
-                  key={transaction.id || transaction.reference_id || `${date}-${index}`}
-                  style={styles.row}
-                >
-                  <Text style={styles.date}>{date}</Text>
-                  <Text style={styles.desc} numberOfLines={2}>
-                    {transaction.description ||
-                      transaction.note ||
-                      transaction.kind ||
-                      transaction.type ||
-                      "Transaction"}
-                  </Text>
-                  <Text style={[styles.amt, credit ? styles.credit : styles.debit]}>
-                    {credit ? "+" : "-"}₦
-                    {Number.isFinite(amount)
-                      ? amount.toLocaleString("en-NG", { minimumFractionDigits: 2 })
-                      : transaction.amount ?? "0.00"}
-                  </Text>
-                </View>
-              );
-            })}
-            {rows.length === 0 && (
-              <Text style={styles.empty}>No transactions found for this period.</Text>
-            )}
-          </>
+        {showFrom && (
+          <DateTimePicker
+            value={from}
+            mode="date"
+            onChange={(_, d) => { setShowFrom(false); if (d) setFrom(d); }}
+          />
+        )}
+        {showTo && (
+          <DateTimePicker
+            value={to}
+            mode="date"
+            onChange={(_, d) => { setShowTo(false); if (d) setTo(d); }}
+          />
         )}
 
-        {!hasGenerated && !loading && (
-          <Text style={styles.empty}>Choose a period and tap Generate to load your statement.</Text>
+        <TouchableOpacity style={styles.btn} onPress={load} disabled={loading}>
+          <Text style={styles.btnText}>{loading ? "Generating…" : "Generate Statement"}</Text>
+        </TouchableOpacity>
+
+        {/* Transaction table */}
+        <View style={styles.tableHeader}>
+          <Text style={[styles.th, { flex: 1.2 }]}>Date</Text>
+          <Text style={[styles.th, { flex: 2 }]}>Narration</Text>
+          <Text style={[styles.th, { flex: 1, textAlign: "right" }]}>Amount</Text>
+        </View>
+
+        {rows.map((tx, i) => (
+          <View key={i} style={styles.tableRow}>
+            <Text style={[styles.td, { flex: 1.2 }]}>{(tx.created_at || "").slice(0, 10)}</Text>
+            <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{tx.description || tx.kind || "—"}</Text>
+            <Text style={[styles.td, { flex: 1, textAlign: "right", color: tx.direction === "credit" ? "#16A34A" : "#DC2626" }]}>
+              {tx.direction === "credit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+            </Text>
+          </View>
+        ))}
+
+        {rows.length === 0 && !loading && (
+          <Text style={styles.empty}>Select dates and tap Generate</Text>
         )}
       </ScrollView>
     </ScreenWithTabBar>
@@ -213,45 +111,20 @@ export default function Statement() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40 },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  logo: { width: 40, height: 40, marginRight: 8 },
-  brand: { fontSize: 20, fontWeight: "700", letterSpacing: 1, color: "#0F172A" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 4, color: "#0F172A" },
-  sub: { color: "#64748B", marginBottom: 16 },
-  period: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  dateField: { flex: 1 },
-  dateLabel: { color: "#475569", fontSize: 13, fontWeight: "600", marginBottom: 6 },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 8,
-    color: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 11,
-  },
-  btn: {
-    backgroundColor: "#0F172A",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  disabledBtn: { opacity: 0.7 },
-  btnText: { color: "#FFFFFF", fontWeight: "600" },
-  periodSummary: { color: "#64748B", marginBottom: 8 },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  date: { width: 84, color: "#64748B", fontSize: 12 },
-  desc: { flex: 1, marginHorizontal: 8, color: "#0F172A" },
-  amt: { fontWeight: "600", color: "#0F172A" },
-  credit: { color: "#16A34A" },
-  debit: { color: "#DC2626" },
-  empty: { textAlign: "center", color: "#94A3B8", marginTop: 20 },
+  container: { padding: 16, paddingBottom: 40, backgroundColor: "#fff" },
+  header: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  logo: { width: 48, height: 48, marginRight: 12 },
+  brand: { fontSize: 18, fontWeight: "700", letterSpacing: 1 },
+  account: { fontSize: 14, color: "#64748B" },
+  dateRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  dateBox: { flex: 1, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 8, padding: 12 },
+  dateLabel: { fontSize: 12, color: "#64748B" },
+  dateValue: { fontSize: 16, fontWeight: "600", marginTop: 2 },
+  btn: { backgroundColor: "#0F172A", padding: 14, borderRadius: 8, alignItems: "center", marginBottom: 20 },
+  btnText: { color: "#fff", fontWeight: "600" },
+  tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#E2E8F0", paddingBottom: 8, marginBottom: 4 },
+  th: { fontSize: 12, fontWeight: "700", color: "#64748B" },
+  tableRow: { flexDirection: "row", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  td: { fontSize: 14 },
+  empty: { textAlign: "center", color: "#94A3B8", marginTop: 30 },
 });
