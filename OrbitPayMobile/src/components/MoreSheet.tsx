@@ -29,6 +29,7 @@ const menuItems = [
   { icon: "bank-transfer-out", label: "Withdraw", route: "/(tabs)/withdraw", color: "#DC2626" },
   { icon: "two-factor-authentication", label: "2FA", route: "/(tabs)/two-factor", color: "#7C3AED" },
   { icon: "cash-clock", label: "Pending Requests", route: "/(tabs)/pending-requests", color: "#D97706" },
+  { icon: "file-document-multiple-outline", label: "Statement of Account", route: "/(tabs)/statement", color: "#0F172A" },
   { icon: "file-document-outline", label: "Privacy & Terms", route: "/(tabs)/legal", color: "#475569" },
 ];
 
