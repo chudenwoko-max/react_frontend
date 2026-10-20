@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import ClearHoldButton from "../src/components/ClearHoldButton";
 import {
   getOrCreateReferenceId,
   clearReferenceId,
 } from "../src/utils/idempotency";
+import { isPaymentHoldError } from "../src/utils/paymentHold";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 
 type Card = { id: number; last4: string; brand?: string };
@@ -35,6 +37,7 @@ export default function PayMerchantScreen() {
   const [cardId, setCardId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [awaitingCheckout, setAwaitingCheckout] = useState(false);
+  const [showClearHold, setShowClearHold] = useState(false);
 
   const loadCards = useCallback(async () => {
     try {
@@ -100,6 +103,7 @@ export default function PayMerchantScreen() {
   }
 
   setBusy(true);
+  setShowClearHold(false);
 
   // CHANGE: one key per merchant pay. The view rejects a missing Idempotency-Key.
   const operationKey = `merchant_pay_${merchant_id}_${amt}`;
@@ -123,6 +127,7 @@ export default function PayMerchantScreen() {
     await clearReferenceId(operationKey);
     finishOk();
   } catch (e: any) {
+    setShowClearHold(isPaymentHoldError(e));
     Alert.alert("Error", apiError(e, "Wallet pay failed"));
     setBusy(false);
   }
@@ -134,6 +139,7 @@ export default function PayMerchantScreen() {
     const amt = parsedAmount();
     if (merchant_id == null || amt == null) return;
     setBusy(true);
+    setShowClearHold(false);
     try {
       const res = await axiosClient.post("merchant/pay-checkout/", {
         merchant_id,
@@ -146,6 +152,7 @@ export default function PayMerchantScreen() {
       await Linking.openURL(url);
     } catch (e: any) {
       setAwaitingCheckout(false);
+      setShowClearHold(isPaymentHoldError(e));
       Alert.alert("Error", apiError(e, "Checkout failed"));
     } finally {
       setBusy(false);
@@ -158,6 +165,7 @@ export default function PayMerchantScreen() {
     const amt = parsedAmount();
     if (merchant_id == null || amt == null) return;
     setBusy(true);
+    setShowClearHold(false);
     try {
       await axiosClient.post("merchant/pay-card/", {
         merchant_id,
@@ -166,6 +174,7 @@ export default function PayMerchantScreen() {
       });
       finishOk();
     } catch (e: any) {
+      setShowClearHold(isPaymentHoldError(e));
       Alert.alert("Error", apiError(e, "Card pay failed"));
       setBusy(false);
     }
@@ -230,6 +239,12 @@ export default function PayMerchantScreen() {
       >
         <Text style={styles.btnText}>Pay with saved card</Text>
       </TouchableOpacity>
+
+      {showClearHold ? (
+        <ClearHoldButton
+          onCleared={() => setShowClearHold(false)}
+        />
+      ) : null}
     </View>
   );
 }

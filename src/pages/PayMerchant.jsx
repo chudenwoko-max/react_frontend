@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
+import { ClearHoldButton } from "../components/ClearHoldButton";
+import { isPaymentHoldError } from "../utils/paymentHold";
 
 export default function PayMerchant() {
   const [cards, setCards] = useState([]);
@@ -11,6 +13,7 @@ export default function PayMerchant() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showClearHold, setShowClearHold] = useState(false);
 
   useEffect(() => {
     axiosClient
@@ -31,6 +34,7 @@ export default function PayMerchant() {
     }
 
     setBusy(true);
+    setShowClearHold(false);
 
     try {
       // Step 1: verify PIN → get pin_token
@@ -78,6 +82,7 @@ export default function PayMerchant() {
       window.location.href = "/dashboard";
 
     } catch (err) {
+      setShowClearHold(isPaymentHoldError(err));
       sessionStorage.removeItem("pay_idem");
 
       console.error(
@@ -107,6 +112,7 @@ export default function PayMerchant() {
     }
 
     setBusy(true);
+    setShowClearHold(false);
 
     try {
       await axiosClient.post("merchant/pay-card/", {
@@ -122,6 +128,7 @@ export default function PayMerchant() {
       window.location.href = "/dashboard";
 
     } catch (err) {
+      setShowClearHold(isPaymentHoldError(err));
       console.error(
         err.response?.status,
         err.response?.data,
@@ -142,6 +149,7 @@ export default function PayMerchant() {
   const addCardCheckout = async () => {
     if (busy) return;
     setBusy(true);
+    setShowClearHold(false);
 
     try {
       const res = await axiosClient.post("merchant/pay-checkout/", {
@@ -155,6 +163,7 @@ export default function PayMerchant() {
 
       window.location.href = url;
     } catch (err) {
+      setShowClearHold(isPaymentHoldError(err));
       console.error(
         err.response?.status,
         err.response?.data,
@@ -259,6 +268,15 @@ export default function PayMerchant() {
         <p style={{ marginTop: 12, color: "red", fontSize: 14 }}>
           {msg}
         </p>
+      )}
+
+      {showClearHold && (
+        <ClearHoldButton
+          onCleared={() => {
+            setShowClearHold(false);
+            setMsg("");
+          }}
+        />
       )}
     </div>
   );
