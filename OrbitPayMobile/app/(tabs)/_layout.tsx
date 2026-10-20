@@ -159,8 +159,8 @@ export default function TabsLayout() {
           tabBarActiveTintColor: "#0F172A",
           tabBarInactiveTintColor: "#94A3B8",
           tabBarStyle: {
-            height: 64,
-            paddingBottom: 8,
+            height: 72,
+            paddingBottom: 12,
             paddingTop: 6,
             backgroundColor: "#FFFFFF",
             borderTopWidth: 1,
@@ -172,7 +172,7 @@ export default function TabsLayout() {
             zIndex: 100,
             elevation: 100,
           },
-          tabBarLabelStyle: { fontSize: 11 },
+          tabBarLabelStyle: { fontSize: 11, marginBottom: 2 },
         }}
       >
         <Tabs.Screen
@@ -218,7 +218,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="bills"
           options={{
-            title: "Airtime & Data",
+            title: "Airtime & Bills",
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="cellphone" size={size} color={color} />
             ),
@@ -236,18 +236,18 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="fund"
+          name="history"
           options={{
-            title: "Bills",
+            title: "History",
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="file-document-outline" size={size} color={color} />
+              <MaterialCommunityIcons name="history" size={size} color={color} />
             ),
             tabBarButton: (props) => (
               <TabPress
                 style={props.style}
                 onPress={() => {
                   bottomSheetRef.current?.close();
-                  router.push("/(tabs)/bills");
+                  router.push("/(tabs)/history");
                 }}
               >
                 {props.children}
@@ -269,7 +269,7 @@ export default function TabsLayout() {
             ),
           }}
         />
-        <Tabs.Screen name="history" options={{ href: null }} />
+        <Tabs.Screen name="fund" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
         <Tabs.Screen name="request-money" options={{ href: null }} />
         <Tabs.Screen name="savings" options={{ href: null }} />

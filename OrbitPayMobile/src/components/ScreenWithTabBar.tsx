@@ -13,7 +13,7 @@ export function ScreenWithTabBar({ children, style }: ScreenWithTabBarProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 80,
+    paddingBottom: 88,
     backgroundColor: "#FFFFFF",
   },
 });
