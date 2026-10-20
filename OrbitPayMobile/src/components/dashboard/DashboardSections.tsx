@@ -139,14 +139,18 @@ export const QuickActions = memo(function QuickActions() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/history")}
+          onPress={() => router.push("/(tabs)/guide")}
           activeOpacity={0.8}
         >
           <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
-            <MaterialCommunityIcons name="history" size={24} color="#7C3AED" />
+            <MaterialCommunityIcons
+              name="book-open-variant"
+              size={24}
+              color="#7C3AED"
+            />
           </View>
           <Text style={styles.actionText} numberOfLines={2}>
-            History
+            Payhost Guide
           </Text>
         </TouchableOpacity>
 

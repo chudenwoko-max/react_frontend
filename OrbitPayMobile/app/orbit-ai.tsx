@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
+import { getGuideSystemPrompt } from "../src/data/payhostGuide";
 
 const SUGGESTED_QUESTIONS = [
   "What is my balance?",
@@ -60,7 +61,10 @@ export default function OrbitAIChat() {
     try {
       const res = await axiosClient.post(
         `chat/sessions/${sessionId}/messages/`,
-        { message: messageText }
+        {
+          message: messageText,
+          context: { system_prompt: getGuideSystemPrompt() },
+        }
       );
 
       if (res.data.reply) {

@@ -675,6 +675,8 @@ export default function Dashboard() {
         </View>
       ) : null}
 
+      <QuickActions />
+
       {savingsSuggestion ? (
         <View style={styles.suggestionCard}>
           <Text style={styles.suggestionLabel}>Savings suggestion</Text>
@@ -694,7 +696,6 @@ export default function Dashboard() {
 
       <MonthSnapshot monthSpent={monthSpent} monthReceived={monthReceived} />
       <WalletsGrid wallets={wallets} />
-      <QuickActions />
       <WeeklyChart weeklyData={weeklyData} />
 
       {savingsGoals.length > 0 ? (

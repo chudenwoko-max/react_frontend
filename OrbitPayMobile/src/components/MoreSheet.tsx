@@ -12,7 +12,6 @@ const menuItems = [
   { icon: "plus", label: "Fund Wallet", route: "/(tabs)/fund", color: "#16A34A" },
   { icon: "wallet-outline", label: "Wallet", route: "/(tabs)/wallet", color: "#0F172A" },
   { icon: "account-outline", label: "Profile", route: "/(tabs)/profile", color: "#1E40AF" },
-  { icon: "history", label: "History", route: "/(tabs)/history", color: "#475569" },
   { icon: "cash-plus", label: "Request Money", route: "/(tabs)/request-money", color: "#D97706" },
   { icon: "piggy-bank", label: "Savings Goals", route: "/(tabs)/savings", color: "#7C3AED" },
   { icon: "receipt", label: "Bill Payments", route: "/(tabs)/bills", color: "#DC2626" },
