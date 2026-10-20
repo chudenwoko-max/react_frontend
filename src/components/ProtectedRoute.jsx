@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import axiosClient from "../axiosClient";
@@ -7,7 +7,14 @@ import UnlockWallet from "./UnlockWallet";
 export default function ProtectedRoute({ children }) {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [refreshingProfile, setRefreshingProfile] = useState(false);
+
+  // CHANGE: legal pages are public
+  const publicPaths = ["/privacy", "/terms"];
+  if (publicPaths.includes(location.pathname)) {
+    return children;
+  }
 
   const handleWalletUnlocked = async () => {
     if (refreshingProfile) return;
