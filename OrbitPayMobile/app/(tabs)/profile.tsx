@@ -180,22 +180,22 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { icon: "account-outline", label: "Edit Profile", onPress: () => router.push("/edit-profile") },
-    { icon: "shield-check-outline", label: "Verify Identity (KYC)", onPress: () => router.push("/kyc") },
-    { icon: "lock-outline", label: "Change PIN", onPress: () => router.push("/set-pin") },
-    { icon: "devices", label: "Active Sessions", onPress: () => router.push("/sessions") },
-    { icon: "bank-outline", label: "Bank Account", onPress: () => router.push("/bank-account") },
-    { icon: "earth", label: "Send abroad", onPress: () => router.push("/send-corridor") },
+    { icon: "account-outline", label: "Edit Profile", onPress: () => router.push("/(tabs)/edit-profile") },
+    { icon: "shield-check-outline", label: "Verify Identity (KYC)", onPress: () => router.push("/(tabs)/kyc") },
+    { icon: "lock-outline", label: "Change PIN", onPress: () => router.push("/(tabs)/set-pin") },
+    { icon: "devices", label: "Active Sessions", onPress: () => router.push("/(tabs)/sessions") },
+    { icon: "bank-outline", label: "Bank Account", onPress: () => router.push("/(tabs)/bank-account") },
+    { icon: "earth", label: "Send abroad", onPress: () => router.push("/(tabs)/send-corridor") },
 
-    { icon: "credit-card-outline", label: "Virtual Cards", onPress: () => router.push("/virtual-cards") },
-    { icon: "piggy-bank-outline", label: "Savings Goals", onPress: () => router.push("/savings") },
-    { icon: "receipt", label: "Bill Payments", onPress: () => router.push("/bills") },
-    { icon: "currency-usd", label: "Currency Converter", onPress: () => router.push("/converter") },
-    { icon: "calendar-clock", label: "Scheduled Transfers", onPress: () => router.push("/scheduled") },
-    { icon: "account-group", label: "Referral", onPress: () => router.push("/referral") },
-    { icon: "headset", label: "Support", onPress: () => router.push("/support") },
-    { icon: "bell-outline", label: "Notifications", onPress: () => router.push("/notifications") },
-    { icon: "two-factor-authentication", label: "Two-Factor Auth", onPress: () => router.push("/two-factor") },
+    { icon: "credit-card-outline", label: "Virtual Cards", onPress: () => router.push("/(tabs)/virtual-cards") },
+    { icon: "piggy-bank-outline", label: "Savings Goals", onPress: () => router.push("/(tabs)/savings") },
+    { icon: "receipt", label: "Bill Payments", onPress: () => router.push("/(tabs)/bills") },
+    { icon: "currency-usd", label: "Currency Converter", onPress: () => router.push("/(tabs)/converter") },
+    { icon: "calendar-clock", label: "Scheduled Transfers", onPress: () => router.push("/(tabs)/scheduled") },
+    { icon: "account-group", label: "Referral", onPress: () => router.push("/(tabs)/referral") },
+    { icon: "headset", label: "Support", onPress: () => router.push("/(tabs)/support") },
+    { icon: "bell-outline", label: "Notifications", onPress: () => router.push("/(tabs)/notifications") },
+    { icon: "two-factor-authentication", label: "Two-Factor Auth", onPress: () => router.push("/(tabs)/two-factor") },
        
   ];
 
@@ -258,7 +258,7 @@ export default function ProfileScreen() {
 </View>
 
       <TouchableOpacity
-        onPress={() => router.push("/kyc")}
+        onPress={() => router.push("/(tabs)/kyc")}
         style={{
           backgroundColor: "#F1F5F9",
           borderRadius: 12,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   header: {
     alignItems: "center",

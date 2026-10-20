@@ -271,6 +271,23 @@ export default function TabsLayout() {
         />
         <Tabs.Screen name="history" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
+        <Tabs.Screen name="request-money" options={{ href: null }} />
+        <Tabs.Screen name="savings" options={{ href: null }} />
+        <Tabs.Screen name="converter" options={{ href: null }} />
+        <Tabs.Screen name="scheduled" options={{ href: null }} />
+        <Tabs.Screen name="virtual-cards" options={{ href: null }} />
+        <Tabs.Screen name="bank-account" options={{ href: null }} />
+        <Tabs.Screen name="send-corridor" options={{ href: null }} />
+        <Tabs.Screen name="kyc" options={{ href: null }} />
+        <Tabs.Screen name="set-pin" options={{ href: null }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null }} />
+        <Tabs.Screen name="referral" options={{ href: null }} />
+        <Tabs.Screen name="support" options={{ href: null }} />
+        <Tabs.Screen name="notifications" options={{ href: null }} />
+        <Tabs.Screen name="withdraw" options={{ href: null }} />
+        <Tabs.Screen name="two-factor" options={{ href: null }} />
+        <Tabs.Screen name="pending-requests" options={{ href: null }} />
+        <Tabs.Screen name="sessions" options={{ href: null }} />
       </Tabs>
       <MoreSheet
         ref={bottomSheetRef}
