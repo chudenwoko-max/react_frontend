@@ -188,7 +188,7 @@ export default function Dashboard() {
         return;
       }
       setWeeklyInsight({
-        title: weekly.title || "Payhost Insight · This week",
+        title: "Payhost Insight · This week",
         message: weekly.body || weekly.message || "",
         save_reason: weekly.save_reason || "",
         suggested_save: weekly.suggested_save,
