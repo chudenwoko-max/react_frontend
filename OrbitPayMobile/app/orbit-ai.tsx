@@ -16,6 +16,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
 import { getGuideSystemPrompt } from "../src/data/payhostGuide";
+import { getLiveContext } from "../src/utils/aiLiveContext";
+
+const ACCOUNT_KEYWORDS = [
+  "my limit",
+  "daily limit",
+  "per-send limit",
+  "per send limit",
+  "my tier",
+  "remaining",
+  "how much can i",
+  "am i frozen",
+  "my balance",
+];
 
 const SUGGESTED_QUESTIONS = [
   "What is my balance?",
@@ -59,11 +72,18 @@ export default function OrbitAIChat() {
     setLoading(true);
 
     try {
+      const needsLiveContext = ACCOUNT_KEYWORDS.some((keyword) =>
+        messageText.toLowerCase().includes(keyword)
+      );
+      const liveContext = needsLiveContext
+        ? `\n\n${await getLiveContext()}`
+        : "";
+
       const res = await axiosClient.post(
         `chat/sessions/${sessionId}/messages/`,
         {
           message: messageText,
-          system_prompt: getGuideSystemPrompt(),
+          system_prompt: `${getGuideSystemPrompt()}${liveContext}`,
         }
       );
 
