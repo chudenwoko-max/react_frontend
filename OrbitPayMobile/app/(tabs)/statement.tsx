@@ -5,6 +5,8 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { isAxiosError } from "axios";
 import { ScreenWithTabBar } from "../../src/components/ScreenWithTabBar";
 import axiosClient from "../../src/api/axiosClient";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 type Transaction = {
   id?: string | number;
@@ -22,6 +24,18 @@ type StatementResponse = {
 
 const formatDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character];
+  });
 
 export default function Statement() {
   const [from, setFrom] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
@@ -60,6 +74,73 @@ export default function Statement() {
       Alert.alert("Error", message || "Could not load statement");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (rows.length === 0) {
+      Alert.alert("No data", "Generate a statement first");
+      return;
+    }
+
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { display: flex; align-items: center; margin-bottom: 20px; }
+            .logo { width: 50px; height: 50px; margin-right: 12px; }
+            h1 { margin: 0; font-size: 22px; }
+            .sub { color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; font-size: 12px; }
+            th { background: #f8f9fa; }
+            .credit { color: #16A34A; }
+            .debit { color: #DC2626; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img class="logo" src="https://payhost.dev/payhost-logo.png" />
+            <div>
+              <h1>PAYHOST</h1>
+              <div class="sub">Statement of Account</div>
+              <div class="sub">${formatDate(from)} to ${formatDate(to)}</div>
+            </div>
+          </div>
+          <table>
+            <tr><th>Date</th><th>Narration</th><th>Amount</th></tr>
+            ${rows.map((tx) => {
+              const amount = Number(tx.amount ?? 0);
+              const isCredit = tx.direction
+                ? tx.direction === "credit"
+                : amount >= 0;
+              const sign = tx.direction
+                ? isCredit ? "+" : "-"
+                : amount >= 0 ? "+" : "-";
+              return `
+                <tr>
+                  <td>${escapeHtml(tx.created_at?.slice(0, 10) || "—")}</td>
+                  <td>${escapeHtml(tx.description || tx.kind || "—")}</td>
+                  <td class="${isCredit ? "credit" : "debit"}">
+                    ${sign}₦${Math.abs(amount).toLocaleString()}
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </table>
+        </body>
+      </html>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Payhost Statement",
+      });
+    } catch {
+      Alert.alert("Error", "Could not create PDF");
     }
   };
 
@@ -108,6 +189,13 @@ export default function Statement() {
 
         <TouchableOpacity style={styles.btn} onPress={load} disabled={loading}>
           <Text style={styles.btnText}>{loading ? "Generating…" : "Generate Statement"}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: "#1E40AF", marginTop: 8 }]}
+          onPress={downloadPdf}
+        >
+          <Text style={styles.btnText}>Download / Share PDF</Text>
         </TouchableOpacity>
 
         <View style={styles.tableHeader}>
