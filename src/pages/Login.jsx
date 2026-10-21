@@ -5,6 +5,16 @@ import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import UnlockWallet from "../components/UnlockWallet";
 
+function unregisterServiceWorkers() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        registration.unregister();
+      });
+    });
+  }
+}
+
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +38,7 @@ export default function Login() {
       const response = await axiosClient.get("profile/");
       if (!response.data?.is_frozen) {
         setUser(response.data);
+        unregisterServiceWorkers();
         navigate("/dashboard", { replace: true });
         return true;
       }
@@ -73,6 +84,7 @@ export default function Login() {
     } else {
       setUser(res.data.user);
       toast.success("Welcome back!");
+      unregisterServiceWorkers();
       navigate("/dashboard");
     }
   } catch (err) {
@@ -105,6 +117,7 @@ const handleVerifyOTP = async (e) => {
 
     setUser(res.data.user);
     toast.success("Login successful!");
+    unregisterServiceWorkers();
     navigate("/dashboard");
   } catch (err) {
     toast.error(err.response?.data?.error || "Invalid or expired OTP");
