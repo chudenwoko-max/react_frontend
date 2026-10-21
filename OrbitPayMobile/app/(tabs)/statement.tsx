@@ -1,42 +1,63 @@
 // CHANGE: Zenith-style Statement of Account with calendar date pickers
 import { useState } from "react";
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert, Platform } from "react-native";
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { isAxiosError } from "axios";
 import { ScreenWithTabBar } from "../../src/components/ScreenWithTabBar";
+import axiosClient from "../../src/api/axiosClient";
 
-const axiosClient = {
-  get: async (path: string, { params }: { params: Record<string, string> }) => {
-    const baseUrl = process.env.EXPO_PUBLIC_API_URL;
-    if (!baseUrl) throw new Error("EXPO_PUBLIC_API_URL is not configured");
-
-    const url = new URL(path, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-    const response = await fetch(url.toString(), { credentials: "include" });
-    const data = await response.json();
-    if (!response.ok) throw { response: { data } };
-    return { data };
-  },
+type Transaction = {
+  id?: string | number;
+  created_at?: string;
+  description?: string;
+  kind?: string;
+  amount?: number | string;
+  direction?: string;
 };
+
+type StatementResponse = {
+  results?: Transaction[];
+  transactions?: Transaction[];
+};
+
+const formatDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export default function Statement() {
   const [from, setFrom] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   const [to, setTo] = useState(new Date());
   const [showFrom, setShowFrom] = useState(false);
   const [showTo, setShowTo] = useState(false);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-
   const load = async () => {
+    if (formatDate(from) > formatDate(to)) {
+      Alert.alert("Invalid date range", "The start date must be on or before the end date.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axiosClient.get("transactions/", {
-        params: { from: fmt(from), to: fmt(to) },
+        params: { from: formatDate(from), to: formatDate(to) },
       });
-      setRows(res.data.results || res.data || []);
-    } catch (e: any) {
-      Alert.alert("Error", e.response?.data?.error || "Could not load statement");
+      const data = res.data as Transaction[] | StatementResponse;
+      setRows(
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data.results)
+            ? data.results
+            : Array.isArray(data.transactions)
+              ? data.transactions
+              : []
+      );
+    } catch (error) {
+      const message =
+        isAxiosError(error)
+          ? error.response?.data?.error || error.message
+          : undefined;
+      Alert.alert("Error", message || "Could not load statement");
     } finally {
       setLoading(false);
     }
@@ -45,7 +66,6 @@ export default function Statement() {
   return (
     <ScreenWithTabBar>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Header with logo */}
         <View style={styles.header}>
           <Image source={require("../../assets/payhost-logo.png")} style={styles.logo} />
           <View>
@@ -54,15 +74,14 @@ export default function Statement() {
           </View>
         </View>
 
-        {/* Date range — calendar style */}
         <View style={styles.dateRow}>
           <TouchableOpacity style={styles.dateBox} onPress={() => setShowFrom(true)}>
             <Text style={styles.dateLabel}>From</Text>
-            <Text style={styles.dateValue}>{fmt(from)}</Text>
+            <Text style={styles.dateValue}>{formatDate(from)}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.dateBox} onPress={() => setShowTo(true)}>
             <Text style={styles.dateLabel}>To</Text>
-            <Text style={styles.dateValue}>{fmt(to)}</Text>
+            <Text style={styles.dateValue}>{formatDate(to)}</Text>
           </TouchableOpacity>
         </View>
 
@@ -70,14 +89,20 @@ export default function Statement() {
           <DateTimePicker
             value={from}
             mode="date"
-            onChange={(_, d) => { setShowFrom(false); if (d) setFrom(d); }}
+            onChange={(_, date) => {
+              setShowFrom(false);
+              if (date) setFrom(date);
+            }}
           />
         )}
         {showTo && (
           <DateTimePicker
             value={to}
             mode="date"
-            onChange={(_, d) => { setShowTo(false); if (d) setTo(d); }}
+            onChange={(_, date) => {
+              setShowTo(false);
+              if (date) setTo(date);
+            }}
           />
         )}
 
@@ -85,7 +110,6 @@ export default function Statement() {
           <Text style={styles.btnText}>{loading ? "Generating…" : "Generate Statement"}</Text>
         </TouchableOpacity>
 
-        {/* Transaction table */}
         <View style={styles.tableHeader}>
           <Text style={[styles.th, { flex: 1.2 }]}>Date</Text>
           <Text style={[styles.th, { flex: 2 }]}>Narration</Text>
@@ -93,11 +117,11 @@ export default function Statement() {
         </View>
 
         {rows.map((tx, i) => (
-          <View key={i} style={styles.tableRow}>
-            <Text style={[styles.td, { flex: 1.2 }]}>{(tx.created_at || "").slice(0, 10)}</Text>
+          <View key={tx.id ?? `${tx.created_at ?? "transaction"}-${i}`} style={styles.tableRow}>
+            <Text style={[styles.td, { flex: 1.2 }]}>{tx.created_at?.slice(0, 10) || "—"}</Text>
             <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{tx.description || tx.kind || "—"}</Text>
             <Text style={[styles.td, { flex: 1, textAlign: "right", color: tx.direction === "credit" ? "#16A34A" : "#DC2626" }]}>
-              {tx.direction === "credit" ? "+" : "-"}₦{Number(tx.amount).toLocaleString()}
+              {tx.direction === "credit" ? "+" : "-"}₦{Number(tx.amount || 0).toLocaleString()}
             </Text>
           </View>
         ))}
