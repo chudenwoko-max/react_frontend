@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosClient from "../axiosClient";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import UnlockWallet from "../components/UnlockWallet";
 
@@ -26,7 +26,6 @@ export default function Login() {
   const [walletLocked, setWalletLocked] = useState(null);
 
   const { setUser } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     setWalletLocked(localStorage.getItem("WALLET_FROZEN") === "true");
@@ -39,7 +38,7 @@ export default function Login() {
       if (!response.data?.is_frozen) {
         setUser(response.data);
         unregisterServiceWorkers();
-        navigate("/dashboard", { replace: true });
+        window.location.href = "/dashboard";
         return true;
       }
       setUser(response.data);
@@ -85,7 +84,7 @@ export default function Login() {
       setUser(res.data.user);
       toast.success("Welcome back!");
       unregisterServiceWorkers();
-      navigate("/dashboard");
+      window.location.href = "/dashboard";
     }
   } catch (err) {
     console.log("FULL ERROR RESPONSE:", err.response?.data);
@@ -118,7 +117,7 @@ const handleVerifyOTP = async (e) => {
     setUser(res.data.user);
     toast.success("Login successful!");
     unregisterServiceWorkers();
-    navigate("/dashboard");
+    window.location.href = "/dashboard";
   } catch (err) {
     toast.error(err.response?.data?.error || "Invalid or expired OTP");
   } finally {
