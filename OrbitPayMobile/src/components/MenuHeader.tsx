@@ -5,7 +5,13 @@ import { router } from "expo-router";
 export default function MenuHeader({ title }: { title: string }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+      <TouchableOpacity
+        onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.push("/(tabs)");
+        }}
+        style={styles.back}
+      >
         <MaterialCommunityIcons name="arrow-left" size={24} color="#0F172A" />
       </TouchableOpacity>
       <Text style={styles.title}>{title}</Text>

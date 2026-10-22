@@ -116,50 +116,45 @@ export default function WalletScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <>
-        <MenuHeader title="Wallet" />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#0F172A" />
-        </View>
-      </>
-    );
-  }
-
   return (
     <>
       <MenuHeader title="Wallet" />
-      <View style={styles.container}>
-        <Text style={styles.header}>My Wallets</Text>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#0F172A" />
+        </View>
+      ) : (
+        <View style={styles.container}>
+          <Text style={styles.header}>My Wallets</Text>
 
-        <FlatList
-          data={wallets}
-          keyExtractor={(item) =>
-            item.id?.toString() || getCurrencyCode(item)
-          }
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <MaterialCommunityIcons name="wallet-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyText}>No wallets found</Text>
-            </View>
-          }
-          ListHeaderComponent={
-            <TouchableOpacity
-              style={styles.fundButton}
-              onPress={() => router.push("/(tabs)/fund")}
-            >
-              <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
-              <Text style={styles.fundButtonText}>Fund Wallet</Text>
-            </TouchableOpacity>
-          }
-        />
-      </View>
+          <FlatList
+            data={wallets}
+            keyExtractor={(item) =>
+              item.id?.toString() || getCurrencyCode(item)
+            }
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <MaterialCommunityIcons name="wallet-outline" size={48} color="#CBD5E1" />
+                <Text style={styles.emptyText}>No wallets found</Text>
+              </View>
+            }
+            ListHeaderComponent={
+              <TouchableOpacity
+                style={styles.fundButton}
+                onPress={() => router.push("/(tabs)/fund")}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+                <Text style={styles.fundButtonText}>Fund Wallet</Text>
+              </TouchableOpacity>
+            }
+          />
+        </View>
+      )}
     </>
   );
 }
