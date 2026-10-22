@@ -31,6 +31,7 @@ import { Alert, Platform, DeviceEventEmitter } from "react-native";
 import { FINANCIALS_REFRESH } from "../src/notifications/refreshOnPush";
 import ClearHoldButton from "../src/components/ClearHoldButton";
 import { isPaymentHoldError } from "../src/utils/paymentHold";
+import MenuHeader from "../src/components/MenuHeader";
 
 type VirtualCard = {
   id: number;
@@ -197,8 +198,9 @@ export default function BillsScreen() {
 
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      <Text style={styles.title}>Bill Payments</Text>
+    <>
+      <MenuHeader title="Bill Payments" />
+      <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
 
       <SegmentedButtons
         value={type}
@@ -417,19 +419,14 @@ export default function BillsScreen() {
       >
         Pay Now
       </Button>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  inner: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 20,
-  },
+  inner: { padding: 20, paddingTop: 20, paddingBottom: 40 },
   input: { marginBottom: 14 },
   sectionLabel: {
     fontSize: 15,

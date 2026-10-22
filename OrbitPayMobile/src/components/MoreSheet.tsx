@@ -37,61 +37,63 @@ interface MoreSheetProps {
   onChange?: (index: number) => void;
 }
 
-const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) => {
-  const snapPoints = useMemo(() => ["55%", "85%"], []);
+const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(
+  ({ onChange }, ref) => {
+    const snapPoints = useMemo(() => ["55%", "85%"], []);
 
-  const handlePress = (route: string) => {
-    if (typeof ref !== "function" && ref?.current) {
-      ref.current.close();
-    }
+    const handlePress = (route: string) => {
+      if (typeof ref !== "function" && ref?.current) {
+        ref.current.close();
+      }
 
-    router.push(route as any);
-  };
+      router.push(route as any);
+    };
 
-  const renderBackdrop = (backdropProps: any) => (
-    <BottomSheetBackdrop
-      {...backdropProps}
-      disappearsOnIndex={-1}
-      appearsOnIndex={0}
-      pressBehavior="close"
-      style={[backdropProps.style, { bottom: 64 }]}
-    />
-  );
+    const renderBackdrop = (backdropProps: any) => (
+      <BottomSheetBackdrop
+        {...backdropProps}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        pressBehavior="close"
+        style={[backdropProps.style, { bottom: 64 }]}
+      />
+    );
 
-  return (
-    <BottomSheet
-      ref={ref}
-      index={-1}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      bottomInset={64}
-      backdropComponent={renderBackdrop}
-      onChange={onChange}
-      backgroundStyle={{ backgroundColor: "#FFFFFF" }}
-      handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
-    >
-      <BottomSheetScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>More Features</Text>
+    return (
+      <BottomSheet
+        ref={ref}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        bottomInset={64}
+        backdropComponent={renderBackdrop}
+        onChange={onChange}
+        backgroundStyle={{ backgroundColor: "#FFFFFF" }}
+        handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
+      >
+        <BottomSheetScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.title}>More Features</Text>
 
-        <View style={styles.grid}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.item}
-              onPress={() => handlePress(item.route)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>
-                <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
-              </View>
-              <Text style={styles.label}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </BottomSheetScrollView>
-    </BottomSheet>
-  );
-});
+          <View style={styles.grid}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.item}
+                onPress={() => handlePress(item.route)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>
+                  <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
+                </View>
+                <Text style={styles.label}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BottomSheetScrollView>
+      </BottomSheet>
+    );
+  }
+);
 
 export default MoreSheet;
 
