@@ -221,7 +221,7 @@ export default function SendScreen() {
       setNote("");
 
       setTimeout(() => {
-        router.replace("/(tabs)");
+        router.back();
       }, 600);
     } catch (err: any) {
       const status = err.response?.status;

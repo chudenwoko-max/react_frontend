@@ -11,11 +11,11 @@ export default function ScheduledScreen() {
         Repeating transfers are not running in production yet. Use Send for a
         one-time OrbitPay transfer.
       </Text>
-      <TouchableOpacity style={styles.btn} onPress={() => router.replace("/(tabs)/send")}>
+      <TouchableOpacity style={styles.btn} onPress={() => router.push("/(tabs)/send")}>
         <Text style={styles.btnText}>Go to Send</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
-        <Text style={styles.link}>Back to Home</Text>
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text style={styles.link}>Go Back</Text>
       </TouchableOpacity>
     </View>
   );

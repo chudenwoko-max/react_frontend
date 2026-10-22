@@ -79,7 +79,7 @@ export default function WithdrawScreen() {
             res.data?.reference_id || ""
           }`
       );
-      router.replace("/(tabs)");
+      router.back();
     } catch (e: any) {
       const status = e?.response?.status;
       const data = e?.response?.data;
@@ -156,8 +156,8 @@ export default function WithdrawScreen() {
         />
       ) : null}
 
-      <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
-        <Text style={styles.homeText}>Back to Home</Text>
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text style={styles.homeText}>Go Back</Text>
       </TouchableOpacity>
     </View>
   );

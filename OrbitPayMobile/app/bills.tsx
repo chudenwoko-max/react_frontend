@@ -163,7 +163,7 @@ export default function BillsScreen() {
 
     DeviceEventEmitter.emit(FINANCIALS_REFRESH);
 
-    router.replace("/(tabs)");
+    router.back();
   } catch (err: any) {
     const status = err?.response?.status;
 

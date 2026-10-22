@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo, useRef } from "react";
+import React, { forwardRef, useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import BottomSheet, {
   BottomSheetScrollView,
@@ -39,24 +39,12 @@ interface MoreSheetProps {
 
 const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) => {
   const snapPoints = useMemo(() => ["55%", "85%"], []);
-  const pendingRoute = useRef<string | null>(null);
 
   const handlePress = (route: string) => {
-    if (typeof ref === "function" || !ref?.current) {
-      router.push(route as any);
-      return;
+    if (typeof ref !== "function" && ref?.current) {
+      ref.current.close();
     }
 
-    pendingRoute.current = route;
-    ref.current.close();
-  };
-
-  const handleSheetChange = (index: number) => {
-    onChange?.(index);
-    if (index !== -1 || !pendingRoute.current) return;
-
-    const route = pendingRoute.current;
-    pendingRoute.current = null;
     router.push(route as any);
   };
 
@@ -78,7 +66,7 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) =>
       enablePanDownToClose
       bottomInset={64}
       backdropComponent={renderBackdrop}
-      onChange={handleSheetChange}
+      onChange={onChange}
       backgroundStyle={{ backgroundColor: "#FFFFFF" }}
       handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
     >

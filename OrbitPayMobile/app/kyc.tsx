@@ -180,10 +180,10 @@ export default function KycScreen() {
 
       if (Platform.OS === "web") {
         window.alert("Tier upgraded successfully");
-        router.replace("/(tabs)");
+        router.back();
       } else {
         Alert.alert("Success", "Tier upgraded successfully", [
-          { text: "OK", onPress: () => router.replace("/(tabs)") },
+          { text: "OK", onPress: () => router.back() },
         ]);
       }
     } catch (submitError) {
