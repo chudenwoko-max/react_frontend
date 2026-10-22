@@ -31,6 +31,7 @@ const menuItems = [
   { icon: "cash-clock", label: "Pending Requests", route: "/(tabs)/pending-requests", color: "#D97706" },
   { icon: "file-document-multiple-outline", label: "Statement of Account", route: "/(tabs)/statement", color: "#0F172A" },
   { icon: "file-document-outline", label: "Privacy & Terms", route: "/(tabs)/legal", color: "#475569" },
+  { icon: "cog", label: "Settings", route: "/(tabs)/settings", color: "#475569" },
 ];
 
 interface MoreSheetProps {
