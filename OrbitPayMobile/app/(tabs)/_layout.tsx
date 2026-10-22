@@ -291,6 +291,8 @@ export default function TabsLayout() {
         <Tabs.Screen name="legal" options={{ href: null }} />
         <Tabs.Screen name="guide" options={{ href: null }} />
         <Tabs.Screen name="statement" options={{ href: null }} />
+        <Tabs.Screen name="settings" options={{ href: null }} />
+        <Tabs.Screen name="feedback" options={{ href: null }} />
       </Tabs>
       <MoreSheet
         ref={bottomSheetRef}
