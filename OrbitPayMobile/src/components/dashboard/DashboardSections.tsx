@@ -91,11 +91,11 @@ export const WalletsGrid = memo(function WalletsGrid({
 
 export const QuickActions = memo(function QuickActions() {
   return (
-    <>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+    <View style={styles.quickActionsCard}>
+      <Text style={styles.quickActionsTitle}>Quick Actions</Text>
       <View style={styles.actionsRow}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.actionItem}
           onPress={() => router.push("/(tabs)/send")}
           activeOpacity={0.8}
         >
@@ -108,7 +108,7 @@ export const QuickActions = memo(function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.actionItem}
           onPress={() => router.push("/(tabs)/fund")}
           activeOpacity={0.8}
         >
@@ -121,7 +121,7 @@ export const QuickActions = memo(function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.actionItem}
           onPress={() => router.push("/pay")}
           activeOpacity={0.8}
         >
@@ -138,7 +138,7 @@ export const QuickActions = memo(function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.actionItem}
           onPress={() => router.push("/(tabs)/guide")}
           activeOpacity={0.8}
         >
@@ -155,7 +155,7 @@ export const QuickActions = memo(function QuickActions() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.actionItem}
           onPress={() => router.push("/orbit-ai")}
           activeOpacity={0.8}
         >
@@ -171,7 +171,7 @@ export const QuickActions = memo(function QuickActions() {
           </Text>
         </TouchableOpacity>
       </View>
-    </>
+    </View>
   );
 });
 
@@ -322,31 +322,43 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0F172A",
   },
+  quickActionsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#0F172A",
+  },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 32,
   },
-  actionButton: {
+  actionItem: {
     alignItems: "center",
-    width: 64,
+    flex: 1,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   actionText: {
-    width: 64,
-    fontSize: 11,
-    lineHeight: 14,
-    minHeight: 28,
-    color: "#475569",
-    fontWeight: "500",
+    fontSize: 12,
+    color: "#334155",
     textAlign: "center",
   },
   chartCard: {
