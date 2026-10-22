@@ -26,6 +26,7 @@ import {
   authenticateWithBiometrics,
   BiometricStatus,
 } from "../../src/utils/biometric"; // ← adjust path if needed
+import MenuHeader from "../../src/components/MenuHeader";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -200,11 +201,13 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={true}
-    >
+    <>
+      <MenuHeader title="Profile" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={true}
+      >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -390,7 +393,8 @@ export default function ProfileScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -400,7 +404,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   contentContainer: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 120,
   },

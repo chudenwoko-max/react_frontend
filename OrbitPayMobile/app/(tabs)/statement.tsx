@@ -4,6 +4,7 @@ import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } fr
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { isAxiosError } from "axios";
 import { ScreenWithTabBar } from "../../src/components/ScreenWithTabBar";
+import MenuHeader from "../../src/components/MenuHeader";
 import axiosClient from "../../src/api/axiosClient";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -146,6 +147,7 @@ export default function Statement() {
 
   return (
     <ScreenWithTabBar>
+      <MenuHeader title="Statement of Account" />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image source={require("../../assets/payhost-logo.png")} style={styles.logo} />

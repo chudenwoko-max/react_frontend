@@ -19,6 +19,7 @@ import {
   clearReferenceId,
 } from "../../src/utils/idempotency";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import MenuHeader from "../../src/components/MenuHeader";
 
 const PENDING_REF_KEY = "pending_funding_reference";
 const PENDING_AMOUNT_KEY = "pending_funding_amount";
@@ -245,66 +246,69 @@ export default function FundWalletScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Fund Wallet</Text>
-      <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
+    <>
+      <MenuHeader title="Fund Wallet" />
+      <View style={styles.container}>
+        <Text style={styles.title}>Fund Wallet</Text>
+        <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
 
-      <Text style={styles.label}>Amount (₦)</Text>
-      <TextInput
-        style={[styles.input, hasPending && styles.inputLocked]}
-        placeholder="e.g. 5000"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={amount}
-        editable={!hasPending}
-        onChangeText={setAmount}
-      />
+        <Text style={styles.label}>Amount (₦)</Text>
+        <TextInput
+          style={[styles.input, hasPending && styles.inputLocked]}
+          placeholder="e.g. 5000"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          value={amount}
+          editable={!hasPending}
+          onChangeText={setAmount}
+        />
 
-      {!hasPending ? (
-        <TouchableOpacity
-          style={[styles.button, loading && styles.disabled]}
-          onPress={handleInitialize}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Proceed to Payment</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.verifySection}>
-          <Text style={styles.instruction}>
-            Complete payment on Paystack. This screen will refresh when you return.
-            If the balance does not update, tap Refresh.
-          </Text>
-
+        {!hasPending ? (
           <TouchableOpacity
-            style={[styles.verifyButton, loading && styles.disabled]}
-            onPress={() => runVerify(reference, true)}
+            style={[styles.button, loading && styles.disabled]}
+            onPress={handleInitialize}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Payment not showing? Refresh</Text>
+              <Text style={styles.buttonText}>Proceed to Payment</Text>
             )}
           </TouchableOpacity>
+        ) : (
+          <View style={styles.verifySection}>
+            <Text style={styles.instruction}>
+              Complete payment on Paystack. This screen will refresh when you return.
+              If the balance does not update, tap Refresh.
+            </Text>
 
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={handleCancelPending}
-            disabled={loading}
-          >
-            <Text style={styles.linkText}>Didn't pay? Start new payment</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.verifyButton, loading && styles.disabled]}
+              onPress={() => runVerify(reference, true)}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Payment not showing? Refresh</Text>
+              )}
+            </TouchableOpacity>
 
-          {statusMessage ? (
-            <Text style={styles.statusText}>{statusMessage}</Text>
-          ) : null}
-        </View>
-      )}
-    </View>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={handleCancelPending}
+              disabled={loading}
+            >
+              <Text style={styles.linkText}>Didn't pay? Start new payment</Text>
+            </TouchableOpacity>
+
+            {statusMessage ? (
+              <Text style={styles.statusText}>{statusMessage}</Text>
+            ) : null}
+          </View>
+        )}
+      </View>
+    </>
   );
 }
 
@@ -313,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F0F1A",
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 20,
   },
   title: { fontSize: 24, fontWeight: "700", color: "#fff", marginBottom: 6 },
   subtitle: { fontSize: 14, color: "#AAA", marginBottom: 30 },
