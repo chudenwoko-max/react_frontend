@@ -71,7 +71,7 @@ export default function RequestMoneyScreen() {
       setFromUser("");
       setAmount("");
       setNote("");
-      router.back();
+      router.replace("/(tabs)");
     } catch (err: any) {
       console.log("Request error:", err.response?.data);
       const message =

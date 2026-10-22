@@ -1,11 +1,9 @@
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenWithTabBar } from "../../src/components/ScreenWithTabBar";
-import MenuHeader from "../../src/components/MenuHeader";
 
 export default function Legal() {
   return (
     <ScreenWithTabBar>
-      <MenuHeader title="Privacy & Terms" />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.brandRow}>
           <Image

@@ -50,16 +50,16 @@ export default function PaymentSuccessScreen() {
         {/* Buttons */}
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => router.push("/(tabs)/wallet")}
+          onPress={() => router.replace("/wallet")}
         >
           <Text style={styles.primaryButtonText}>Go to Wallet</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace("/")}
         >
-          <Text style={styles.secondaryButtonText}>Go Back</Text>
+          <Text style={styles.secondaryButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
     </View>

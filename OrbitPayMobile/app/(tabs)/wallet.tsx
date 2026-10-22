@@ -11,7 +11,6 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import axiosClient from "../../src/api/axiosClient";
 import { router } from "expo-router";
-import MenuHeader from "../../src/components/MenuHeader";
 
 type Wallet = {
   id: number;
@@ -116,44 +115,45 @@ export default function WalletScreen() {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#0F172A" />
+      </View>
+    );
+  }
+
   return (
-    <>
-      <MenuHeader title="Wallet" />
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#0F172A" />
-        </View>
-      ) : (
-        <View style={styles.container}>
-          <FlatList
-            data={wallets}
-            keyExtractor={(item) =>
-              item.id?.toString() || getCurrencyCode(item)
-            }
-            renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 40 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <MaterialCommunityIcons name="wallet-outline" size={48} color="#CBD5E1" />
-                <Text style={styles.emptyText}>No wallets found</Text>
-              </View>
-            }
-            ListHeaderComponent={
-              <TouchableOpacity
-                style={styles.fundButton}
-                onPress={() => router.push("/(tabs)/fund")}
-              >
-                <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
-                <Text style={styles.fundButtonText}>Fund Wallet</Text>
-              </TouchableOpacity>
-            }
-          />
-        </View>
-      )}
-    </>
+    <View style={styles.container}>
+      <Text style={styles.header}>My Wallets</Text>
+
+      <FlatList
+        data={wallets}
+        keyExtractor={(item) =>
+          item.id?.toString() || getCurrencyCode(item)
+        }
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <MaterialCommunityIcons name="wallet-outline" size={48} color="#CBD5E1" />
+            <Text style={styles.emptyText}>No wallets found</Text>
+          </View>
+        }
+        ListHeaderComponent={
+          <TouchableOpacity
+            style={styles.fundButton}
+            onPress={() => router.push("/(tabs)/fund")}
+          >
+            <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+            <Text style={styles.fundButtonText}>Fund Wallet</Text>
+          </TouchableOpacity>
+        }
+      />
+    </View>
   );
 }
 
@@ -161,8 +161,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
-    paddingTop: 12,
+    paddingTop: 60,
     paddingHorizontal: 20,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 20,
   },
   center: {
     flex: 1,

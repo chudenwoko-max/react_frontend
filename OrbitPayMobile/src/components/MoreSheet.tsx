@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from "react";
+import React, { forwardRef, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import BottomSheet, {
   BottomSheetScrollView,
@@ -37,60 +37,73 @@ interface MoreSheetProps {
   onChange?: (index: number) => void;
 }
 
-const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(
-  ({ onChange }, ref) => {
-    const snapPoints = useMemo(() => ["55%", "85%"], []);
+const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) => {
+  const snapPoints = useMemo(() => ["55%", "85%"], []);
+  const pendingRoute = useRef<string | null>(null);
 
-    const renderBackdrop = (backdropProps: any) => (
-      <BottomSheetBackdrop
-        {...backdropProps}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        pressBehavior="close"
-        style={[backdropProps.style, { bottom: 64 }]}
-      />
-    );
+  const handlePress = (route: string) => {
+    if (typeof ref === "function" || !ref?.current) {
+      router.push(route as any);
+      return;
+    }
 
-    return (
-      <BottomSheet
-        ref={ref}
-        index={-1}
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        bottomInset={64}
-        backdropComponent={renderBackdrop}
-        onChange={onChange}
-        backgroundStyle={{ backgroundColor: "#FFFFFF" }}
-        handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
-      >
-        <BottomSheetScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.title}>More Features</Text>
+    pendingRoute.current = route;
+    ref.current.close();
+  };
 
-          <View style={styles.grid}>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.item}
-                onPress={() => {
-                  if (typeof ref !== "function" && ref?.current) {
-                    ref.current.close();
-                  }
-                  router.push(item.route as any);
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>
-                  <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
-                </View>
-                <Text style={styles.label}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </BottomSheetScrollView>
-      </BottomSheet>
-    );
-  }
-);
+  const handleSheetChange = (index: number) => {
+    onChange?.(index);
+    if (index !== -1 || !pendingRoute.current) return;
+
+    const route = pendingRoute.current;
+    pendingRoute.current = null;
+    router.push(route as any);
+  };
+
+  const renderBackdrop = (backdropProps: any) => (
+    <BottomSheetBackdrop
+      {...backdropProps}
+      disappearsOnIndex={-1}
+      appearsOnIndex={0}
+      pressBehavior="close"
+      style={[backdropProps.style, { bottom: 64 }]}
+    />
+  );
+
+  return (
+    <BottomSheet
+      ref={ref}
+      index={-1}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      bottomInset={64}
+      backdropComponent={renderBackdrop}
+      onChange={handleSheetChange}
+      backgroundStyle={{ backgroundColor: "#FFFFFF" }}
+      handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
+    >
+      <BottomSheetScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>More Features</Text>
+
+        <View style={styles.grid}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.item}
+              onPress={() => handlePress(item.route)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>
+                <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
+              </View>
+              <Text style={styles.label}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </BottomSheetScrollView>
+    </BottomSheet>
+  );
+});
 
 export default MoreSheet;
 

@@ -26,7 +26,6 @@ import Toast from "react-native-toast-message";
 import { FINANCIALS_REFRESH } from "../../src/notifications/refreshOnPush";
 import ClearHoldButton from "../../src/components/ClearHoldButton";
 import { isPaymentHoldError } from "../../src/utils/paymentHold";
-import MenuHeader from "../../src/components/MenuHeader";
 
 const HIGH_VALUE_THRESHOLD = 50000;
 
@@ -221,7 +220,7 @@ export default function SendScreen() {
       setNote("");
 
       setTimeout(() => {
-        router.back();
+        router.replace("/(tabs)");
       }, 600);
     } catch (err: any) {
       const status = err.response?.status;
@@ -246,13 +245,12 @@ export default function SendScreen() {
   };
 
   return (
-    <>
-      <MenuHeader title="Send Money" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Send Money</Text>
         <Text style={styles.subtitle}>
           {sendMode === "bank"
             ? "Transfer to a bank account (Paystack test)"
@@ -425,15 +423,15 @@ export default function SendScreen() {
         >
           {Number(amount) >= HIGH_VALUE_THRESHOLD ? "Confirm & Send" : "Send Money"}
         </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  inner: { padding: 20, paddingTop: 20 },
+  inner: { padding: 20, paddingTop: 60 },
+  title: { fontSize: 26, fontWeight: "700", color: "#0F172A", marginBottom: 6 },
   subtitle: { fontSize: 15, color: "#64748B", marginBottom: 16 },
   modeRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   modeBtn: {

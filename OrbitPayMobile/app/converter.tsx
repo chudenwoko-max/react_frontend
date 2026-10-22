@@ -81,7 +81,7 @@ export default function ConverterScreen() {
       setPin("");
 
       setTimeout(() => {
-        router.back();
+        router.replace("/(tabs)");
       }, 800);
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || "Conversion failed";
