@@ -249,7 +249,6 @@ export default function FundWalletScreen() {
     <>
       <MenuHeader title="Fund Wallet" />
       <View style={styles.container}>
-        <Text style={styles.title}>Fund Wallet</Text>
         <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
 
         <Text style={styles.label}>Amount (₦)</Text>
@@ -319,7 +318,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 20,
   },
-  title: { fontSize: 24, fontWeight: "700", color: "#fff", marginBottom: 6 },
   subtitle: { fontSize: 14, color: "#AAA", marginBottom: 30 },
   label: { color: "#CCC", marginBottom: 8, fontSize: 14 },
   input: {

@@ -41,14 +41,6 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(
   ({ onChange }, ref) => {
     const snapPoints = useMemo(() => ["55%", "85%"], []);
 
-    const handlePress = (route: string) => {
-      if (typeof ref !== "function" && ref?.current) {
-        ref.current.close();
-      }
-
-      router.push(route as any);
-    };
-
     const renderBackdrop = (backdropProps: any) => (
       <BottomSheetBackdrop
         {...backdropProps}
@@ -79,7 +71,12 @@ const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(
               <TouchableOpacity
                 key={index}
                 style={styles.item}
-                onPress={() => handlePress(item.route)}
+                onPress={() => {
+                  if (typeof ref !== "function" && ref?.current) {
+                    ref.current.close();
+                  }
+                  router.push(item.route as any);
+                }}
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>

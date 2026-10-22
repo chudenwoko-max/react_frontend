@@ -153,7 +153,6 @@ export default function Statement() {
           <Image source={require("../../assets/payhost-logo.png")} style={styles.logo} />
           <View>
             <Text style={styles.brand}>PAYHOST</Text>
-            <Text style={styles.account}>Statement of Account</Text>
           </View>
         </View>
 
@@ -229,7 +228,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
   logo: { width: 48, height: 48, marginRight: 12 },
   brand: { fontSize: 18, fontWeight: "700", letterSpacing: 1 },
-  account: { fontSize: 14, color: "#64748B" },
   dateRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   dateBox: { flex: 1, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 8, padding: 12 },
   dateLabel: { fontSize: 12, color: "#64748B" },

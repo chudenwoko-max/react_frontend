@@ -253,7 +253,6 @@ export default function SendScreen() {
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Send Money</Text>
         <Text style={styles.subtitle}>
           {sendMode === "bank"
             ? "Transfer to a bank account (Paystack test)"
@@ -435,7 +434,6 @@ export default function SendScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   inner: { padding: 20, paddingTop: 20 },
-  title: { fontSize: 26, fontWeight: "700", color: "#0F172A", marginBottom: 6 },
   subtitle: { fontSize: 15, color: "#64748B", marginBottom: 16 },
   modeRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   modeBtn: {

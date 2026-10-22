@@ -125,8 +125,6 @@ export default function WalletScreen() {
         </View>
       ) : (
         <View style={styles.container}>
-          <Text style={styles.header}>My Wallets</Text>
-
           <FlatList
             data={wallets}
             keyExtractor={(item) =>
@@ -165,12 +163,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     paddingTop: 12,
     paddingHorizontal: 20,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 20,
   },
   center: {
     flex: 1,
