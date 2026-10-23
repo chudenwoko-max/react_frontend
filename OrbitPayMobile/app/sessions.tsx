@@ -70,6 +70,12 @@ export default function SessionsScreen() {
     try {
       await axiosClient.post("auth/logout-all/");
       await logout();
+      router.dismissAll();
+      router.replace("/(auth)/login");
+
+      const message = "You have been logged out of all devices.";
+      if (Platform.OS === "web") window.alert(message);
+      else Alert.alert("Logged out", message);
     } catch (error: unknown) {
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error ||
