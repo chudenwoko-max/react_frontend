@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
+import axios from "axios";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import axiosClient from "../src/api/axiosClient";
@@ -38,6 +39,7 @@ export default function SessionsScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
   const { logout } = useAuth();
 
   const fetchSessions = async () => {
@@ -61,6 +63,48 @@ export default function SessionsScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchSessions();
+  };
+
+  const logoutAllDevices = async () => {
+    setLoggingOutAll(true);
+    try {
+      await axiosClient.post("auth/logout-all/");
+      await logout();
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.error ||
+          error.response?.data?.detail ||
+          "Could not log out of all devices"
+        : error instanceof Error
+          ? error.message
+          : "Could not log out of all devices";
+
+      if (Platform.OS === "web") window.alert(String(message));
+      else Alert.alert("Error", String(message));
+    } finally {
+      setLoggingOutAll(false);
+    }
+  };
+
+  const confirmLogoutAllDevices = () => {
+    const message =
+      "You will need to sign in again everywhere.";
+
+    if (Platform.OS === "web") {
+      if (window.confirm(`Log out of all devices? ${message}`)) {
+        void logoutAllDevices();
+      }
+      return;
+    }
+
+    Alert.alert("Log out of all devices?", message, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: () => void logoutAllDevices(),
+      },
+    ]);
   };
 
   const revokeSession = async (session: Session) => {
@@ -180,7 +224,7 @@ export default function SessionsScreen() {
         data={sessions}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -191,6 +235,19 @@ export default function SessionsScreen() {
           </View>
         }
       />
+      <TouchableOpacity
+        style={[styles.logoutAllButton, loggingOutAll && styles.disabledButton]}
+        onPress={confirmLogoutAllDevices}
+        disabled={loggingOutAll}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: loggingOutAll }}
+      >
+        {loggingOutAll ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.logoutAllText}>Log out of all devices</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -290,5 +347,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 15,
     color: "#94A3B8",
+  },
+  logoutAllButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    minHeight: 48,
+    marginBottom: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  logoutAllText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
