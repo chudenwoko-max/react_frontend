@@ -119,7 +119,8 @@ export default function TwoFactorScreen() {
           <Text style={styles.statusText}>2FA is currently enabled</Text>
 
           <TextInput
-            label="Enter current 6-digit code to disable"
+            label="6-digit code"
+            placeholder="Enter current code"
             value={code}
             onChangeText={setCode}
             mode="outlined"
@@ -265,6 +266,8 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
+    width: "100%",
+    backgroundColor: "#FFFFFF",
   },
   button: {
     marginTop: 8,
