@@ -462,7 +462,6 @@ export default function Dashboard() {
     } catch (e) {
       console.log(e);
     } finally {
-      router.dismissAll();
       router.replace("/(auth)/login");
     }
   };

@@ -70,7 +70,6 @@ export default function SessionsScreen() {
     try {
       await axiosClient.post("auth/logout-all/");
       await logout();
-      router.dismissAll();
       router.replace("/(auth)/login");
 
       const message = "You have been logged out of all devices.";
