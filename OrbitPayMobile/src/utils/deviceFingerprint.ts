@@ -1,8 +1,16 @@
 import { Platform } from "react-native";
-import * as Application from "expo-application";
 import * as Device from "expo-device";
 
 const FINGERPRINT_KEY = "DEVICE_FINGERPRINT";
+
+type ExpoApplication = typeof import("expo-application");
+
+let application: ExpoApplication | null = null;
+try {
+  application = require("expo-application") as ExpoApplication;
+} catch (error) {
+  console.warn("Application metadata is not available in this runtime:", error);
+}
 
 export async function getDeviceFingerprint(): Promise<string> {
   try {
@@ -32,7 +40,7 @@ export async function getDeviceFingerprint(): Promise<string> {
       Device.modelName || "unknown",
       Device.brand || "unknown",
       Device.osVersion || "unknown",
-      Application.applicationId || "unknown",
+      application?.applicationId || "unknown",
     ];
 
     fingerprint = parts.join("|") + "|" + Date.now().toString(36);

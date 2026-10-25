@@ -1,11 +1,26 @@
 import { Platform } from "react-native";
-import * as Device from "expo-device";
-import Constants from "expo-constants";
 import axiosClient from "../api/axiosClient";
 
+type ExpoDevice = typeof import("expo-device");
+type ExpoConstants = typeof import("expo-constants");
 type ExpoNotifications = typeof import("expo-notifications");
 
+let device: ExpoDevice | null = null;
+let constants: ExpoConstants | null = null;
 let notifications: ExpoNotifications | null = null;
+
+try {
+  device = require("expo-device") as ExpoDevice;
+} catch (error) {
+  console.warn("Device information is not available in this runtime:", error);
+}
+
+try {
+  constants = require("expo-constants") as ExpoConstants;
+} catch (error) {
+  console.warn("Expo configuration is not available in this runtime:", error);
+}
+
 try {
   notifications = require("expo-notifications") as ExpoNotifications;
 } catch (error) {
@@ -27,53 +42,17 @@ if (Platform.OS !== "web" && notifications) {
   });
 }
 
-async function ensureAndroidChannel() {
-  if (Platform.OS !== "android" || !notifications) return;
-  await notifications.setNotificationChannelAsync("orbitpay-default", {
-    name: "OrbitPay",
-    importance: notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#4F46E5",
-    sound: "default",
-  });
-}
-
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  const notificationModule = notifications;
-  if (Platform.OS === "web" || !notificationModule) return null;
-  // CHANGE: no google-services.json yet. A throw here closes the release APK.
-  return null;
-  // existing body stays below, unused until FCM is added
-
-  if (!Device.isDevice) return null;
-
-  await ensureAndroidChannel();
-
-  const existing = await notificationModule.getPermissionsAsync();
-  let status = existing.status;
-  if (status !== "granted") {
-    const asked = await notificationModule.requestPermissionsAsync();
-    status = asked.status;
-  }
-  if (status !== "granted") return null;
-
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  if (!projectId) {
-    console.warn("Missing EAS projectId; cannot get Expo push token");
+  if (
+    Platform.OS === "web" ||
+    !device ||
+    !constants ||
+    !notifications
+  ) {
     return null;
   }
-
-  const tokenRes = await notificationModule.getExpoPushTokenAsync({ projectId });
-  const token = tokenRes.data;
-
-  await axiosClient.post("devices/register/", {
-    token,
-    platform: Platform.OS,
-    device_name: `${Device.manufacturer ?? ""} ${Device.modelName ?? ""}`.trim(),
-  });
-
-  return token;
+  // CHANGE: no google-services.json yet. A throw here closes the release APK.
+  return null;
 }
 
 export async function unregisterPushToken(token?: string | null) {
