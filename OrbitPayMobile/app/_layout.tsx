@@ -7,8 +7,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 import { initializeSslPinning } from "react-native-ssl-public-key-pinning";
 import * as Sentry from "@sentry/react-native";
-import * as Notifications from "expo-notifications";
 import {
+  getNotifications,
   registerForPushNotificationsAsync,
   getNotificationRoute,
 } from "../src/notifications/push";
@@ -52,7 +52,10 @@ function PushBootstrap() {
   useEffect(() => {
     if (Platform.OS === "web") return;
 
-    Notifications.getLastNotificationResponseAsync()
+    const notifications = getNotifications();
+    if (!notifications) return;
+
+    notifications.getLastNotificationResponseAsync()
       .then((res) => {
         if (!res) return;
         const data = res.notification.request.content.data as Record<string, any>;
@@ -65,13 +68,16 @@ function PushBootstrap() {
     if (Platform.OS === "web") return;
     if (!isLoggedIn) return;
 
+    const notifications = getNotifications();
+    if (!notifications) return;
+
     registerForPushNotificationsAsync().catch(() => {});
 
-    const received = Notifications.addNotificationReceivedListener(() => {
+    const received = notifications.addNotificationReceivedListener(() => {
       refreshFinancialsFromPush();
     });
 
-    const response = Notifications.addNotificationResponseReceivedListener((res) => {
+    const response = notifications.addNotificationResponseReceivedListener((res) => {
       refreshFinancialsFromPush();
       const data = res.notification.request.content.data as Record<string, any>;
       router.push(getNotificationRoute(data) as any);

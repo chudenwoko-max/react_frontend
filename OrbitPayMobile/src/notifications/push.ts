@@ -1,11 +1,23 @@
 import { Platform } from "react-native";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import axiosClient from "../api/axiosClient";
 
-if (Platform.OS !== "web") {
-  Notifications.setNotificationHandler({
+type ExpoNotifications = typeof import("expo-notifications");
+
+let notifications: ExpoNotifications | null = null;
+try {
+  notifications = require("expo-notifications") as ExpoNotifications;
+} catch (error) {
+  console.warn("Notifications are not available in this runtime:", error);
+}
+
+export function getNotifications(): ExpoNotifications | null {
+  return notifications;
+}
+
+if (Platform.OS !== "web" && notifications) {
+  notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
@@ -16,10 +28,10 @@ if (Platform.OS !== "web") {
 }
 
 async function ensureAndroidChannel() {
-  if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync("orbitpay-default", {
+  if (Platform.OS !== "android" || !notifications) return;
+  await notifications.setNotificationChannelAsync("orbitpay-default", {
     name: "OrbitPay",
-    importance: Notifications.AndroidImportance.HIGH,
+    importance: notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#4F46E5",
     sound: "default",
@@ -27,7 +39,8 @@ async function ensureAndroidChannel() {
 }
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (Platform.OS === "web") return null;
+  const notificationModule = notifications;
+  if (Platform.OS === "web" || !notificationModule) return null;
   // CHANGE: no google-services.json yet. A throw here closes the release APK.
   return null;
   // existing body stays below, unused until FCM is added
@@ -36,10 +49,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
   await ensureAndroidChannel();
 
-  const existing = await Notifications.getPermissionsAsync();
+  const existing = await notificationModule.getPermissionsAsync();
   let status = existing.status;
   if (status !== "granted") {
-    const asked = await Notifications.requestPermissionsAsync();
+    const asked = await notificationModule.requestPermissionsAsync();
     status = asked.status;
   }
   if (status !== "granted") return null;
@@ -51,7 +64,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return null;
   }
 
-  const tokenRes = await Notifications.getExpoPushTokenAsync({ projectId });
+  const tokenRes = await notificationModule.getExpoPushTokenAsync({ projectId });
   const token = tokenRes.data;
 
   await axiosClient.post("devices/register/", {
