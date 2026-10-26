@@ -88,7 +88,21 @@ function App() {
       <Route path="/terms" element={<Terms />} />
 
       {isMarketing ? (
-        <Route path="/" element={<Landing />} />
+        <>
+          <Route path="/" element={<Landing />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ErrorBoundary>
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              </ErrorBoundary>
+            }
+          >
+            <Route index element={<Dashboard />} />
+          </Route>
+        </>
       ) : (
         AppShell()
       )}
