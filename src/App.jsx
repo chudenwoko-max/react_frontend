@@ -39,42 +39,45 @@ const host = window.location.hostname;
 const isMarketing =
   host === "www.payhost.dev" || host === "payhost.dev";
 
-function AppShell() {
+function AppShell({ marketing = false } = {}) {
   return (
-    <Route
-      path="/"
-      element={
-        <ErrorBoundary>
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        </ErrorBoundary>
-      }
-    >
-      <Route index element={<Dashboard />} />
-      <Route path="dashboard" element={<Dashboard />} />
-      <Route path="wallet" element={<Wallet />} />
-      <Route path="send-money" element={<SendMoney />} />
-      <Route path="fund-wallet" element={<FundWallet />} />
-      <Route path="withdraw" element={<Withdraw />} />
-      <Route path="transactions" element={<Transactions />} />
-      <Route path="converter" element={<CurrencyConverter />} />
-      <Route path="profile" element={<Profile />} />
-      <Route path="avatar-upload" element={<AvatarUpload />} />
-      <Route path="bank-account" element={<BankAccount />} />
-      <Route path="kyc" element={<KYC />} />
-      <Route path="logout" element={<Logout />} />
-      <Route path="request-money" element={<RequestMoney />} />
-      <Route path="bills" element={<BillPayments />} />
-      <Route path="savings" element={<Savings />} />
-      <Route path="cards" element={<VirtualCards />} />
-      <Route path="referral" element={<Referral />} />
-      <Route path="scheduled" element={<ScheduledTransfers />} />
-      <Route path="support" element={<Support />} />
-      <Route path="statements" element={<Statements />} />
-      <Route path="business" element={<Business />} />
-      <Route path="pay" element={<PayMerchant />} />
-    </Route>
+    <>
+      {marketing && <Route path="/" element={<Landing />} />}
+      <Route
+        path={marketing ? undefined : "/"}
+        element={
+          <ErrorBoundary>
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          </ErrorBoundary>
+        }
+      >
+        {!marketing && <Route index element={<Dashboard />} />}
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="wallet" element={<Wallet />} />
+        <Route path="send-money" element={<SendMoney />} />
+        <Route path="fund-wallet" element={<FundWallet />} />
+        <Route path="withdraw" element={<Withdraw />} />
+        <Route path="transactions" element={<Transactions />} />
+        <Route path="converter" element={<CurrencyConverter />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="avatar-upload" element={<AvatarUpload />} />
+        <Route path="bank-account" element={<BankAccount />} />
+        <Route path="kyc" element={<KYC />} />
+        <Route path="logout" element={<Logout />} />
+        <Route path="request-money" element={<RequestMoney />} />
+        <Route path="bills" element={<BillPayments />} />
+        <Route path="savings" element={<Savings />} />
+        <Route path="cards" element={<VirtualCards />} />
+        <Route path="referral" element={<Referral />} />
+        <Route path="scheduled" element={<ScheduledTransfers />} />
+        <Route path="support" element={<Support />} />
+        <Route path="statements" element={<Statements />} />
+        <Route path="business" element={<Business />} />
+        <Route path="pay" element={<PayMerchant />} />
+      </Route>
+    </>
   );
 }
 
@@ -87,37 +90,7 @@ function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
 
-      {isMarketing ? (
-        <>
-          <Route path="/" element={<Landing />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ErrorBoundary>
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              </ErrorBoundary>
-            }
-          >
-            <Route index element={<Dashboard />} />
-          </Route>
-          <Route
-            path="/send-money"
-            element={
-              <ErrorBoundary>
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              </ErrorBoundary>
-            }
-          >
-            <Route index element={<SendMoney />} />
-          </Route>
-        </>
-      ) : (
-        AppShell()
-      )}
+      {AppShell({ marketing: isMarketing })}
     </Routes>
   );
 }
