@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
@@ -43,9 +44,11 @@ function AppShell() {
     <Route
       path="/"
       element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
     >
       <Route index element={<Dashboard />} />
