@@ -102,6 +102,18 @@ function App() {
           >
             <Route index element={<Dashboard />} />
           </Route>
+          <Route
+            path="/send-money"
+            element={
+              <ErrorBoundary>
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              </ErrorBoundary>
+            }
+          >
+            <Route index element={<SendMoney />} />
+          </Route>
         </>
       ) : (
         AppShell()
