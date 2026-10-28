@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import axiosClient from "../axiosClient";
 
 export default function ForgotPassword() {
@@ -23,6 +24,7 @@ export default function ForgotPassword() {
         email: email.trim(),
       });
       setSuccess(true);
+      toast.success("If an account exists, a reset link has been sent.");
     } catch (requestError) {
       setError(
         requestError.response?.data?.error || "Unable to send a reset link. Please try again."
