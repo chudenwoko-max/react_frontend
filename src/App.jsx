@@ -11,6 +11,7 @@ import Terms from "./Terms";
 import Logout from "./pages/Logout";
 import Business from "./pages/Business";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Register from "./pages/Register";
 
 import Dashboard from "./pages/Dashboard";
@@ -85,6 +86,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />

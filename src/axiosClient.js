@@ -19,6 +19,7 @@ let refreshTried = false;
 function onPublicPage() {
   const path = window.location.pathname;
   return path.startsWith("/login")
+    || path.startsWith("/forgot-password")
     || path.startsWith("/reset-password")
     || path.startsWith("/register");
 }

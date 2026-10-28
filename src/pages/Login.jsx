@@ -187,6 +187,12 @@ const handleVerifyOTP = async (e) => {
                 onChange={(e) => setPassword(e.target.value)}
                 style={styles.input}
               />
+              <Link
+                to="/forgot-password"
+                style={{ fontSize: 14, color: "#0284C7" }}
+              >
+                Forgot password?
+              </Link>
             </div>
 
             <button type="submit" disabled={loading} style={styles.button}>
