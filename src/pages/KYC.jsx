@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import axiosClient from "../axiosClient";
+import DocumentScanner from "../components/DocumentScanner";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
@@ -43,6 +44,7 @@ export default function KYC() {
   const [files, setFiles] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [scanningGovernmentId, setScanningGovernmentId] = useState(false);
   const [error, setError] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
 
@@ -80,6 +82,22 @@ export default function KYC() {
     const value = fileFields.has(field) ? event.target.files?.[0] : event.target.value;
     if (fileFields.has(field)) setFiles((current) => ({ ...current, [field]: value }));
     else setValues((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleDocumentCapture = (blob) => {
+    setScanningGovernmentId(false);
+    if (!blob) {
+      toast.error("Could not capture the document. Please try again.");
+      return;
+    }
+
+    setFiles((current) => ({
+      ...current,
+      government_id: new File([blob], "id-document.jpg", {
+        type: blob.type || "image/jpeg",
+      }),
+    }));
+    toast.success("Document captured. Submit your KYC form to upload it.");
   };
 
   const handleUpgrade = async (event) => {
@@ -159,14 +177,34 @@ export default function KYC() {
                   {getFieldLabel(field)}
                 </label>
                 {fileFields.has(field) ? (
-                  <input
-                    id={`kyc-${field}`}
-                    name={field}
-                    type="file"
-                    accept={field === "selfie" ? "image/*" : "image/*,.pdf"}
-                    onChange={(event) => handleChange(field, event)}
-                    style={styles.input}
-                  />
+                  <>
+                    <input
+                      id={`kyc-${field}`}
+                      name={field}
+                      type="file"
+                      accept={field === "selfie" ? "image/*" : "image/*,.pdf"}
+                      onChange={(event) => handleChange(field, event)}
+                      style={styles.input}
+                    />
+                    {field === "government_id" && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={() => setScanningGovernmentId(true)}
+                          style={styles.secondaryButton}
+                        >
+                          Scan document
+                        </button>
+                        {scanningGovernmentId && (
+                          <DocumentScanner
+                            onCapture={handleDocumentCapture}
+                            onCancel={() => setScanningGovernmentId(false)}
+                          />
+                        )}
+                      </>
+                    )}
+                  </>
                 ) : (
                   <input
                     id={`kyc-${field}`}
