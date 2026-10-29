@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axiosClient from "../api/axiosClient";
+import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
 export default function Login() {
