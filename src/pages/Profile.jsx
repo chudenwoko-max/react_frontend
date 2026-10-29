@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import axiosClient from "../axiosClient";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function ChangePinSection() {
+  const navigate = useNavigate();
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -29,6 +30,7 @@ function ChangePinSection() {
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
+      setTimeout(() => navigate("/dashboard"), 800);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to change PIN");
     } finally {
