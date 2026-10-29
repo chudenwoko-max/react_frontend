@@ -12,7 +12,7 @@ import Logout from "./pages/Logout";
 import Business from "./pages/Business";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
-import ForgotPasscode from "./ForgotPasscode";
+import ForgotPasscode from "./pages/ForgotPasscode";
 import Register from "./pages/Register";
 
 import Dashboard from "./pages/Dashboard";
