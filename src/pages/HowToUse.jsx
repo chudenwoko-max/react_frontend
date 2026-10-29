@@ -32,6 +32,18 @@ export default function HowToUse() {
       </section>
 
       <section style={styles.section}>
+        <h2>Sign in</h2>
+        <p>Payhost uses a simple 6-digit passcode (similar to many Nigerian banking apps).</p>
+        <ul>
+          <li>Enter your <strong>username</strong> and <strong>6-digit passcode</strong>.</li>
+          <li>After your first successful login the username stays filled in on that device.</li>
+          <li>No OTP or email code is required for normal login.</li>
+          <li>Tap <strong>Forgot passcode?</strong> if you forget it — enter your username and a reset link is sent to your email.</li>
+          <li>New users can tap <strong>Create Account</strong> to register.</li>
+        </ul>
+      </section>
+
+      <section style={styles.section}>
         <h2>Dashboard</h2>
         <p>See your balances in NGN, GBP, EUR and other wallets. Tap a wallet to view more details. Use the menu to reach any feature.</p>
       </section>
@@ -47,7 +59,7 @@ export default function HowToUse() {
           <li>Choose wallet-to-wallet (Payhost user) or bank transfer.</li>
           <li>Enter the recipient (username, phone, or bank details).</li>
           <li>Enter amount and description.</li>
-          <li>Confirm with your PIN.</li>
+          <li>Confirm with your transfer PIN.</li>
           <li>Money leaves your wallet immediately if the checks pass.</li>
         </ol>
       </section>
@@ -64,7 +76,7 @@ export default function HowToUse() {
 
       <section style={styles.section}>
         <h2>Withdraw</h2>
-        <p>Move money from your Payhost wallet to your linked bank account. Enter amount → confirm with PIN → funds are sent.</p>
+        <p>Move money from your Payhost wallet to your linked bank account. Enter amount → confirm with transfer PIN → funds are sent.</p>
       </section>
 
       <section style={styles.section}>
@@ -106,18 +118,22 @@ export default function HowToUse() {
           <li>Save after editing.</li>
         </ul>
         <p><strong>Security controls</strong></p>
+        <p><strong>Login Passcode</strong><br />
+          Your 6-digit passcode is set when you create your account and is used only to sign in.
+          You can reset it anytime via “Forgot passcode?” on the login screen.
+        </p>
         <p><strong>Transfer PIN</strong><br />
           Your transfer PIN is created the first time you send money, withdraw, or pay a bill.
           You will be asked to set it at that moment. You can change it later from Profile.
           After too many wrong attempts the PIN locks for 10 minutes.
         </p>
         <p><strong>Two-Factor Authentication (2FA)</strong><br />
-          Turn on 2FA for extra login protection. Scan the QR code with an authenticator app or enter the secret key, then confirm with the 6-digit code. You will need the code each time you log in from a new device.
+          Optional extra protection. When enabled you may be asked for a code from your authenticator app on new devices.
         </p>
         <p><strong>Lock Wallet</strong><br />
           Instantly freeze your wallet if you suspect unauthorised access. While locked, no sends, withdrawals, or bill payments can leave the account. Unlock requires both your PIN and a one-time code.
         </p>
-        <p>Keep your PIN and 2FA app private. Use Lock Wallet immediately if you notice anything unusual.</p>
+        <p>Keep your passcode and transfer PIN private. Use Lock Wallet immediately if you notice anything unusual.</p>
       </section>
 
       <section style={styles.section}>
@@ -170,7 +186,7 @@ export default function HowToUse() {
         <ul>
           <li>Always fund your wallet before sending or paying bills.</li>
           <li>Large amounts and new beneficiaries may be held briefly for review.</li>
-          <li>Keep your PIN and password private.</li>
+          <li>Keep your login passcode and transfer PIN private.</li>
           <li>Complete KYC to raise your limits before the real launch.</li>
         </ul>
       </section>
