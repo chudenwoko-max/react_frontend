@@ -80,7 +80,11 @@ export default function KYC() {
   }, [refreshAttempt]);
 
   const handleChange = (field, event) => {
-    const value = fileFields.has(field) ? event.target.files?.[0] : event.target.value;
+    const value = fileFields.has(field)
+      ? event.target.files?.[0]
+      : field === "nin"
+        ? event.target.value.replace(/\D/g, "").slice(0, 11)
+        : event.target.value;
     if (fileFields.has(field)) setFiles((current) => ({ ...current, [field]: value }));
     else setValues((current) => ({ ...current, [field]: value }));
   };
@@ -117,6 +121,10 @@ export default function KYC() {
     toast.success("Selfie captured");
   };
 
+  const isApproved = ["approved", "verified"].includes(
+    String(kycStatus?.status || "").toLowerCase(),
+  );
+
   const handleUpgrade = async (event) => {
     event.preventDefault();
     if (!missing?.length) return;
@@ -125,35 +133,59 @@ export default function KYC() {
       return;
     }
 
-    const incomplete = missing.filter((field) => {
-      if (fileFields.has(field)) {
-        return !files[field] || files[field].size === 0;
+    if (isApproved) {
+      if (values.nin?.trim() && !/^\d{11}$/.test(values.nin.trim())) {
+        setError("NIN must be exactly 11 digits.");
+        return;
       }
-      return !values[field]?.trim();
-    });
-    if (incomplete.length > 0) {
-      setError(`Complete all requested fields: ${incomplete.map(getFieldLabel).join(", ")}.`);
-      return;
+      const hasUpgradeData =
+        Boolean(values.nin?.trim()) ||
+        ["proof_of_address", "government_id", "selfie"].some(
+          (field) => files[field]?.size > 0,
+        );
+      if (!hasUpgradeData) {
+        setError("Enter your NIN or select/capture at least one requested document.");
+        return;
+      }
+    } else {
+      const incomplete = missing.filter((field) => {
+        if (fileFields.has(field)) {
+          return !files[field] || files[field].size === 0;
+        }
+        return !values[field]?.trim();
+      });
+      if (incomplete.length > 0) {
+        setError(`Complete all requested fields: ${incomplete.map(getFieldLabel).join(", ")}.`);
+        return;
+      }
     }
 
     setLoading(true);
     setError("");
     const upgradeFormData = new FormData();
-    missing.forEach((field) => {
-      if (fileFields.has(field)) {
-        if (files[field]) {
+    if (isApproved) {
+      if (values.nin?.trim()) {
+        upgradeFormData.append("nin", values.nin.trim());
+      }
+      ["proof_of_address", "government_id", "selfie"].forEach((field) => {
+        if (files[field]?.size > 0) {
           upgradeFormData.append(field, files[field]);
         }
-      } else if (values[field]) {
-        upgradeFormData.append(field, values[field].trim());
-      }
-    });
+      });
+    } else {
+      missing.forEach((field) => {
+        if (fileFields.has(field)) {
+          if (files[field]) {
+            upgradeFormData.append(field, files[field]);
+          }
+        } else if (values[field]?.trim()) {
+          upgradeFormData.append(field, values[field].trim());
+        }
+      });
+    }
     console.debug("KYC fields ready to submit:", Array.from(upgradeFormData.keys()));
 
     try {
-      const isApproved = ["approved", "verified"].includes(
-        String(kycStatus?.status || "").toLowerCase(),
-      );
       await axiosClient.post(
         isApproved
           ? `/kyc/upgrade/${encodeURIComponent(targetTier)}/`
@@ -201,13 +233,20 @@ export default function KYC() {
           <p style={styles.success}>You are at the highest tier.</p>
         ) : (
           <form onSubmit={handleUpgrade}>
-            <p style={styles.subtitle}>Provide only the remaining information requested for your account.</p>
+            <p style={styles.subtitle}>
+              {isApproved
+                ? "Provide your NIN or select/capture at least one document to upgrade your tier."
+                : "Provide only the remaining information requested for your account."}
+            </p>
             {!targetTier && (
               <p role="alert" style={styles.error}>
                 Your KYC status did not include a target tier. Please refresh your status or contact support.
               </p>
             )}
-            {missing.map((field) => (
+            {(isApproved
+              ? ["nin", "proof_of_address", "government_id", "selfie"]
+              : missing
+            ).map((field) => (
               <div key={field} style={styles.field}>
                 <label htmlFor={`kyc-${field}`} style={styles.label}>
                   {getFieldLabel(field)}
