@@ -141,13 +141,22 @@ export default function KYC() {
     });
 
     try {
+      const isApproved = ["approved", "verified"].includes(
+        String(kycStatus?.status || "").toLowerCase(),
+      );
       await axiosClient.post(
-        `/kyc/upgrade/${encodeURIComponent(targetTier)}/`,
+        isApproved
+          ? `/kyc/upgrade/${encodeURIComponent(targetTier)}/`
+          : "/kyc/submit/",
         upgradeFormData,
         { headers: { "Content-Type": "multipart/form-data" } },
       );
-      toast.success("Tier upgraded successfully");
-      navigate("/", { replace: true });
+      toast.success(
+        isApproved
+          ? "KYC documents updated"
+          : "KYC submitted — awaiting approval",
+      );
+      setTimeout(() => navigate("/dashboard", { replace: true }), 1800);
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Failed to upgrade your tier. Please try again."));
     } finally {
