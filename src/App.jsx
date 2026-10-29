@@ -12,6 +12,7 @@ import Logout from "./pages/Logout";
 import Business from "./pages/Business";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import ForgotPasscode from "./ForgotPasscode";
 import Register from "./pages/Register";
 
 import Dashboard from "./pages/Dashboard";
@@ -89,6 +90,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/forgot-passcode" element={<ForgotPasscode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />

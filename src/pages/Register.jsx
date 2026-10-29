@@ -11,6 +11,7 @@ export default function Register() {
     password: "",
     confirm_password: "",
   });
+  const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -19,10 +20,18 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (passcode.length !== 6) {
+      toast.error("Enter a 6-digit passcode");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await axiosClient.post("/register/", formData);
+      const res = await axiosClient.post("/register/", {
+        ...formData,
+        passcode,
+      });
       toast.success(res.data.message || "Account created successfully!");
       
       // Redirect to login after successful registration
@@ -98,6 +107,20 @@ export default function Register() {
             placeholder="Confirm your password"
             value={formData.confirm_password}
             onChange={handleChange}
+            style={styles.input}
+            required
+          />
+        </div>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>6-digit passcode</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
+            placeholder="6-digit passcode"
             style={styles.input}
             required
           />
