@@ -31,6 +31,10 @@ export default function Register() {
       const res = await axiosClient.post("/register/", {
         ...formData,
         passcode,
+      }, {
+        headers: {
+          "X-Payhost-Client": "web",
+        },
       });
       toast.success(res.data.message || "Account created successfully!");
       
