@@ -4,6 +4,89 @@ import axiosClient from "../axiosClient";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
+function ChangePinSection() {
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChangePin = async (event) => {
+    event.preventDefault();
+    if (loading) return;
+    if (newPin !== confirmPin) {
+      toast.error("New PINs do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axiosClient.post("change-pin/", {
+        current_pin: currentPin,
+        new_pin: newPin,
+        confirm_pin: confirmPin,
+      });
+      toast.success("PIN changed successfully");
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmPin("");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to change PIN");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.changePinSection}>
+      <h3 style={styles.changePinTitle}>Change Transfer PIN</h3>
+      <form onSubmit={handleChangePin}>
+        <input
+          type="password"
+          placeholder="Current PIN"
+          aria-label="Current PIN"
+          autoComplete="current-password"
+          value={currentPin}
+          onChange={(event) => setCurrentPin(event.target.value)}
+          required
+          disabled={loading}
+          style={styles.changePinInput}
+        />
+        <input
+          type="password"
+          placeholder="New PIN"
+          aria-label="New PIN"
+          autoComplete="new-password"
+          value={newPin}
+          onChange={(event) => setNewPin(event.target.value)}
+          required
+          minLength={4}
+          disabled={loading}
+          style={styles.changePinInput}
+        />
+        <input
+          type="password"
+          placeholder="Confirm new PIN"
+          aria-label="Confirm new PIN"
+          autoComplete="new-password"
+          value={confirmPin}
+          onChange={(event) => setConfirmPin(event.target.value)}
+          required
+          minLength={4}
+          disabled={loading}
+          style={styles.changePinInput}
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          style={styles.changePinButton}
+        >
+          {loading ? "Changing..." : "Change PIN"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function Profile() {
   const { user, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -205,6 +288,8 @@ function Profile() {
             Lock wallet
           </button>
         </div>
+
+        <ChangePinSection />
       </div>
 
       {lockDialogOpen && (
@@ -360,6 +445,34 @@ const styles = {
     fontSize: 16,
     fontWeight: 600,
     color: "#111827",
+  },
+  changePinSection: {
+    marginTop: 24,
+    padding: 20,
+    background: "#f8fafc",
+    borderRadius: 12,
+  },
+  changePinTitle: {
+    margin: "0 0 12px",
+    fontSize: 16,
+    color: "#111827",
+  },
+  changePinInput: {
+    width: "100%",
+    padding: "10px 12px",
+    marginBottom: 10,
+    borderRadius: 8,
+    border: "1px solid #d1d5db",
+    boxSizing: "border-box",
+  },
+  changePinButton: {
+    padding: "10px 16px",
+    background: "#0F172A",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    fontWeight: 600,
+    cursor: "pointer",
   },
   securityItem: {
     display: "flex",
