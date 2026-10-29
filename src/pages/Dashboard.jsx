@@ -125,6 +125,9 @@ export default function Dashboard() {
         <div>
           <h1 style={styles.title}>Dashboard</h1>
           <p style={styles.subtitle}>Overview of your account</p>
+          <Link to="/how-to-use" style={styles.helpLink}>
+            How to use Payhost
+          </Link>
         </div>
       </div>
 
@@ -269,6 +272,18 @@ const styles = {
     color: "#6b7280",
     marginTop: 4,
     fontSize: 14,
+  },
+  helpLink: {
+    display: "inline-block",
+    marginTop: 4,
+    padding: "8px 12px",
+    border: "1px solid #bfdbfe",
+    borderRadius: 8,
+    background: "#eff6ff",
+    color: "#2563eb",
+    fontSize: 14,
+    fontWeight: 600,
+    textDecoration: "none",
   },
   walletsRow: {
     display: "grid",

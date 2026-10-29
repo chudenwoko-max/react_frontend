@@ -176,7 +176,9 @@ export default function HowToUse() {
       </section>
 
       <p style={{ marginTop: 32 }}>
-        <Link to="/dashboard">← Back to Dashboard</Link>
+        <Link to="/dashboard" aria-label="Back to Dashboard">
+          ← Back to Dashboard
+        </Link>
       </p>
     </div>
   );

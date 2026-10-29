@@ -78,6 +78,7 @@ function AppShell({ marketing = false } = {}) {
         <Route path="statements" element={<Statements />} />
         <Route path="business" element={<Business />} />
         <Route path="pay" element={<PayMerchant />} />
+        <Route path="how-to-use" element={<HowToUse />} />
       </Route>
     </>
   );
@@ -92,7 +93,6 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
-      <Route path="/how-to-use" element={<HowToUse />} />
 
       {AppShell({ marketing: isMarketing })}
     </Routes>
