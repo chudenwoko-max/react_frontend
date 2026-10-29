@@ -45,6 +45,7 @@ export default function KYC() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [scanningGovernmentId, setScanningGovernmentId] = useState(false);
+  const [scanningSelfie, setScanningSelfie] = useState(false);
   const [error, setError] = useState("");
   const [refreshAttempt, setRefreshAttempt] = useState(0);
 
@@ -98,6 +99,22 @@ export default function KYC() {
       }),
     }));
     toast.success("Document captured. Submit your KYC form to upload it.");
+  };
+
+  const handleSelfieCapture = (blob) => {
+    setScanningSelfie(false);
+    if (!blob) {
+      toast.error("Could not capture the selfie. Please try again.");
+      return;
+    }
+
+    setFiles((current) => ({
+      ...current,
+      selfie: new File([blob], "selfie.jpg", {
+        type: blob.type || "image/jpeg",
+      }),
+    }));
+    toast.success("Selfie captured. Submit your KYC form to upload it.");
   };
 
   const handleUpgrade = async (event) => {
@@ -204,18 +221,66 @@ export default function KYC() {
                         )}
                       </>
                     )}
+                    {field === "selfie" && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={() => setScanningSelfie(true)}
+                          style={styles.secondaryButton}
+                        >
+                          Take selfie
+                        </button>
+                        {scanningSelfie && (
+                          <DocumentScanner
+                            facingMode="user"
+                            onCapture={handleSelfieCapture}
+                            onCancel={() => setScanningSelfie(false)}
+                          />
+                        )}
+                      </>
+                    )}
                   </>
                 ) : (
-                  <input
-                    id={`kyc-${field}`}
-                    name={field}
-                    type={field === "date_of_birth" ? "date" : "text"}
-                    inputMode={field === "nin" || field === "bvn" ? "numeric" : undefined}
-                    maxLength={field === "nin" || field === "bvn" ? 11 : undefined}
-                    value={values[field] || ""}
-                    onChange={(event) => handleChange(field, event)}
-                    style={styles.input}
-                  />
+                  field === "gender" ? (
+                    <select
+                      id={`kyc-${field}`}
+                      name={field}
+                      value={values[field] || ""}
+                      onChange={(event) => handleChange(field, event)}
+                      style={styles.input}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  ) : field === "government_id_type" ? (
+                    <select
+                      id={`kyc-${field}`}
+                      name={field}
+                      value={values[field] || ""}
+                      onChange={(event) => handleChange(field, event)}
+                      style={styles.input}
+                    >
+                      <option value="">Select ID type</option>
+                      <option value="national_id">National ID (NIN Slip / Card)</option>
+                      <option value="passport">International Passport</option>
+                      <option value="drivers_license">Driver&apos;s Licence</option>
+                      <option value="voters_card">Voter&apos;s Card (PVC)</option>
+                    </select>
+                  ) : (
+                    <input
+                      id={`kyc-${field}`}
+                      name={field}
+                      type={field === "date_of_birth" ? "date" : "text"}
+                      inputMode={field === "nin" || field === "bvn" ? "numeric" : undefined}
+                      maxLength={field === "nin" || field === "bvn" ? 11 : undefined}
+                      value={values[field] || ""}
+                      onChange={(event) => handleChange(field, event)}
+                      style={styles.input}
+                    />
+                  )
                 )}
               </div>
             ))}
