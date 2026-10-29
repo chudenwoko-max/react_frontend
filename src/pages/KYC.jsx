@@ -125,9 +125,12 @@ export default function KYC() {
       return;
     }
 
-    const incomplete = missing.filter((field) =>
-      fileFields.has(field) ? !files[field] : !values[field]?.trim(),
-    );
+    const incomplete = missing.filter((field) => {
+      if (fileFields.has(field)) {
+        return !files[field] || files[field].size === 0;
+      }
+      return !values[field]?.trim();
+    });
     if (incomplete.length > 0) {
       setError(`Complete all requested fields: ${incomplete.map(getFieldLabel).join(", ")}.`);
       return;
@@ -137,8 +140,15 @@ export default function KYC() {
     setError("");
     const upgradeFormData = new FormData();
     missing.forEach((field) => {
-      upgradeFormData.append(field, fileFields.has(field) ? files[field] : values[field].trim());
+      if (fileFields.has(field)) {
+        if (files[field]) {
+          upgradeFormData.append(field, files[field]);
+        }
+      } else if (values[field]) {
+        upgradeFormData.append(field, values[field].trim());
+      }
     });
+    console.debug("KYC fields ready to submit:", Array.from(upgradeFormData.keys()));
 
     try {
       const isApproved = ["approved", "verified"].includes(
