@@ -26,11 +26,11 @@ function ChangePinSection() {
         new_pin: newPin,
         confirm_pin: confirmPin,
       });
-      toast.success("PIN changed successfully");
+      toast.success("PIN changed successfully", { duration: 3000 });
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
-      setTimeout(() => navigate("/dashboard"), 800);
+      setTimeout(() => navigate("/dashboard"), 1500);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to change PIN");
     } finally {
