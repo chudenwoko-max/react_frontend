@@ -98,7 +98,7 @@ export default function KYC() {
         type: blob.type || "image/jpeg",
       }),
     }));
-    toast.success("Document captured. Submit your KYC form to upload it.");
+    toast.success("Document captured");
   };
 
   const handleSelfieCapture = (blob) => {
@@ -114,7 +114,7 @@ export default function KYC() {
         type: blob.type || "image/jpeg",
       }),
     }));
-    toast.success("Selfie captured. Submit your KYC form to upload it.");
+    toast.success("Selfie captured");
   };
 
   const handleUpgrade = async (event) => {
@@ -212,6 +212,11 @@ export default function KYC() {
                       onChange={(event) => handleChange(field, event)}
                       style={styles.input}
                     />
+                    {files[field] && (
+                      <p style={styles.captured}>
+                        ✓ {field === "selfie" ? "Selfie" : "Document"} captured
+                      </p>
+                    )}
                     {field === "government_id" && (
                       <>
                         <button
@@ -220,7 +225,7 @@ export default function KYC() {
                           onClick={() => setScanningGovernmentId(true)}
                           style={styles.secondaryButton}
                         >
-                          Scan document
+                          {files.government_id ? "Retake" : "Scan document"}
                         </button>
                         {scanningGovernmentId && (
                           <DocumentScanner
@@ -238,7 +243,7 @@ export default function KYC() {
                           onClick={() => setScanningSelfie(true)}
                           style={styles.secondaryButton}
                         >
-                          Take selfie
+                          {files.selfie ? "Retake" : "Take selfie"}
                         </button>
                         {scanningSelfie && (
                           <DocumentScanner
@@ -324,6 +329,12 @@ const styles = {
   status: { margin: "4px 0", color: "#475569" },
   message: { color: "#475569", textAlign: "center" },
   success: { marginTop: 20, color: "#166534", fontWeight: 600 },
+  captured: {
+    margin: "8px 0 0",
+    color: "#166534",
+    fontWeight: 600,
+    fontSize: 14,
+  },
   field: { display: "flex", flexDirection: "column", gap: 8, marginTop: 16 },
   label: { color: "#334155", fontWeight: 600 },
   input: {
