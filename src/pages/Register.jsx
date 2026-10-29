@@ -28,7 +28,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const res = await axiosClient.post("/register/", {
+      await axiosClient.post("/register/", {
         ...formData,
         passcode,
       }, {
@@ -36,12 +36,8 @@ export default function Register() {
           "X-Payhost-Client": "web",
         },
       });
-      toast.success(res.data.message || "Account created successfully!");
-      
-      // Redirect to login after successful registration
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      toast.success("Account created! You can now sign in.");
+      navigate("/login");
     } catch (err) {
       const errorMsg = err.response?.data?.error || "Registration failed";
       toast.error(errorMsg);
