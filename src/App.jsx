@@ -35,6 +35,7 @@ import Support from "./pages/Support";
 import Statements from "./pages/Statements";
 import PayMerchant from "./pages/PayMerchant";
 import ResetPassword from "./pages/ResetPassword";
+import HowToUse from "./pages/HowToUse";
 
 const host = window.location.hostname;
 const isMarketing =
@@ -91,6 +92,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/how-to-use" element={<HowToUse />} />
 
       {AppShell({ marketing: isMarketing })}
     </Routes>
