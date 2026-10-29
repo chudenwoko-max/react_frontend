@@ -1,23 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const { setUser } = useAuth();
+  const [username, setUsername] = useState(
+    () => localStorage.getItem("payhost_username") || ""
+  );
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Pre-fill username after first login
-  useEffect(() => {
-    const saved = localStorage.getItem("payhost_username");
-    if (saved) setUsername(saved);
-  }, []);
-
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username || passcode.length !== 6) {
+    if (!username.trim() || passcode.length !== 6) {
       toast.error("Enter username and 6-digit passcode");
       return;
     }
@@ -28,9 +26,11 @@ export default function Login() {
         passcode,
       });
       localStorage.setItem("payhost_username", username.trim());
-      // store tokens / user as you already do
+      if (res.data?.user) {
+        setUser(res.data.user);
+      }
       toast.success("Welcome back");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error || "Invalid credentials");
     } finally {
