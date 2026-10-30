@@ -27,7 +27,7 @@ export default function Login() {
       });
       // await AsyncStorage.setItem("payhost_username", username.trim());
       Alert.alert("Welcome back");
-      router.replace("/(tabs)/dashboard");
+      router.replace("/(tabs)");
     } catch (err: any) {
       Alert.alert(err.response?.data?.error || "Invalid credentials");
     } finally {
