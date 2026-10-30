@@ -7,18 +7,23 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F0F1A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.orbitpay.app",
-      "buildNumber": "1.0.0",
+      "buildNumber": "1",
+      "scheme": "payhost",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Allow Payhost to use Face ID to unlock the app securely."
+        "NSFaceIDUsageDescription": "Allow Payhost to use Face ID to unlock the app securely.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,19 +35,31 @@
       },
       "package": "com.orbitpay.app",
       "versionCode": 2,
+      "scheme": "payhost",
       "intentFilters": [
         {
           "action": "VIEW",
-          "data": [{ "scheme": "payhost" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "payhost"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
+      ],
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "web": {
       "name": "Payhost",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
-
     "plugins": [
       "expo-router",
       "expo-font",
@@ -62,7 +79,6 @@
         }
       ],
       "@sentry/react-native/expo",
-
       [
         "expo-notifications",
         {
@@ -70,14 +86,19 @@
           "defaultChannel": "orbitpay-default",
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-status-bar"
     ],
-
     "extra": {
       "router": {},
       "eas": {
         "projectId": "cc8156e9-fb42-4809-93e3-f4a0df99ee1f"
       }
+    },
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
