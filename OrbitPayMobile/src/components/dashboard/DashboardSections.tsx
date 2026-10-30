@@ -2,7 +2,7 @@
 
 import React, { memo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 export const BalanceCard = memo(function BalanceCard({
@@ -91,84 +91,51 @@ export const WalletsGrid = memo(function WalletsGrid({
 
 export const QuickActions = memo(function QuickActions() {
   return (
-    <View style={styles.quickActionsCard}>
-      <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-      <View style={styles.actionsRow}>
+    <View style={styles.quickLinksContainer}>
+      <Text style={styles.quickLinksTitle}>Quick Links</Text>
+      <View style={styles.quickLinksGrid}>
         <TouchableOpacity
-          style={styles.actionItem}
-          onPress={() => router.push("/(tabs)/send")}
-          activeOpacity={0.8}
+          style={styles.quickLinkCard}
+          onPress={() => router.push("/(tabs)/kyc" as any)}
+          activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: "#E0F2FE" }]}>
-            <MaterialCommunityIcons name="send" size={24} color="#0284C7" />
+          <View style={[styles.quickLinkIcon, { backgroundColor: "#DCFCE7" }]}>
+            <Ionicons name="shield-checkmark" size={26} color="#16A34A" />
           </View>
-          <Text style={styles.actionText} numberOfLines={2}>
-            Send
-          </Text>
+          <Text style={styles.quickLinkLabel}>KYC</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionItem}
-          onPress={() => router.push("/(tabs)/fund")}
-          activeOpacity={0.8}
+          style={styles.quickLinkCard}
+          onPress={() => router.push("/pay" as any)}
+          activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: "#DCFCE7" }]}>
-            <MaterialCommunityIcons name="plus" size={24} color="#16A34A" />
+          <View style={[styles.quickLinkIcon, { backgroundColor: "#EDE9FE" }]}>
+            <MaterialCommunityIcons name="storefront" size={26} color="#7C3AED" />
           </View>
-          <Text style={styles.actionText} numberOfLines={2}>
-            Fund
-          </Text>
+          <Text style={styles.quickLinkLabel}>Pay Merchant</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionItem}
-          onPress={() => router.push("/pay")}
-          activeOpacity={0.8}
+          style={styles.quickLinkCard}
+          onPress={() => router.push("/(tabs)/guide" as any)}
+          activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: "#FFEDD5" }]}>
-            <MaterialCommunityIcons
-              name="storefront-outline"
-              size={24}
-              color="#EA580C"
-            />
+          <View style={[styles.quickLinkIcon, { backgroundColor: "#DBEAFE" }]}>
+            <Ionicons name="help-circle" size={26} color="#2563EB" />
           </View>
-          <Text style={styles.actionText} numberOfLines={2}>
-            Pay Merchant
-          </Text>
+          <Text style={styles.quickLinkLabel}>How to Use{"\n"}Payhost</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionItem}
-          onPress={() => router.push("/(tabs)/guide")}
-          activeOpacity={0.8}
+          style={styles.quickLinkCard}
+          onPress={() => router.push("/orbit-ai" as any)}
+          activeOpacity={0.7}
         >
-          <View style={[styles.iconCircle, { backgroundColor: "#F3E8FF" }]}>
-            <MaterialCommunityIcons
-              name="book-open-variant"
-              size={24}
-              color="#7C3AED"
-            />
+          <View style={[styles.quickLinkIcon, { backgroundColor: "#FEF3C7" }]}>
+            <Ionicons name="sparkles" size={26} color="#D97706" />
           </View>
-          <Text style={styles.actionText} numberOfLines={2}>
-            Payhost Guide
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionItem}
-          onPress={() => router.push("/orbit-ai")}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: "#EDE9FE" }]}>
-            <MaterialCommunityIcons
-              name="robot-happy-outline"
-              size={24}
-              color="#7C3AED"
-            />
-          </View>
-          <Text style={styles.actionText} numberOfLines={2}>
-            Payhost AI
-          </Text>
+          <Text style={styles.quickLinkLabel}>Payhost AI</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -322,44 +289,48 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0F172A",
   },
-  quickActionsCard: {
+  quickLinksContainer: {
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  quickLinksTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 12,
+    fontFamily: "serif",
+  },
+  quickLinksGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  quickLinkCard: {
+    width: "48%",
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  quickActionsTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#0F172A",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  actionItem: {
+    paddingVertical: 18,
+    paddingHorizontal: 12,
     alignItems: "center",
-    flex: 1,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  quickLinkIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  actionText: {
-    fontSize: 12,
-    color: "#334155",
+  quickLinkLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#1E293B",
     textAlign: "center",
+    lineHeight: 18,
+    fontFamily: "serif",
   },
   chartCard: {
     backgroundColor: "#FFFFFF",
