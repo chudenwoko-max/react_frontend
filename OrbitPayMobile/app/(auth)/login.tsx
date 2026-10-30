@@ -1,278 +1,99 @@
-import { Image } from "react-native";
-import { useEffect, useState } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
-import { TextInput, Button, Text, HelperText } from "react-native-paper";
-import { Link, router } from "expo-router";
-import { useAuth } from "../../src/context/AuthContext";
-import axiosClient from "../../src/api/axiosClient";
-import { getDeviceFingerprint } from "../../src/utils/deviceFingerprint";
-import * as SecureStore from "expo-secure-store";
-import UnlockWallet from "../../src/components/UnlockWallet";
+import { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { router } from "expo-router";
+import axiosClient from "../../src/api/axiosClient"; // adjust path
 
-export default function LoginScreen() {
-  const { completeLogin, refreshProfile } = useAuth();
+export default function Login() {
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [show2FA, setShow2FA] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [userId, setUserId] = useState<number | null>(null);
-  const [walletLocked, setWalletLocked] = useState<boolean | null>(null);
 
   useEffect(() => {
-    SecureStore.getItemAsync("WALLET_FROZEN")
-      .then((value) => setWalletLocked(value === "true"))
-      .catch((loadError) => {
-        console.error("Could not read wallet lock state:", loadError);
-        setError("Could not check wallet status. Restart the app and try again.");
-        setWalletLocked(false);
-      });
+    // pre-fill username
+    const saved = /* AsyncStorage.getItem("payhost_username") */ "";
+    if (saved) setUsername(saved);
   }, []);
 
-  const handleWalletUnlocked = async (response: { data: Record<string, unknown> }) => {
-    try {
-      await SecureStore.deleteItemAsync("WALLET_FROZEN");
-    } catch (storageError) {
-      console.error("Could not clear saved wallet lock state:", storageError);
-    }
-    setWalletLocked(false);
-
-    const access = response.data.access;
-    const refresh = response.data.refresh;
-    if (typeof access === "string" && typeof refresh === "string") {
-      try {
-        await completeLogin(access, refresh);
-        router.replace("/(tabs)");
-        return;
-      } catch (loginError) {
-        console.error("Wallet unlocked, but automatic sign-in failed:", loginError);
-      }
-    }
-
-    try {
-      const profile = await refreshProfile();
-      if (!profile?.is_frozen) {
-        router.replace("/(tabs)");
-        return;
-      }
-    } catch {
-      // Unlock succeeds without restoring a session; continue to normal sign-in.
-    }
-
-    setError("Wallet unlocked. Sign in to continue.");
-  };
-
   const handleLogin = async () => {
-    if (!username || !password) {
-      setError("Please fill in all fields");
+    if (!username.trim() || passcode.length !== 6) {
+      Alert.alert("Enter username and 6-digit passcode");
       return;
     }
-
     setLoading(true);
-    setError("");
-
     try {
-      if (username.trim().startsWith("eyJ") || password.startsWith("eyJ")) {
-        setError("Enter your username and password, not a token");
-        setLoading(false);
-        return;
-      }
-
-      const fingerprint = await getDeviceFingerprint();
-
-      const res = await axiosClient.post(
-        "login/",
-        {
-          username,
-          password,
-          device_fingerprint: fingerprint,
-          device_name: Platform.OS === "web" ? "Web Browser" : "Android Phone",
-          device_type: Platform.OS,
-        },
-        { headers: { "X-Client": "mobile" } }
-      );
-
-      if (res.data.requires_2fa) {
-        setUserId(res.data.user_id);
-        setShow2FA(true);
-        setLoading(false);
-        return;
-      }
-
-      await completeLogin(res.data.access, res.data.refresh);
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      let message = "Unable to log in. Please try again.";
-      if (error.response) {
-        message =
-          error.response.data?.error ||
-          error.response.data?.detail ||
-          JSON.stringify(error.response.data);
-      } else if (error.request) {
-        message = "Network error. Cannot reach the server.";
-      } else {
-        message = error.message || message;
-      }
-      setError(message);
+      const res = await axiosClient.post("login/", {
+        username: username.trim(),
+        passcode,
+      });
+      // await AsyncStorage.setItem("payhost_username", username.trim());
+      Alert.alert("Welcome back");
+      router.replace("/(tabs)/dashboard");
+    } catch (err: any) {
+      Alert.alert(err.response?.data?.error || "Invalid credentials");
     } finally {
       setLoading(false);
     }
   };
-
-  const handleVerify2FA = async () => {
-    if (!otpCode || otpCode.length !== 6) {
-      setError("Please enter the 6-digit code");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const fingerprint = await getDeviceFingerprint();
-      const res = await axiosClient.post(
-        "verify-2fa/",
-        {
-          user_id: userId,
-          code: otpCode,
-          device_fingerprint: fingerprint,
-        },
-        { headers: { "X-Client": "mobile" } }
-      );
-
-      await completeLogin(res.data.access, res.data.refresh);
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      setError(error.response?.data?.error || "Invalid authentication code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (walletLocked === null) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#0F172A" />
-      </View>
-    );
-  }
-
-  if (walletLocked) {
-    return (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <View style={styles.inner}>
-          <View style={styles.brand}>
-            <Image
-              source={require("../../assets/payhost-mark.png")}
-              style={styles.mark}
-            />
-            <Text style={styles.brandName}>Payhost</Text>
-          </View>
-          <UnlockWallet onUnlocked={handleWalletUnlocked} />
-        </View>
-      </KeyboardAvoidingView>
-    );
-  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <View style={styles.inner}>
-        <View style={styles.brand}>
-          <Image
-            source={require("../../assets/payhost-mark.png")}
-            style={styles.mark}
-          />
-          <Text style={styles.brandName}>Payhost</Text>
-        </View>
-        <Text style={styles.subtitle}>
-          {show2FA ? "Enter the email code" : "Sign in to your account"}
-        </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Sign in</Text>
 
-        {!show2FA ? (
-          <>
-            <TextInput
-              label="Username or Email"
-              value={username}
-              onChangeText={setUsername}
-              mode="outlined"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              secureTextEntry
-              style={styles.input}
-            />
-          </>
-        ) : (
-          <>
-            <Text style={{ marginBottom: 12, color: "#64748B" }}>
-              Enter the 6-digit code sent to your email.
-            </Text>
-            <TextInput
-              label="Email code"
-              value={otpCode}
-              onChangeText={setOtpCode}
-              mode="outlined"
-              keyboardType="numeric"
-              maxLength={6}
-              style={styles.input}
-            />
-          </>
-        )}
+      <Text style={styles.label}>Username</Text>
+      <TextInput
+        value={username}
+        onChangeText={setUsername}
+        editable={!/* saved username exists */ false}
+        style={styles.input}
+        autoCapitalize="none"
+      />
 
-        {error ? (
-          <HelperText type="error" visible={true}>
-            {error}
-          </HelperText>
-        ) : null}
+      <Text style={styles.label}>Passcode</Text>
+      <TextInput
+        value={passcode}
+        onChangeText={(t) => setPasscode(t.replace(/\D/g, ""))}
+        keyboardType="number-pad"
+        maxLength={6}
+        secureTextEntry
+        style={styles.input}
+        placeholder="••••••"
+      />
 
-        <Button
-          mode="contained"
-          onPress={show2FA ? handleVerify2FA : handleLogin}
-          loading={loading}
-          style={styles.button}
-          contentStyle={{ paddingVertical: 6 }}
-        >
-          {show2FA ? "Verify Code" : "Sign In"}
-        </Button>
+      <TouchableOpacity onPress={handleLogin} disabled={loading} style={styles.button}>
+        <Text style={styles.buttonText}>{loading ? "Signing in..." : "Sign in"}</Text>
+      </TouchableOpacity>
 
-        <Button
-          mode="text"
-          onPress={() => router.push("/forgot-password")}
-          style={{ marginTop: 12 }}
-        >
-          Forgot Password?
-        </Button>
+      <TouchableOpacity onPress={() => router.push("/(auth)/forgot-passcode")}>
+        <Text style={styles.link}>Forgot passcode?</Text>
+      </TouchableOpacity>
 
-        <Link href="/(auth)/register" asChild>
-          <Button mode="text" style={{ marginTop: 4 }}>
-            Don't have an account? Create Account
-          </Button>
-        </Link>
-      </View>
-    </KeyboardAvoidingView>
+      <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+        <Text style={styles.link}>Don't have an account? Create Account</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  loading: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
-  inner: { flex: 1, justifyContent: "center", padding: 24 },
-  brand: { alignItems: "center", marginBottom: 20 },
-  mark: { width: 48, height: 48, resizeMode: "contain" },
-  brandName: { marginTop: 8, fontWeight: "700", color: "#0F172A" },
-  subtitle: { textAlign: "center", color: "#64748B", marginBottom: 32 },
-  input: { marginBottom: 16 },
-  button: { marginTop: 8, borderRadius: 10 },
+  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#f8fafc" },
+  title: { fontSize: 28, fontWeight: "700", textAlign: "center", marginBottom: 32 },
+  label: { fontSize: 14, marginBottom: 6, color: "#374151" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: "#fff",
+  },
+  button: {
+    backgroundColor: "#0F172A",
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  link: { textAlign: "center", marginTop: 16, color: "#0284C7" },
 });
