@@ -1,0 +1,144 @@
+import React, { forwardRef, useMemo, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import BottomSheet, {
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+} from "@gorhom/bottom-sheet";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+
+const menuItems = [
+  { icon: "send", label: "Send Money", route: "/(tabs)/send", color: "#0284C7" },
+  { icon: "plus", label: "Fund Wallet", route: "/(tabs)/fund", color: "#16A34A" },
+  { icon: "wallet-outline", label: "Wallet", route: "/(tabs)/wallet", color: "#0F172A" },
+  { icon: "account-outline", label: "Profile", route: "/(tabs)/profile", color: "#1E40AF" },
+  { icon: "cash-plus", label: "Request Money", route: "/(tabs)/request-money", color: "#D97706" },
+  { icon: "piggy-bank", label: "Savings Goals", route: "/(tabs)/savings", color: "#7C3AED" },
+  { icon: "receipt", label: "Bill Payments", route: "/(tabs)/bills", color: "#DC2626" },
+  { icon: "calendar-clock", label: "Scheduled", route: "/(tabs)/scheduled", color: "#4F46E5" },
+  { icon: "credit-card", label: "Virtual Cards", route: "/(tabs)/virtual-cards", color: "#0F172A" },
+  { icon: "bank", label: "Bank Account", route: "/(tabs)/bank-account", color: "#059669" },
+  { icon: "shield-check", label: "KYC", route: "/(tabs)/kyc", color: "#B45309" },
+  { icon: "lock", label: "Set PIN", route: "/(tabs)/set-pin", color: "#BE185D" },
+  { icon: "account-edit", label: "Edit Profile", route: "/(tabs)/edit-profile", color: "#1E40AF" },
+  { icon: "account-group", label: "Referral", route: "/(tabs)/referral", color: "#7C2D12" },
+  { icon: "headset", label: "Support", route: "/(tabs)/support", color: "#0E7490" },
+  { icon: "bell", label: "Notifications", route: "/(tabs)/notifications", color: "#6D28D9" },
+  { icon: "bank-transfer-out", label: "Withdraw", route: "/(tabs)/withdraw", color: "#DC2626" },
+  { icon: "two-factor-authentication", label: "2FA", route: "/(tabs)/two-factor", color: "#7C3AED" },
+  { icon: "cash-clock", label: "Pending Requests", route: "/(tabs)/pending-requests", color: "#D97706" },
+  { icon: "file-document-multiple-outline", label: "Statement of Account", route: "/(tabs)/statement", color: "#0F172A" },
+  { icon: "file-document-outline", label: "Privacy & Terms", route: "/(tabs)/legal", color: "#475569" },
+  { icon: "cog", label: "Settings", route: "/(tabs)/settings", color: "#475569" },
+];
+
+interface MoreSheetProps {
+  onChange?: (index: number) => void;
+}
+
+const MoreSheet = forwardRef<BottomSheet, MoreSheetProps>(({ onChange }, ref) => {
+  const snapPoints = useMemo(() => ["55%", "85%"], []);
+  const pendingRoute = useRef<string | null>(null);
+
+  const handlePress = (route: string) => {
+    if (typeof ref === "function" || !ref?.current) {
+      router.push(route as any);
+      return;
+    }
+
+    pendingRoute.current = route;
+    ref.current.close();
+  };
+
+  const handleSheetChange = (index: number) => {
+    onChange?.(index);
+    if (index !== -1 || !pendingRoute.current) return;
+
+    const route = pendingRoute.current;
+    pendingRoute.current = null;
+    router.push(route as any);
+  };
+
+  const renderBackdrop = (backdropProps: any) => (
+    <BottomSheetBackdrop
+      {...backdropProps}
+      disappearsOnIndex={-1}
+      appearsOnIndex={0}
+      pressBehavior="close"
+      style={[backdropProps.style, { bottom: 64 }]}
+    />
+  );
+
+  return (
+    <BottomSheet
+      ref={ref}
+      index={-1}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      bottomInset={64}
+      backdropComponent={renderBackdrop}
+      onChange={handleSheetChange}
+      backgroundStyle={{ backgroundColor: "#FFFFFF" }}
+      handleIndicatorStyle={{ backgroundColor: "#CBD5E1", width: 40 }}
+    >
+      <BottomSheetScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>More Features</Text>
+
+        <View style={styles.grid}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.item}
+              onPress={() => handlePress(item.route)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: item.color + "15" }]}>
+                <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
+              </View>
+              <Text style={styles.label}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </BottomSheetScrollView>
+    </BottomSheet>
+  );
+});
+
+export default MoreSheet;
+
+const styles = StyleSheet.create({
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 20,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  item: {
+    width: "30%",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 12,
+    color: "#475569",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+});
