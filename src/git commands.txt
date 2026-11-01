@@ -1,0 +1,14 @@
+cd "C:\Users\chude\React"
+git add --  "OrbitPayMobile\src\components\dashboard\DashboardSections.tsx" 
+git status
+git commit -m "Add back arrow header to all Menu screens"
+git push origin main
+
+
+
+cd "C:\Users\chude\React"
+git add "src\pages\KYC.jsx" 
+git commit -m "Send confirm_password on the reset page."
+git push origin main
+
+

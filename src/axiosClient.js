@@ -1,4 +1,6 @@
 import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const API_BASE_URL = "https://api.payhost.dev";
 
@@ -14,9 +16,37 @@ const axiosClient = axios.create({
 
 axiosClient.defaults.headers.common["X-Payhost-Client"] = "web";
 
+// Request interceptor — attaches Bearer token on Android / web
+axiosClient.interceptors.request.use(async (config) => {
+  const publicPaths = ["register/", "login/", "token/refresh/"];
+  const isPublic = publicPaths.some((path) => config.url?.includes(path));
+
+  if (isPublic) {
+    delete config.headers.Authorization;
+    return config;
+  }
+
+  try {
+    let token = null;
+    if (Platform.OS === "web") {
+      token = localStorage.getItem("ACCESS_TOKEN");
+    } else {
+      token = await SecureStore.getItemAsync("ACCESS_TOKEN");
+    }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (e) {
+    console.log("Failed to attach access token:", e);
+  }
+
+  return config;
+});
+
 let refreshTried = false;
 
 function onPublicPage() {
+  if (Platform.OS !== "web") return false;
   const path = window.location.pathname;
   return path.startsWith("/login")
     || path.startsWith("/forgot-password")
@@ -29,16 +59,16 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const url = error.config?.url || "";
 
-    // _skipRefresh: a failed refresh must not start another refresh.
     if (error.config?._skipRefresh || refreshTried || url.includes("refresh/")) {
-      if (!onPublicPage()) window.location.href = "/login";
+      if (Platform.OS === "web" && !onPublicPage()) {
+        window.location.href = "/login";
+      }
       return Promise.reject(error);
     }
 
     if (error.response?.status === 401) {
       refreshTried = true;
       try {
-        // Force credentials on this call. got: [] means this request was not credentialed.
         await axiosClient.post(
           "token/refresh/",
           {},
@@ -46,7 +76,9 @@ axiosClient.interceptors.response.use(
         );
         return axiosClient(error.config);
       } catch (err) {
-        if (!onPublicPage()) window.location.href = "/login";
+        if (Platform.OS === "web" && !onPublicPage()) {
+          window.location.href = "/login";
+        }
         return Promise.reject(err);
       }
     }

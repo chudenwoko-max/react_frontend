@@ -40,7 +40,11 @@ function averageBrightness(imageData) {
   return sum / (d.length / 16);
 }
 
-export default function DocumentScanner({ onCapture, onCancel }) {
+export default function DocumentScanner({
+  onCapture,
+  onCancel,
+  facingMode = "environment",
+}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [status, setStatus] = useState("Point camera at document");
@@ -101,7 +105,11 @@ export default function DocumentScanner({ onCapture, onCancel }) {
     async function start() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: {
+            facingMode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -113,7 +121,7 @@ export default function DocumentScanner({ onCapture, onCancel }) {
     }
     start();
     return () => stream?.getTracks().forEach((t) => t.stop());
-  }, []);
+  }, [facingMode]);
 
   useEffect(() => {
     if (!streaming) return;
