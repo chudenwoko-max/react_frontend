@@ -5,6 +5,7 @@ const axiosClient = axios.create({
   headers: {
     "Content-Type": "application/json",
     "X-Client": "web",
+    "X-Payhost-Client": "web",
   },
   withCredentials: true,
 });
