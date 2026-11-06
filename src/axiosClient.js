@@ -1,6 +1,9 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+
+const Platform = {
+  OS: typeof window !== "undefined" && typeof document !== "undefined" ? "web" : "native",
+};
 
 const API_BASE_URL = "https://api.payhost.dev";
 
