@@ -269,7 +269,7 @@ export default function FundWalletScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Fund Wallet</Text>
+      <Text style={styles.title}>Add Money</Text>
       <Text style={styles.subtitle}>Minimum amount: ₦100</Text>
 
       <Text style={styles.label}>Amount (₦)</Text>
