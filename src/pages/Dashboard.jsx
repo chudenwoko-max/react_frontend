@@ -26,8 +26,8 @@ ChartJS.register(
 );
 
 const QUICK_ACTIONS = [
-  { label: "Fund", to: "/fund-wallet" },
-  { label: "Send", to: "/send-money" },
+  { label: "Add Money", to: "/fund-wallet" },
+  { label: "Transfer", to: "/send-money" },
   { label: "Pay Merchant", to: "/pay" },
   { label: "Withdraw", to: "/withdraw" },
 ];
