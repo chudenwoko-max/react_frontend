@@ -19,14 +19,36 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
+const fallbackStorage = new Map<string, string>();
+const AsyncStorage = {
+  async setItem(key: string, value: string) {
+    if (Platform.OS === "web" && typeof globalThis.localStorage !== "undefined") {
+      globalThis.localStorage.setItem(key, value);
+    } else {
+      fallbackStorage.set(key, value);
+    }
+  },
+  async getItem(key: string) {
+    if (Platform.OS === "web" && typeof globalThis.localStorage !== "undefined") {
+      return globalThis.localStorage.getItem(key);
+    }
+    return fallbackStorage.get(key) ?? null;
+  },
+  async multiRemove(keys: string[]) {
+    if (Platform.OS === "web" && typeof globalThis.localStorage !== "undefined") {
+      keys.forEach((key) => globalThis.localStorage.removeItem(key));
+    } else {
+      keys.forEach((key) => fallbackStorage.delete(key));
+    }
+  },
+};
 
 const PENDING_REF_KEY = "pending_funding_reference";
 const PENDING_AMOUNT_KEY = "pending_funding_amount";
 
 export default function FundWalletScreen() {
   const { logout } = useAuth();
-  const router = useRouter();
+  const navigation = useRouter();
 
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
@@ -62,7 +84,7 @@ export default function FundWalletScreen() {
         // ⭐ PATCH: Handle revoked/expired session
         if (e?.response?.status === 401) {
           await logout();
-          router.replace("/(auth)/login");
+          navigation.replace("/(auth)/login");
           return;
         }
 
@@ -103,7 +125,7 @@ export default function FundWalletScreen() {
       setCheckoutUrl("");
       setStatusMessage("");
 
-      router.replace({
+      navigation.replace({
         pathname: "/payment-success",
         params: {
           amount: String(data.amount || amount || "0"),
@@ -116,7 +138,7 @@ export default function FundWalletScreen() {
       // ⭐ PATCH: Handle revoked/expired session
       if (error?.response?.status === 401) {
         await logout();
-        router.replace("/(auth)/login");
+        navigation.replace("/(auth)/login");
         return;
       }
 
@@ -185,7 +207,7 @@ export default function FundWalletScreen() {
   } catch (error: any) {
     if (error?.response?.status === 401) {
       await logout();
-      router.replace("/(auth)/login");
+      navigation.replace("/(auth)/login");
       return;
     }
 
@@ -235,7 +257,7 @@ export default function FundWalletScreen() {
       // ⭐ PATCH: Handle revoked/expired session
       if (e?.response?.status === 401) {
         await logout();
-        router.replace("/(auth)/login");
+        navigation.replace("/(auth)/login");
         return;
       }
 
