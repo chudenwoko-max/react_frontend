@@ -58,7 +58,7 @@ function FundWallet() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Fund Wallet</h1>
+        <h1 style={styles.title}>Add Money</h1>
         <p style={styles.subtitle}>Add money to your wallet securely</p>
       </div>
 

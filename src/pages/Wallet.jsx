@@ -124,7 +124,7 @@ export default function Wallet() {
         <Link to="/fund-wallet" style={styles.actionCard}>
           <span style={{ fontSize: 22 }}>↓</span>
           <div>
-            <p style={styles.actionTitle}>Fund Wallet</p>
+            <p style={styles.actionTitle}>Add Money</p>
             <p style={styles.actionDesc}>Add money</p>
           </div>
         </Link>

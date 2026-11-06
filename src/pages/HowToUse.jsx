@@ -70,7 +70,7 @@ export default function HowToUse() {
       </section>
 
       <section style={styles.section}>
-        <h2>Fund Wallet</h2>
+        <h2>Add Money</h2>
         <p>Add money using card, bank transfer, or other methods shown. The money appears in your NGN wallet after successful payment.</p>
       </section>
 
