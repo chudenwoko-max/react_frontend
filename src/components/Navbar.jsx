@@ -71,27 +71,6 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
         background: "#ffffff",
       }}
     >
-      <style>{`
-        .menu-tip { position: relative; }
-        .menu-tip::after {
-          content: attr(data-tip);
-          position: absolute;
-          top: calc(100% + 8px);
-          left: 0;
-          background: #1f2328;
-          color: #fff;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 6px 8px;
-          border-radius: 6px;
-          white-space: nowrap;
-          opacity: 0;
-          pointer-events: none;
-          z-index: 1000;
-        }
-        .menu-tip:hover::after { opacity: 1; }
-      `}</style>
-
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
           onClick={onMenuClick}
@@ -99,14 +78,18 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            lineHeight: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
             padding: 4,
+            color: "#0F172A",
           }}
-          className={isSidebarOpen ? undefined : "menu-tip"}
-          data-tip={isSidebarOpen ? undefined : "Open menu"}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          {isSidebarOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+          <span style={{ fontSize: 14, fontWeight: 600 }}>
+            {isSidebarOpen ? "Close" : "Menu"}
+          </span>
         </button>
       </div>
 
