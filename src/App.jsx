@@ -26,6 +26,7 @@ import Profile from "./pages/Profile";
 import AvatarUpload from "./pages/AvatarUpload";
 import BankAccount from "./pages/BankAccount";
 import KYC from "./pages/KYC";
+import Security from "./pages/Security";
 import RequestMoney from "./pages/RequestMoney";
 import BillPayments from "./pages/BillPayments";
 import Savings from "./pages/Savings";
@@ -72,6 +73,7 @@ function AppShell({ marketing = false } = {}) {
         <Route path="avatar-upload" element={<AvatarUpload />} />
         <Route path="bank-account" element={<BankAccount />} />
         <Route path="kyc" element={<KYC />} />
+        <Route path="security" element={<Security />} />
         <Route path="logout" element={<Logout />} />
         <Route path="request-money" element={<RequestMoney />} />
         <Route path="bills" element={<BillPayments />} />

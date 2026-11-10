@@ -16,6 +16,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/transactions", label: "Transactions", icon: <FaExchangeAlt /> },
     { path: "/converter", label: "Currency Converter", icon: <FaExchangeAlt /> },
     { path: "/kyc", label: "Verify Identity", icon: <FaShieldAlt /> },
+    { path: "/security", label: "Security", icon: <FaShieldAlt /> },
     { path: "/profile", label: "Profile", icon: <FaUser /> },
     { path: "/avatar-upload", label: "Avatar Upload", icon: <FaImage /> },
     { path: "/bank-account", label: "Bank Account", icon: <FaUniversity /> },
