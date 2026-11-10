@@ -14,6 +14,7 @@ export default function Referral() {
       setData(res.data);
     } catch (err) {
       console.error(err);
+      toast.error("Could not load referral info");
     } finally {
       setLoading(false);
     }
@@ -24,13 +25,15 @@ export default function Referral() {
   }, []);
 
   const copyCode = () => {
+    if (!data?.code) return;
     navigator.clipboard.writeText(data.code);
-    toast.success("Referral code copied!");
+    toast.success("Referral code copied");
   };
 
   const copyMessage = () => {
+    if (!data?.share_message) return;
     navigator.clipboard.writeText(data.share_message);
-    toast.success("Share message copied!");
+    toast.success("Invite message copied");
   };
 
   const handleApplyCode = async () => {
@@ -42,7 +45,7 @@ export default function Referral() {
     setApplying(true);
     try {
       await axiosClient.post("/referral/apply/", { code: applyCode.trim() });
-      toast.success("Referral code applied successfully!");
+      toast.success("Referral code applied");
       setApplyCode("");
       fetchReferral();
     } catch (err) {
@@ -55,7 +58,7 @@ export default function Referral() {
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
-        Loading referral info...
+        Loading…
       </div>
     );
   }
@@ -63,75 +66,68 @@ export default function Referral() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Refer & Earn</h1>
+        <h1 style={styles.title}>Refer friends</h1>
         <p style={styles.subtitle}>
-          Invite friends and earn rewards when they join
+          Share Payhost with people you know
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <p style={styles.statLabel}>Total Referrals</p>
+          <p style={styles.statLabel}>People referred</p>
           <h2 style={styles.statValue}>{data?.total_referrals || 0}</h2>
         </div>
-        <div style={styles.statCard}>
-          <p style={styles.statLabel}>Total Earned</p>
-          <h2 style={styles.statValue}>
-            ₦{Number(data?.total_earned || 0).toLocaleString()}
-          </h2>
-        </div>
       </div>
 
-      {/* Your Referral Code */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Your Referral Code</h3>
+        <h3 style={styles.cardTitle}>Your referral code</h3>
         <div style={styles.codeBox}>
-          <span style={styles.code}>{data?.code}</span>
+          <span style={styles.code}>{data?.code || "—"}</span>
           <button onClick={copyCode} style={styles.copyBtn}>
-            Copy Code
+            Copy
           </button>
         </div>
 
-        <p style={styles.shareLabel}>Share this message:</p>
+        <p style={styles.shareLabel}>Invite message</p>
         <div style={styles.messageBox}>
-          <p style={styles.message}>{data?.share_message}</p>
+          <p style={styles.message}>
+            {data?.share_message || "Join me on Payhost."}
+          </p>
           <button onClick={copyMessage} style={styles.copyBtn}>
-            Copy Message
+            Copy message
           </button>
         </div>
       </div>
 
-      {/* Apply a Code */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Have a Referral Code?</h3>
-        <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 16 }}>
-          Enter a friend’s code to claim your welcome bonus
+        <h3 style={styles.cardTitle}>Have a referral code?</h3>
+        <p style={{ color: "#6b7280", fontSize: 14, margin: "0 0 16px" }}>
+          Enter a code from someone who invited you
         </p>
         <div style={styles.applyRow}>
           <input
             type="text"
-            placeholder="Enter referral code"
+            placeholder="Referral code"
             value={applyCode}
             onChange={(e) => setApplyCode(e.target.value.toUpperCase())}
             style={styles.input}
+            autoCapitalize="characters"
           />
           <button
             onClick={handleApplyCode}
             disabled={applying}
             style={styles.applyBtn}
           >
-            {applying ? "Applying..." : "Apply"}
+            {applying ? "Applying…" : "Apply"}
           </button>
         </div>
       </div>
 
-      {/* Referral History */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Your Referrals</h3>
+        <h3 style={styles.cardTitle}>People you’ve referred</h3>
 
-        {data?.referrals?.length === 0 ? (
-          <p style={styles.empty}>You haven’t referred anyone yet</p>
+        {!data?.referrals?.length ? (
+          <p style={styles.empty}>No referrals yet</p>
         ) : (
           <div style={styles.list}>
             {data.referrals.map((ref) => (
@@ -140,21 +136,15 @@ export default function Referral() {
                   <p style={styles.username}>{ref.username}</p>
                   <p style={styles.date}>{ref.created_at}</p>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <span
-                    style={{
-                      ...styles.badge,
-                      background:
-                        ref.status === "completed" ? "#dcfce7" : "#fef3c7",
-                      color: ref.status === "completed" ? "#16a34a" : "#d97706",
-                    }}
-                  >
-                    {ref.status}
-                  </span>
-                  <p style={styles.reward}>
-                    ₦{Number(ref.reward_amount).toLocaleString()}
-                  </p>
-                </div>
+                <span
+                  style={{
+                    ...styles.badge,
+                    background: ref.status === "completed" ? "#dcfce7" : "#f3f4f6",
+                    color: ref.status === "completed" ? "#16a34a" : "#6b7280",
+                  }}
+                >
+                  {ref.status}
+                </span>
               </div>
             ))}
           </div>
@@ -164,7 +154,6 @@ export default function Referral() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   page: {
     padding: "32px 28px",
@@ -187,7 +176,7 @@ const styles = {
   },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1fr",
     gap: 16,
     marginBottom: 24,
   },
@@ -275,10 +264,11 @@ const styles = {
     border: "1px solid #d1d5db",
     fontSize: 15,
     outline: "none",
+    boxSizing: "border-box",
   },
   applyBtn: {
     padding: "11px 20px",
-    background: "#16a34a",
+    background: "#111827",
     color: "white",
     border: "none",
     borderRadius: 10,
@@ -288,7 +278,7 @@ const styles = {
   list: {
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 4,
   },
   listItem: {
     display: "flex",
@@ -314,12 +304,6 @@ const styles = {
     fontSize: 11,
     fontWeight: 600,
     textTransform: "capitalize",
-  },
-  reward: {
-    margin: "4px 0 0",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#111827",
   },
   empty: {
     textAlign: "center",
