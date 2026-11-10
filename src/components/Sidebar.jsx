@@ -10,11 +10,9 @@ export default function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: <FaHome /> },
     { path: "/wallet", label: "Wallet", icon: <FaWallet /> },
-    { path: "/send-money", label: "Transfer", icon: <FaPaperPlane /> },
     { path: "/set-pin", label: "Set Transfer PIN", icon: <FaKey /> },
     { path: "/change-pin", label: "Change Transfer PIN", icon: <FaKey /> },
     { path: "/request-money", label: "Request Money", icon: <FaHandHoldingUsd /> },
-    { path: "/withdraw", label: "Withdraw", icon: <FaArrowDown /> },
     { path: "/transactions", label: "Transactions", icon: <FaExchangeAlt /> },
     { path: "/converter", label: "Currency Converter", icon: <FaExchangeAlt /> },
     { path: "/kyc", label: "Verify Identity", icon: <FaShieldAlt /> },
