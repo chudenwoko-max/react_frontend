@@ -195,7 +195,7 @@ export default function VirtualCards() {
                         onClick={() => setShowFund(card.id)}
                         style={styles.actionBtn}
                       >
-                        Fund
+                        Add Money
                       </button>
 
                       <button
