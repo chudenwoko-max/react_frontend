@@ -34,20 +34,23 @@ const deleteToken = async (key: string) => {
 const axiosClient = axios.create({
   baseURL: baseURL,
   timeout: 30000,
+  withCredentials: Platform.OS === "web",
   headers: {
     "Content-Type": "application/json",
     // CHANGE: login is exempt. Money routes require X-Payhost-Client, not only X-Client.
-    "X-Client": "mobile",
-    "X-Payhost-Client": "mobile",
+    "X-Client": Platform.OS === "web" ? "web" : "mobile",
+    "X-Payhost-Client": Platform.OS === "web" ? "web" : "mobile",
   },
 });
 
 // ---------------- REQUEST INTERCEPTOR ----------------
 
 axiosClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  const token = await getToken("ACCESS_TOKEN");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (Platform.OS !== "web") {
+    const token = await getToken("ACCESS_TOKEN");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   // CHANGE: money routes require Idempotency-Key. Screens keep storing reference_id; copy it when the header is absent.
@@ -148,7 +151,9 @@ axiosClient.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        original.headers.Authorization = `Bearer ${access}`;
+        if (Platform.OS !== "web") {
+          original.headers.Authorization = `Bearer ${access}`;
+        }
         return axiosClient(original);
       } catch {
         await deleteToken("ACCESS_TOKEN");
