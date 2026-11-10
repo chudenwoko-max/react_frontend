@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
+import PinModal from "../components/PinModal";
 
 export default function VirtualCards() {
   const [cards, setCards] = useState([]);
@@ -12,6 +13,9 @@ export default function VirtualCards() {
   const [cardName, setCardName] = useState("");
   const [creating, setCreating] = useState(false);
   const [showDetails, setShowDetails] = useState(null); // card id
+  const [showPinModal, setShowPinModal] = useState(false);
+const [pendingFund, setPendingFund] = useState(null); // { cardId, amount }
+
 
   const fetchCards = async () => {
     try {
@@ -71,20 +75,40 @@ export default function VirtualCards() {
   };
 
   const handleFund = async (cardId) => {
-    if (!fundAmount || Number(fundAmount) <= 0) {
-      toast.error("Enter a valid amount");
+  if (!fundAmount || Number(fundAmount) <= 0) {
+    toast.error("Enter a valid amount");
+    return;
+  }
+  setPendingFund({ cardId, amount: fundAmount });
+  setShowPinModal(true);
+};
+
+const onPinVerified = async () => {
+  if (!pendingFund) return;
+  try {
+    // PinModal in verify mode already stored PIN_TOKEN, or get it here
+    const pinToken = localStorage.getItem("PIN_TOKEN");
+    if (!pinToken) {
+      toast.error("PIN verification failed");
       return;
     }
-    try {
-      await axiosClient.post(`/cards/${cardId}/fund/`, { amount: fundAmount });
-      toast.success("Card funded successfully");
-      setShowFund(null);
-      setFundAmount("");
-      fetchCards();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Funding failed");
-    }
-  };
+
+    await axiosClient.post(`/cards/${pendingFund.cardId}/fund/`, {
+      amount: pendingFund.amount,
+      pin_token: pinToken,
+    });
+    toast.success("Card funded successfully");
+    setShowFund(null);
+    setFundAmount("");
+    setPendingFund(null);
+    localStorage.removeItem("PIN_TOKEN");
+    fetchCards();
+  } catch (err) {
+    toast.error(err.response?.data?.error || "Funding failed");
+  } finally {
+    setShowPinModal(false);
+  }
+};
 
   const getCardGradient = (type, status) => {
     if (status === "frozen") return "linear-gradient(135deg, #6b7280, #9ca3af)";
@@ -95,207 +119,216 @@ export default function VirtualCards() {
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Virtual Cards</h1>
-          <p style={styles.subtitle}>Create and manage your virtual payment cards</p>
-        </div>
+  <div style={styles.page}>
+    <div style={styles.header}>
+      <div>
+        <h1 style={styles.title}>Virtual Cards</h1>
+        <p style={styles.subtitle}>Create and manage your virtual payment cards</p>
+      </div>
+      <button onClick={() => setShowCreate(true)} style={styles.createBtn}>
+        + Create Card
+      </button>
+    </div>
+
+    {loading ? (
+      <p style={{ textAlign: "center", color: "#6b7280" }}>Loading cards...</p>
+    ) : cards.length === 0 ? (
+      <div style={styles.emptyState}>
+        <p style={{ fontSize: 18, marginBottom: 8 }}>No virtual cards yet</p>
+        <p style={{ color: "#6b7280", marginBottom: 20 }}>
+          Create your first virtual card to start making online payments
+        </p>
         <button onClick={() => setShowCreate(true)} style={styles.createBtn}>
-          + Create Card
+          Create Your First Card
         </button>
       </div>
+    ) : (
+      <div style={styles.cardsGrid}>
+        {cards.map((card) => (
+          <div key={card.id} style={styles.cardWrapper}>
+            <div
+              style={{
+                ...styles.cardVisual,
+                background: getCardGradient(card.card_type, card.status),
+              }}
+            >
+              <div style={styles.cardTop}>
+                <span style={styles.cardBrand}>
+                  {card.card_type === "usd" ? "VIRTUAL USD" : "VIRTUAL NGN"}
+                </span>
+                <span style={styles.cardStatus}>{card.status}</span>
+              </div>
 
-      {loading ? (
-        <p style={{ textAlign: "center", color: "#6b7280" }}>Loading cards...</p>
-      ) : cards.length === 0 ? (
-        <div style={styles.emptyState}>
-          <p style={{ fontSize: 18, marginBottom: 8 }}>No virtual cards yet</p>
-          <p style={{ color: "#6b7280", marginBottom: 20 }}>
-            Create your first virtual card to start making online payments
-          </p>
-          <button onClick={() => setShowCreate(true)} style={styles.createBtn}>
-            Create Your First Card
-          </button>
-        </div>
-      ) : (
-        <div style={styles.cardsGrid}>
-          {cards.map((card) => (
-            <div key={card.id} style={styles.cardWrapper}>
-              {/* Card Visual */}
-              <div
-                style={{
-                  ...styles.cardVisual,
-                  background: getCardGradient(card.card_type, card.status),
-                }}
-              >
-                <div style={styles.cardTop}>
-                  <span style={styles.cardBrand}>
-                    {card.card_type === "usd" ? "VIRTUAL USD" : "VIRTUAL NGN"}
-                  </span>
-                  <span style={styles.cardStatus}>{card.status}</span>
+              <div style={styles.chip}></div>
+
+              <p style={styles.cardNumber}>
+                {showDetails === card.id
+                  ? card.card_number.replace(/(.{4})/g, "$1 ").trim()
+                  : card.masked_number}
+              </p>
+
+              <div style={styles.cardBottom}>
+                <div>
+                  <p style={styles.cardLabel}>Card Holder</p>
+                  <p style={styles.cardValue}>{card.card_name}</p>
                 </div>
-
-                <div style={styles.chip}></div>
-
-                <p style={styles.cardNumber}>
-                  {showDetails === card.id
-                    ? card.card_number.replace(/(.{4})/g, "$1 ").trim()
-                    : card.masked_number}
-                </p>
-
-                <div style={styles.cardBottom}>
+                <div>
+                  <p style={styles.cardLabel}>Expires</p>
+                  <p style={styles.cardValue}>{card.expiry}</p>
+                </div>
+                {showDetails === card.id && (
                   <div>
-                    <p style={styles.cardLabel}>Card Holder</p>
-                    <p style={styles.cardValue}>{card.card_name}</p>
+                    <p style={styles.cardLabel}>CVV</p>
+                    <p style={styles.cardValue}>{card.cvv}</p>
                   </div>
-                  <div>
-                    <p style={styles.cardLabel}>Expires</p>
-                    <p style={styles.cardValue}>{card.expiry}</p>
-                  </div>
-                  {showDetails === card.id && (
-                    <div>
-                      <p style={styles.cardLabel}>CVV</p>
-                      <p style={styles.cardValue}>{card.cvv}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Info & Actions */}
-              <div style={styles.cardInfo}>
-                <div style={styles.balanceRow}>
-                  <span>Balance</span>
-                  <strong>
-                    {card.currency === "USD" ? "$" : "₦"}
-                    {Number(card.balance).toLocaleString()}
-                  </strong>
-                </div>
-
-                <div style={styles.actions}>
-                  <button
-                    onClick={() =>
-                      setShowDetails(showDetails === card.id ? null : card.id)
-                    }
-                    style={styles.actionBtn}
-                  >
-                    {showDetails === card.id ? "Hide Details" : "Show Details"}
-                  </button>
-
-                  {card.status !== "terminated" && (
-                    <>
-                      <button
-                        onClick={() => handleFreeze(card.id, card.status)}
-                        style={styles.actionBtn}
-                      >
-                        {card.status === "active" ? "Freeze" : "Unfreeze"}
-                      </button>
-
-                      <button
-                        onClick={() => setShowFund(card.id)}
-                        style={styles.actionBtn}
-                      >
-                        Add Money
-                      </button>
-
-                      <button
-                        onClick={() => handleTerminate(card.id)}
-                        style={{ ...styles.actionBtn, color: "#dc2626" }}
-                      >
-                        Terminate
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create Card Modal */}
-      {showCreate && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h2 style={{ marginTop: 0 }}>Create Virtual Card</h2>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Card Type</label>
-              <div style={{ display: "flex", gap: 10 }}>
-                {["ngn", "usd"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setCardType(type)}
-                    style={{
-                      ...styles.typeBtn,
-                      background: cardType === type ? "#eff6ff" : "#f9fafb",
-                      borderColor: cardType === type ? "#2563eb" : "#e5e7eb",
-                      color: cardType === type ? "#2563eb" : "#374151",
-                    }}
-                  >
-                    {type.toUpperCase()} Card
-                  </button>
-                ))}
+                )}
               </div>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Name on Card (optional)</label>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                style={styles.input}
-              />
-            </div>
+            <div style={styles.cardInfo}>
+              <div style={styles.balanceRow}>
+                <span>Balance</span>
+                <strong>
+                  {card.currency === "USD" ? "$" : "₦"}
+                  {Number(card.balance).toLocaleString()}
+                </strong>
+              </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button onClick={() => setShowCreate(false)} style={styles.cancelBtn}>
-                Cancel
-              </button>
-              <button onClick={handleCreate} disabled={creating} style={styles.primaryBtn}>
-                {creating ? "Creating..." : "Create Card"}
-              </button>
+              <div style={styles.actions}>
+                <button
+                  onClick={() =>
+                    setShowDetails(showDetails === card.id ? null : card.id)
+                  }
+                  style={styles.actionBtn}
+                >
+                  {showDetails === card.id ? "Hide Details" : "Show Details"}
+                </button>
+
+                {card.status !== "terminated" && (
+                  <>
+                    <button
+                      onClick={() => handleFreeze(card.id, card.status)}
+                      style={styles.actionBtn}
+                    >
+                      {card.status === "active" ? "Freeze" : "Unfreeze"}
+                    </button>
+
+                    <button
+                      onClick={() => setShowFund(card.id)}
+                      style={styles.actionBtn}
+                    >
+                      Add Money
+                    </button>
+
+                    <button
+                      onClick={() => handleTerminate(card.id)}
+                      style={{ ...styles.actionBtn, color: "#dc2626" }}
+                    >
+                      Terminate
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
+    )}
 
-      {/* Fund Card Modal */}
-      {showFund && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h2 style={{ marginTop: 0 }}>Fund Virtual Card</h2>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Amount</label>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={fundAmount}
-                onChange={(e) => setFundAmount(e.target.value)}
-                style={styles.input}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button
-                onClick={() => {
-                  setShowFund(null);
-                  setFundAmount("");
-                }}
-                style={styles.cancelBtn}
-              >
-                Cancel
-              </button>
-              <button onClick={() => handleFund(showFund)} style={styles.primaryBtn}>
-                Add Money
-              </button>
+    {/* Create Card Modal */}
+    {showCreate && (
+      <div style={styles.modalOverlay}>
+        <div style={styles.modal}>
+          <h2 style={{ marginTop: 0 }}>Create Virtual Card</h2>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Card Type</label>
+            <div style={{ display: "flex", gap: 10 }}>
+              {["ngn", "usd"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setCardType(type)}
+                  style={{
+                    ...styles.typeBtn,
+                    background: cardType === type ? "#eff6ff" : "#f9fafb",
+                    borderColor: cardType === type ? "#2563eb" : "#e5e7eb",
+                    color: cardType === type ? "#2563eb" : "#374151",
+                  }}
+                >
+                  {type.toUpperCase()} Card
+                </button>
+              ))}
             </div>
           </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Name on Card (optional)</label>
+            <input
+              type="text"
+              placeholder="Your name"
+              value={cardName}
+              onChange={(e) => setCardName(e.target.value)}
+              style={styles.input}
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={() => setShowCreate(false)} style={styles.cancelBtn}>
+              Cancel
+            </button>
+            <button onClick={handleCreate} disabled={creating} style={styles.primaryBtn}>
+              {creating ? "Creating..." : "Create Card"}
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+
+    {/* Fund Card Modal */}
+    {showFund && (
+      <div style={styles.modalOverlay}>
+        <div style={styles.modal}>
+          <h2 style={{ marginTop: 0 }}>Fund Virtual Card</h2>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Amount</label>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={fundAmount}
+              onChange={(e) => setFundAmount(e.target.value)}
+              style={styles.input}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <button
+              onClick={() => {
+                setShowFund(null);
+                setFundAmount("");
+              }}
+              style={styles.cancelBtn}
+            >
+              Cancel
+            </button>
+            <button onClick={() => handleFund(showFund)} style={styles.primaryBtn}>
+              Add Money
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* PIN verification for funding */}
+    <PinModal
+      open={showPinModal}
+      onClose={() => {
+        setShowPinModal(false);
+        setPendingFund(null);
+      }}
+      onVerified={onPinVerified}
+      mode="verify"
+    />
+  </div>
+);
 }
 
 // ================= STYLES =================
