@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
-import PinModal from "../components/PinModal";
 import FavoriteRecipients from "../components/FavoriteRecipients";
 import AddFavoriteModal from "../components/AddFavoriteModal";
 import { ClearHoldButton } from "../components/ClearHoldButton";
@@ -19,22 +18,10 @@ export default function SendMoney() {
   const [busy, setBusy] = useState(false);
   const [showClearHold, setShowClearHold] = useState(false);
   const [limits, setLimits] = useState(null);
-
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pinMode, setPinMode] = useState("verify");
-  const [pendingUser, setPendingUser] = useState(null);
-  const [pendingAmount, setPendingAmount] = useState("");
+  const [pin, setPin] = useState("");
 
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
   const [lastRecipient, setLastRecipient] = useState("");
-
-  useEffect(() => {
-    const hasPin = localStorage.getItem("HAS_PIN");
-    if (!hasPin) {
-      setPinMode("set");
-      setShowPinModal(true);
-    }
-  }, []);
 
   useEffect(() => {
     axiosClient
@@ -56,110 +43,64 @@ export default function SendMoney() {
       .catch(() => setResults([]));
   };
 
-  const handleSend = () => {
-  if (busy) return;
+  const handleSend = async (event) => {
+    event.preventDefault();
+    if (busy) return;
 
-  if (!selectedUser) {
-    toast.error("Select a recipient first");
-    return;
-  }
-
-  if (!amount || Number(amount) <= 0) {
-    toast.error("Enter a valid amount");
-    return;
-  }
-
-  // --- IDEMPOTENCY KEY (one per tap) ---
-  const existingIdem = sessionStorage.getItem("send_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("send_idem", idem);
-
-  // Store pending info for the PIN modal
-  setPendingUser(selectedUser);
-  setPendingAmount(amount);
-
-  // No setPendingIdem here
-
-  setPinMode("verify");
-  setShowPinModal(true);
-};
-
-
-  const savePinToken = (data) => {
-    const token = data?.token || data?.pin_token || "";
-    if (token) localStorage.setItem("PIN_TOKEN", token);
-    return token;
-  };
-
-  const handlePinVerified = async (pin) => {
-  if (pinMode === "set") {
-    try {
-      const res = await axiosClient.post("create-pin/", { pin });
-      savePinToken(res.data);
-      localStorage.setItem("HAS_PIN", "true");
-      toast.success("PIN created");
-      setShowPinModal(false);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Could not create PIN");
-    }
-    return;
-  }
-
-  if (!pendingUser?.username) {
-    toast.error("Recipient lost. Please try again.");
-    return;
-  }
-
-  let pinToken = localStorage.getItem("PIN_TOKEN");
-  if (!pinToken) {
-    try {
-      const res = await axiosClient.post("verify-pin/", { pin });
-      pinToken = savePinToken(res.data);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "PIN token missing. Please try again.");
+    if (!selectedUser) {
+      toast.error("Select a recipient first");
       return;
     }
-  }
-  if (!pinToken) {
-    toast.error("PIN token missing. Please try again.");
-    return;
-  }
 
-  // --- IDEMPOTENCY KEY (must exist from handleSend) ---
-  const idem = sessionStorage.getItem("send_idem");
-  if (!idem) {
-    toast.error("Idempotency key missing. Start the transfer again.");
-    return;
-  }
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
 
-  setBusy(true);
-  try {
-    await axiosClient.post(
-      "send-money/",
-      {
-        recipient: pendingUser.username,
-        amount: pendingAmount,
-        pin,
-        pin_token: pinToken,
-        idempotency_key: idem,
-      },
-      {
-        headers: { "Idempotency-Key": idem },
+    if (!/^\d{4}$/.test(pin)) {
+      toast.error("Enter your 4-digit transfer PIN");
+      return;
+    }
+
+    const reference =
+      sessionStorage.getItem("send_idem") || crypto.randomUUID();
+    sessionStorage.setItem("send_idem", reference);
+
+    setBusy(true);
+    setShowClearHold(false);
+
+    try {
+      const pinRes = await axiosClient.post("verify-pin/", { pin });
+      const pinToken = pinRes.data?.pin_token;
+      if (!pinToken) {
+        toast.error("Could not verify transfer PIN");
+        setBusy(false);
+        return;
       }
-    );
 
-    // Clear key only after success
-    sessionStorage.removeItem("send_idem");
-    localStorage.removeItem("PIN_TOKEN");
+      await axiosClient.post(
+        "send-money/",
+        {
+          recipient: selectedUser.username,
+          amount,
+          pin,
+          pin_token: pinToken,
+          idempotency_key: reference,
+        },
+        {
+          headers: { "Idempotency-Key": reference },
+        }
+      );
 
-    toast.success("Transfer successful");
-    navigate("/");
-  } catch (err) {
-    if (isPaymentHoldError(err)) setShowClearHold(true);
-    toast.error(err.response?.data?.error || "Transfer failed");
-    setBusy(false);
-  }
-};
+      sessionStorage.removeItem("send_idem");
+      toast.success("Transfer successful");
+      navigate("/");
+    } catch (err) {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      toast.error(err.response?.data?.error || "Transfer failed");
+      setBusy(false);
+    }
+  };
 
 
   return (
@@ -242,23 +183,41 @@ export default function SendMoney() {
           </div>
         )}
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Amount</label>
-          <div style={styles.amountWrapper}>
-            <span style={styles.currency}>₦</span>
+        <form onSubmit={handleSend}>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Amount</label>
+            <div style={styles.amountWrapper}>
+              <span style={styles.currency}>₦</span>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                style={styles.amountInput}
+              />
+            </div>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label htmlFor="transfer-pin" style={styles.label}>
+              Enter transfer PIN
+            </label>
             <input
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              style={styles.amountInput}
+              id="transfer-pin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              style={styles.input}
             />
           </div>
-        </div>
 
-        <button onClick={handleSend} disabled={busy} style={styles.sendBtn}>
-          {busy ? "Sending..." : "Continue"}
-        </button>
+          <button type="submit" disabled={busy} style={styles.sendBtn}>
+            {busy ? "Sending..." : "Continue"}
+          </button>
+        </form>
         {showClearHold && (
           <ClearHoldButton onCleared={() => setShowClearHold(false)} />
         )}
@@ -270,12 +229,6 @@ export default function SendMoney() {
         recipientUsername={lastRecipient}
       />
 
-      <PinModal
-        open={showPinModal}
-        onClose={() => setShowPinModal(false)}
-        onVerified={handlePinVerified}
-        mode={pinMode}
-      />
     </div>
   );
 }
