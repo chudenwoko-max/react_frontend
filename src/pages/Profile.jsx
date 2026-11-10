@@ -12,12 +12,17 @@ function ChangePinSection() {
   const [loading, setLoading] = useState(false);
 
   const handleChangePin = async (event) => {
-    event.preventDefault();
-    if (loading) return;
-    if (newPin !== confirmPin) {
-      toast.error("New PINs do not match");
-      return;
-    }
+  event.preventDefault();
+  if (loading) return;
+  if (currentPin.length !== 4 || newPin.length !== 4 || confirmPin.length !== 4) {
+    toast.error("PIN must be exactly 4 digits");
+    return;
+  }
+  if (newPin !== confirmPin) {
+    toast.error("New PINs do not match");
+    return;
+  }
+  
 
     setLoading(true);
     try {
@@ -43,40 +48,46 @@ function ChangePinSection() {
       <h3 style={styles.changePinTitle}>Change Transfer PIN</h3>
       <form onSubmit={handleChangePin}>
         <input
-          type="password"
-          placeholder="Current PIN"
-          aria-label="Current PIN"
-          autoComplete="current-password"
-          value={currentPin}
-          onChange={(event) => setCurrentPin(event.target.value)}
-          required
-          disabled={loading}
-          style={styles.changePinInput}
-        />
-        <input
-          type="password"
-          placeholder="New PIN"
-          aria-label="New PIN"
-          autoComplete="new-password"
-          value={newPin}
-          onChange={(event) => setNewPin(event.target.value)}
-          required
-          minLength={4}
-          disabled={loading}
-          style={styles.changePinInput}
-        />
-        <input
-          type="password"
-          placeholder="Confirm new PIN"
-          aria-label="Confirm new PIN"
-          autoComplete="new-password"
-          value={confirmPin}
-          onChange={(event) => setConfirmPin(event.target.value)}
-          required
-          minLength={4}
-          disabled={loading}
-          style={styles.changePinInput}
-        />
+  type="password"
+  placeholder="Current PIN"
+  aria-label="Current PIN"
+  autoComplete="current-password"
+  inputMode="numeric"
+  maxLength={4}
+  value={currentPin}
+  onChange={(event) => setCurrentPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
+  required
+  disabled={loading}
+  style={styles.changePinInput}
+/>
+<input
+  type="password"
+  placeholder="New PIN"
+  aria-label="New PIN"
+  autoComplete="new-password"
+  inputMode="numeric"
+  maxLength={4}
+  minLength={4}
+  value={newPin}
+  onChange={(event) => setNewPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
+  required
+  disabled={loading}
+  style={styles.changePinInput}
+/>
+<input
+  type="password"
+  placeholder="Confirm new PIN"
+  aria-label="Confirm new PIN"
+  autoComplete="new-password"
+  inputMode="numeric"
+  maxLength={4}
+  minLength={4}
+  value={confirmPin}
+  onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
+  required
+  disabled={loading}
+  style={styles.changePinInput}
+/>
         <button
           type="submit"
           disabled={loading}
