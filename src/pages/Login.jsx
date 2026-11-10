@@ -38,6 +38,12 @@ export default function Login() {
     }
   };
 
+  const useDifferentAccount = () => {
+    localStorage.removeItem("payhost_username");
+    setUsername("");
+    setPasscode("");
+  };
+
   return (
     <div style={styles.page}>
       <form onSubmit={handleLogin} style={styles.card}>
@@ -51,6 +57,16 @@ export default function Login() {
           style={styles.input}
           autoComplete="username"
         />
+
+        {!!localStorage.getItem("payhost_username") && (
+          <button
+            type="button"
+            onClick={useDifferentAccount}
+            style={styles.switchAccount}
+          >
+            Use a different account
+          </button>
+        )}
 
         <label style={styles.label}>Passcode</label>
         <input
@@ -85,6 +101,16 @@ const styles = {
   title: { margin: "0 0 24px", fontSize: 24, textAlign: "center" },
   label: { display: "block", fontSize: 13, marginBottom: 6, color: "#374151" },
   input: { width: "100%", padding: "12px 14px", marginBottom: 16, borderRadius: 10, border: "1px solid #d1d5db", fontSize: 16, boxSizing: "border-box" },
+  switchAccount: {
+    background: "none",
+    border: "none",
+    color: "#64748b",
+    fontSize: 14,
+    cursor: "pointer",
+    textAlign: "left",
+    padding: "4px 0 12px",
+    textDecoration: "underline",
+  },
   button: { width: "100%", padding: 13, background: "#0F172A", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
   linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
 };
