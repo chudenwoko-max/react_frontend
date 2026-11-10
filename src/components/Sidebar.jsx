@@ -12,7 +12,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/wallet", label: "Wallet", icon: <FaWallet /> },
     { path: "/send-money", label: "Transfer", icon: <FaPaperPlane /> },
     { path: "/set-pin", label: "Set Transfer PIN", icon: <FaKey /> },
-    { path: "/profile#change-pin", label: "Change Transfer PIN", icon: <FaKey /> },
+    { path: "/change-pin", label: "Change Transfer PIN", icon: <FaKey /> },
     { path: "/request-money", label: "Request Money", icon: <FaHandHoldingUsd /> },
     { path: "/fund-wallet", label: "Add Money", icon: <FaMoneyBill /> },
     { path: "/withdraw", label: "Withdraw", icon: <FaArrowDown /> },
