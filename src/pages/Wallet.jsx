@@ -8,7 +8,6 @@ export default function Wallet() {
   const [rates, setRates] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Convert form
   const [showConvert, setShowConvert] = useState(false);
   const [fromCurrency, setFromCurrency] = useState("NGN");
   const [toCurrency, setToCurrency] = useState("USD");
@@ -21,10 +20,11 @@ export default function Wallet() {
         axiosClient.get("/wallets/"),
         axiosClient.get("/wallets/rates/"),
       ]);
-      setWallets(walletsRes.data);
-      setRates(ratesRes.data);
+      setWallets(walletsRes.data || []);
+      setRates(ratesRes.data || []);
     } catch (err) {
       console.error(err);
+      toast.error("Could not load wallets");
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function Wallet() {
         to_currency: toCurrency,
         amount,
       });
-      toast.success(res.data.message);
+      toast.success(res.data.message || "Conversion successful");
       setAmount("");
       setShowConvert(false);
       fetchData();
@@ -67,27 +67,47 @@ export default function Wallet() {
     return rate ? Number(rate.rate) : null;
   };
 
+  const formatBalance = (balance) =>
+    Number(balance || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
-        Loading wallets...
+        Loading wallets…
       </div>
     );
   }
+
+  const primaryWallet = wallets.find((w) => w.is_default) || wallets[0];
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>My Wallets</h1>
-          <p style={styles.subtitle}>Manage your multi-currency balances</p>
+          <h1 style={styles.title}>Wallets</h1>
+          <p style={styles.subtitle}>View and manage your balances</p>
         </div>
         <button onClick={() => setShowConvert(true)} style={styles.convertBtn}>
-          Convert Currency
+          Convert
         </button>
       </div>
 
-      {/* Wallets Grid */}
+      {primaryWallet && (
+        <div style={styles.primaryCard}>
+          <p style={styles.primaryLabel}>Primary balance</p>
+          <h2 style={styles.primaryBalance}>
+            {primaryWallet.symbol}
+            {formatBalance(primaryWallet.balance)}
+          </h2>
+          <p style={styles.primaryCurrency}>
+            {primaryWallet.currency_code} · {primaryWallet.currency_name}
+          </p>
+        </div>
+      )}
+
       <div style={styles.walletsGrid}>
         {wallets.map((wallet) => (
           <div
@@ -106,56 +126,56 @@ export default function Wallet() {
           >
             <div style={styles.walletTop}>
               <span style={styles.currencyCode}>{wallet.currency_code}</span>
-              {wallet.is_default && <span style={styles.defaultBadge}>Default</span>}
+              {wallet.is_default && <span style={styles.defaultBadge}>Primary</span>}
             </div>
             <p style={styles.currencyName}>{wallet.currency_name}</p>
-            <h2 style={styles.balance}>
+            <h3 style={styles.balance}>
               {wallet.symbol}
-              {Number(wallet.balance).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}
-            </h2>
+              {formatBalance(wallet.balance)}
+            </h3>
           </div>
         ))}
       </div>
 
-      {/* Quick Actions */}
       <div style={styles.actionsGrid}>
         <Link to="/fund-wallet" style={styles.actionCard}>
-          <span style={{ fontSize: 22 }}>↓</span>
+          <span style={styles.actionIcon}>↓</span>
           <div>
-            <p style={styles.actionTitle}>Add Money</p>
-            <p style={styles.actionDesc}>Add money</p>
+            <p style={styles.actionTitle}>Add money</p>
+            <p style={styles.actionDesc}>Fund your wallet</p>
           </div>
         </Link>
         <Link to="/send-money" style={styles.actionCard}>
-          <span style={{ fontSize: 22 }}>↑</span>
+          <span style={styles.actionIcon}>↑</span>
           <div>
-            <p style={styles.actionTitle}>Send Money</p>
-            <p style={styles.actionDesc}>Transfer funds</p>
+            <p style={styles.actionTitle}>Send</p>
+            <p style={styles.actionDesc}>Transfer to others</p>
           </div>
         </Link>
         <Link to="/withdraw" style={styles.actionCard}>
-          <span style={{ fontSize: 22 }}>↗</span>
+          <span style={styles.actionIcon}>↗</span>
           <div>
             <p style={styles.actionTitle}>Withdraw</p>
             <p style={styles.actionDesc}>To bank account</p>
           </div>
         </Link>
-        <div onClick={() => setShowConvert(true)} style={{ ...styles.actionCard, cursor: "pointer" }}>
-          <span style={{ fontSize: 22 }}>⇄</span>
+        <button
+          type="button"
+          onClick={() => setShowConvert(true)}
+          style={styles.actionCard}
+        >
+          <span style={styles.actionIcon}>⇄</span>
           <div>
             <p style={styles.actionTitle}>Convert</p>
             <p style={styles.actionDesc}>Exchange currency</p>
           </div>
-        </div>
+        </button>
       </div>
 
-      {/* Convert Modal */}
       {showConvert && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h2 style={{ marginTop: 0, marginBottom: 20 }}>Convert Currency</h2>
+        <div style={styles.modalOverlay} onClick={() => setShowConvert(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Convert currency</h2>
 
             <div style={styles.formGroup}>
               <label style={styles.label}>From</label>
@@ -191,6 +211,7 @@ export default function Wallet() {
               <label style={styles.label}>Amount</label>
               <input
                 type="number"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -198,10 +219,10 @@ export default function Wallet() {
               />
             </div>
 
-            {getRate(fromCurrency, toCurrency) && amount && (
+            {getRate(fromCurrency, toCurrency) && amount && Number(amount) > 0 && (
               <div style={styles.rateBox}>
                 <p style={{ margin: 0, fontSize: 14 }}>
-                  You will receive approximately:{" "}
+                  You’ll receive approximately{" "}
                   <strong>
                     {(Number(amount) * getRate(fromCurrency, toCurrency)).toLocaleString(
                       undefined,
@@ -211,16 +232,13 @@ export default function Wallet() {
                   </strong>
                 </p>
                 <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>
-                  Rate: 1 {fromCurrency} = {getRate(fromCurrency, toCurrency)} {toCurrency}
+                  1 {fromCurrency} = {getRate(fromCurrency, toCurrency)} {toCurrency}
                 </p>
               </div>
             )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button
-                onClick={() => setShowConvert(false)}
-                style={styles.cancelBtn}
-              >
+              <button onClick={() => setShowConvert(false)} style={styles.cancelBtn}>
                 Cancel
               </button>
               <button
@@ -228,7 +246,7 @@ export default function Wallet() {
                 disabled={converting}
                 style={styles.primaryBtn}
               >
-                {converting ? "Converting..." : "Convert"}
+                {converting ? "Converting…" : "Convert"}
               </button>
             </div>
           </div>
@@ -238,7 +256,6 @@ export default function Wallet() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
   page: {
     padding: "32px 28px",
@@ -249,7 +266,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 24,
   },
   title: {
     fontSize: 26,
@@ -270,6 +287,30 @@ const styles = {
     borderRadius: 10,
     fontWeight: 600,
     cursor: "pointer",
+  },
+  primaryCard: {
+    background: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: 16,
+    padding: "24px",
+    marginBottom: 24,
+  },
+  primaryLabel: {
+    margin: 0,
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: 500,
+  },
+  primaryBalance: {
+    margin: "6px 0 4px",
+    fontSize: 32,
+    fontWeight: 700,
+    color: "#111827",
+  },
+  primaryCurrency: {
+    margin: 0,
+    fontSize: 14,
+    color: "#6b7280",
   },
   walletsGrid: {
     display: "grid",
@@ -307,12 +348,12 @@ const styles = {
   },
   balance: {
     margin: 0,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 700,
   },
   actionsGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: 12,
   },
   actionCard: {
@@ -325,6 +366,11 @@ const styles = {
     gap: 12,
     textDecoration: "none",
     color: "inherit",
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  actionIcon: {
+    fontSize: 22,
   },
   actionTitle: {
     margin: 0,
@@ -338,10 +384,7 @@ const styles = {
   },
   modalOverlay: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    inset: 0,
     background: "rgba(0,0,0,0.5)",
     display: "flex",
     alignItems: "center",
@@ -372,6 +415,7 @@ const styles = {
     border: "1px solid #d1d5db",
     fontSize: 15,
     outline: "none",
+    boxSizing: "border-box",
   },
   rateBox: {
     background: "#f0f9ff",
