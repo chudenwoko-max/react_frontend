@@ -288,7 +288,7 @@ export default function VirtualCards() {
                 Cancel
               </button>
               <button onClick={() => handleFund(showFund)} style={styles.primaryBtn}>
-                Fund Card
+                Add Money
               </button>
             </div>
           </div>
