@@ -36,6 +36,27 @@ function getTargetTier(data) {
   return tier === "" || tier == null ? null : String(tier);
 }
 
+function isFieldRequired(field, { isNewUser, forceTier2, forceTier3 }) {
+  if (isNewUser) {
+    return [
+      "full_name", "date_of_birth", "gender", "phone_number",
+      "address", "city", "state", "country",
+    ].includes(field);
+  }
+  if (forceTier2) return ["bvn", "nin"].includes(field);
+  if (forceTier3) return ["proof_of_address"].includes(field);
+  return true;
+}
+
+function RequiredLabel({ field, required, children }) {
+  return (
+    <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
+      {children || getFieldLabel(field)}
+      {required && <span style={{ color: "#B91C1C" }}> *</span>}
+    </label>
+  );
+}
+
 export default function KYC() {
   const [status, setStatus] = useState("");
   const [missing, setMissing] = useState(null);
@@ -83,10 +104,44 @@ export default function KYC() {
     setFiles((prev) => ({ ...prev, [field]: file }));
   };
 
+  const isNewUser = !isApproved;
+  const hasBvn = backendHasBvn;
+  const hasNin = backendHasNin;
+  const isFullyVerified = isApproved && hasBvn && hasNin && backendHasProofOfAddress;
+  const forceTier2 = isApproved && (!hasBvn || !hasNin) && !isFullyVerified;
+  const forceTier3 = isApproved && hasBvn && hasNin && !backendHasProofOfAddress && !isFullyVerified;
+
+  const fieldsToRender = isFullyVerified
+    ? []
+    : isNewUser
+    ? (missing || [])
+    : forceTier3
+    ? ["proof_of_address"]
+    : forceTier2
+    ? ["bvn", "nin"]
+    : (missing || []);
+
   const handleSubmit = async () => {
     if (!missing) return;
     setLoading(true);
     setError("");
+
+    const ctx = { isNewUser, forceTier2, forceTier3 };
+    const requiredMissing = fieldsToRender.filter((field) => {
+      if (!isFieldRequired(field, ctx)) return false;
+      if (fileFields.has(field)) return !files[field];
+      return !values[field]?.trim();
+    });
+
+    if (requiredMissing.length) {
+      const names = requiredMissing.map(getFieldLabel).join(", ");
+      const msg = `Please complete: ${names}`;
+      setError(msg);
+      alert(msg);
+      setLoading(false);
+      return;
+    }
+
     try {
       const formData = new FormData();
       for (const field of fieldsToRender) {
@@ -115,25 +170,9 @@ export default function KYC() {
     return <div style={{ padding: 40, textAlign: "center" }}>Loading KYC status…</div>;
   }
 
-  const hasBvn = backendHasBvn;
-  const hasNin = backendHasNin;
-  const isFullyVerified = isApproved && hasBvn && hasNin && backendHasProofOfAddress;
-  const isNewUser = !isApproved;
-  const forceTier2 = isApproved && (!hasBvn || !hasNin) && !isFullyVerified;
-  const forceTier3 = isApproved && hasBvn && hasNin && !backendHasProofOfAddress && !isFullyVerified;
-
-  const fieldsToRender = isFullyVerified
-    ? []
-    : isNewUser
-    ? (missing || [])
-    : forceTier3
-    ? ["proof_of_address"]
-    : forceTier2
-    ? ["bvn", "nin"]
-    : (missing || []);
-
   const dailyLimit = limits?.daily_send_ngn || limits?.daily_send_limit || "—";
   const perSendLimit = limits?.single_send_ngn || limits?.per_send_limit || "—";
+  const ctx = { isNewUser, forceTier2, forceTier3 };
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
@@ -165,12 +204,12 @@ export default function KYC() {
           </p>
 
           {fieldsToRender.map((field) => {
+            const required = isFieldRequired(field, ctx);
+
             if (fileFields.has(field)) {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-                    {getFieldLabel(field)}
-                  </label>
+                  <RequiredLabel field={field} required={required} />
                   <input
                     type="file"
                     accept="image/*"
@@ -183,7 +222,7 @@ export default function KYC() {
             if (field === "gender") {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>Gender</label>
+                  <RequiredLabel field={field} required={required}>Gender</RequiredLabel>
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
@@ -200,7 +239,7 @@ export default function KYC() {
             if (field === "state") {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>State</label>
+                  <RequiredLabel field={field} required={required}>State</RequiredLabel>
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
@@ -217,7 +256,7 @@ export default function KYC() {
             if (field === "government_id_type") {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>Government ID type</label>
+                  <RequiredLabel field={field} required={required}>Government ID type</RequiredLabel>
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
@@ -235,7 +274,7 @@ export default function KYC() {
             if (field === "date_of_birth") {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>Date of birth</label>
+                  <RequiredLabel field={field} required={required}>Date of birth</RequiredLabel>
                   <input
                     type="date"
                     value={values[field] || ""}
@@ -247,9 +286,7 @@ export default function KYC() {
             }
             return (
               <div key={field} style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
-                  {getFieldLabel(field)}
-                </label>
+                <RequiredLabel field={field} required={required} />
                 <input
                   type={field === "nin" || field === "bvn" || field === "phone_number" ? "tel" : "text"}
                   value={values[field] || ""}
