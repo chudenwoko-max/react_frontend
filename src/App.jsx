@@ -37,6 +37,7 @@ import Statements from "./pages/Statements";
 import PayMerchant from "./pages/PayMerchant";
 import ResetPassword from "./pages/ResetPassword";
 import HowToUse from "./pages/HowToUse";
+import SetPin from "./pages/SetPin";
 
 const host = window.location.hostname;
 const isMarketing =
@@ -60,6 +61,7 @@ function AppShell({ marketing = false } = {}) {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="wallet" element={<Wallet />} />
         <Route path="send-money" element={<SendMoney />} />
+        <Route path="set-pin" element={<SetPin />} />
         <Route path="fund-wallet" element={<FundWallet />} />
         <Route path="withdraw" element={<Withdraw />} />
         <Route path="transactions" element={<Transactions />} />

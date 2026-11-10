@@ -3,7 +3,7 @@ import {
   FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
   FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
   FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
-  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes
+  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes, FaKey
 } from "react-icons/fa";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -11,6 +11,8 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/dashboard", label: "Dashboard", icon: <FaHome /> },
     { path: "/wallet", label: "Wallet", icon: <FaWallet /> },
     { path: "/send-money", label: "Transfer", icon: <FaPaperPlane /> },
+    { path: "/set-pin", label: "Set Transfer PIN", icon: <FaKey /> },
+    { path: "/profile#change-pin", label: "Change Transfer PIN", icon: <FaKey /> },
     { path: "/request-money", label: "Request Money", icon: <FaHandHoldingUsd /> },
     { path: "/fund-wallet", label: "Add Money", icon: <FaMoneyBill /> },
     { path: "/withdraw", label: "Withdraw", icon: <FaArrowDown /> },
@@ -37,7 +39,6 @@ export default function Sidebar({ isOpen, onClose }) {
       }}
       className="sidebar"
     >
-      {/* GitHub-style tooltip CSS (still needed for navbar bars) */}
       <style>{`
         .menu-tip { position: relative; }
         .menu-tip::after {
@@ -61,7 +62,6 @@ export default function Sidebar({ isOpen, onClose }) {
         .menu-tip:not(:hover)::after { opacity: 0; }
       `}</style>
 
-      {/* Close button at top of sidebar (GitHub pattern, NO tooltip) */}
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 8px 0" }}>
         <button
           type="button"
@@ -86,7 +86,6 @@ export default function Sidebar({ isOpen, onClose }) {
         </button>
       </div>
 
-      {/* Menu */}
       <nav style={styles.nav}>
         {menuItems.map((item) => (
           <NavLink
