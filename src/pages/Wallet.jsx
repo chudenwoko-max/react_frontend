@@ -82,6 +82,7 @@ export default function Wallet() {
   }
 
   const primaryWallet = wallets.find((w) => w.is_default) || wallets[0];
+  const hasWallets = wallets.length > 0;
 
   return (
     <div style={styles.page}>
@@ -90,9 +91,19 @@ export default function Wallet() {
           <h1 style={styles.title}>Wallets</h1>
           <p style={styles.subtitle}>View and manage your balances</p>
         </div>
-        <button onClick={() => setShowConvert(true)} style={styles.convertBtn}>
-          Convert
-        </button>
+        {hasWallets && (
+          <button onClick={() => setShowConvert(true)} style={styles.convertBtn}>
+            Convert
+          </button>
+        )}
+      </div>
+
+      {/* Funding context note */}
+      <div style={styles.infoBanner}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+          <strong>Local funding:</strong> Add money via bank transfer to your NGN wallet.{" "}
+          <strong>International cards:</strong> Payments made with foreign cards (via Paystack) settle into your NGN balance after conversion. Full multi-currency holding requires a separate domiciliary account.
+        </p>
       </div>
 
       {primaryWallet && (
@@ -104,45 +115,65 @@ export default function Wallet() {
           </h2>
           <p style={styles.primaryCurrency}>
             {primaryWallet.currency_code} · {primaryWallet.currency_name}
+            {primaryWallet.currency_code === "NGN" && (
+              <span style={styles.localTag}> · Local</span>
+            )}
           </p>
         </div>
       )}
 
-      <div style={styles.walletsGrid}>
-        {wallets.map((wallet) => (
-          <div
-            key={wallet.id}
-            style={{
-              ...styles.walletCard,
-              background:
-                wallet.currency_code === "NGN"
-                  ? "linear-gradient(135deg, #1e40af, #3b82f6)"
-                  : wallet.currency_code === "USD"
-                  ? "linear-gradient(135deg, #065f46, #10b981)"
-                  : wallet.currency_code === "GBP"
-                  ? "linear-gradient(135deg, #7c2d12, #ea580c)"
-                  : "linear-gradient(135deg, #4c1d95, #8b5cf6)",
-            }}
-          >
-            <div style={styles.walletTop}>
-              <span style={styles.currencyCode}>{wallet.currency_code}</span>
-              {wallet.is_default && <span style={styles.defaultBadge}>Primary</span>}
+      {!hasWallets && (
+        <div style={styles.emptyState}>
+          <p style={{ fontSize: 16, marginBottom: 8 }}>No wallets yet</p>
+          <p style={{ color: "#6b7280", marginBottom: 16 }}>
+            Your wallets will appear here once they are created.
+          </p>
+          <Link to="/fund-wallet" style={styles.convertBtn}>
+            Add money
+          </Link>
+        </div>
+      )}
+
+      {hasWallets && (
+        <div style={styles.walletsGrid}>
+          {wallets.map((wallet) => (
+            <div
+              key={wallet.id}
+              style={{
+                ...styles.walletCard,
+                background:
+                  wallet.currency_code === "NGN"
+                    ? "linear-gradient(135deg, #1e40af, #3b82f6)"
+                    : wallet.currency_code === "USD"
+                    ? "linear-gradient(135deg, #065f46, #10b981)"
+                    : wallet.currency_code === "GBP"
+                    ? "linear-gradient(135deg, #7c2d12, #ea580c)"
+                    : "linear-gradient(135deg, #4c1d95, #8b5cf6)",
+              }}
+            >
+              <div style={styles.walletTop}>
+                <span style={styles.currencyCode}>{wallet.currency_code}</span>
+                {wallet.is_default && <span style={styles.defaultBadge}>Primary</span>}
+              </div>
+              <p style={styles.currencyName}>{wallet.currency_name}</p>
+              <h3 style={styles.balance}>
+                {wallet.symbol}
+                {formatBalance(wallet.balance)}
+              </h3>
+              {wallet.currency_code === "NGN" && (
+                <p style={styles.walletNote}>Local settlements</p>
+              )}
             </div>
-            <p style={styles.currencyName}>{wallet.currency_name}</p>
-            <h3 style={styles.balance}>
-              {wallet.symbol}
-              {formatBalance(wallet.balance)}
-            </h3>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div style={styles.actionsGrid}>
         <Link to="/fund-wallet" style={styles.actionCard}>
           <span style={styles.actionIcon}>↓</span>
           <div>
             <p style={styles.actionTitle}>Add money</p>
-            <p style={styles.actionDesc}>Fund your wallet</p>
+            <p style={styles.actionDesc}>Fund your NGN wallet</p>
           </div>
         </Link>
         <Link to="/send-money" style={styles.actionCard}>
@@ -163,6 +194,7 @@ export default function Wallet() {
           type="button"
           onClick={() => setShowConvert(true)}
           style={styles.actionCard}
+          disabled={!hasWallets}
         >
           <span style={styles.actionIcon}>⇄</span>
           <div>
@@ -175,7 +207,10 @@ export default function Wallet() {
       {showConvert && (
         <div style={styles.modalOverlay} onClick={() => setShowConvert(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: "0 0 20px", fontSize: 20 }}>Convert currency</h2>
+            <h2 style={{ margin: "0 0 8px", fontSize: 20 }}>Convert currency</h2>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#6b7280" }}>
+              Conversion uses available rates. International card payments settle into NGN after conversion.
+            </p>
 
             <div style={styles.formGroup}>
               <label style={styles.label}>From</label>
@@ -266,7 +301,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: {
     fontSize: 26,
@@ -287,6 +322,16 @@ const styles = {
     borderRadius: 10,
     fontWeight: 600,
     cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-block",
+  },
+  infoBanner: {
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    borderRadius: 12,
+    padding: "12px 16px",
+    marginBottom: 20,
+    color: "#1e40af",
   },
   primaryCard: {
     background: "#f8fafc",
@@ -311,6 +356,18 @@ const styles = {
     margin: 0,
     fontSize: 14,
     color: "#6b7280",
+  },
+  localTag: {
+    color: "#2563eb",
+    fontWeight: 600,
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: "48px 20px",
+    background: "white",
+    borderRadius: 16,
+    border: "1px solid #f3f4f6",
+    marginBottom: 24,
   },
   walletsGrid: {
     display: "grid",
@@ -350,6 +407,11 @@ const styles = {
     margin: 0,
     fontSize: 24,
     fontWeight: 700,
+  },
+  walletNote: {
+    margin: "8px 0 0",
+    fontSize: 11,
+    opacity: 0.75,
   },
   actionsGrid: {
     display: "grid",
