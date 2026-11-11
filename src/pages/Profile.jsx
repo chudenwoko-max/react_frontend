@@ -85,9 +85,7 @@ function Profile() {
           <Link to="/avatar-upload" style={styles.secondaryBtn}>
             Change Avatar
           </Link>
-          <Link to="/kyc" style={styles.primaryBtn}>
-            Verify Identity
-          </Link>
+          
         </div>
       </div>
     </div>
