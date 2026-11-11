@@ -87,6 +87,8 @@ export default function Dashboard() {
     );
   }
 
+  const primaryWallet = wallets.find((w) => w.is_default) || wallets.find((w) => w.currency_code === "NGN") || wallets[0];
+
   const weeklyChart = {
     labels: data.weekly_activity?.map((w) => w.date) || [],
     datasets: [
@@ -122,16 +124,6 @@ export default function Dashboard() {
     },
   };
 
-  const getWalletGradient = (code) => {
-    const gradients = {
-      NGN: "linear-gradient(135deg, #1e40af, #3b82f6)",
-      USD: "linear-gradient(135deg, #065f46, #10b981)",
-      GBP: "linear-gradient(135deg, #7c2d12, #ea580c)",
-      EUR: "linear-gradient(135deg, #4c1d95, #8b5cf6)",
-    };
-    return gradients[code] || "linear-gradient(135deg, #374151, #6b7280)";
-  };
-
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -157,38 +149,34 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div style={styles.walletsRow}>
-        {wallets.length === 0 ? (
+      {/* Primary NGN balance only */}
+      <div style={styles.primaryBalanceSection}>
+        {primaryWallet ? (
+          <div style={styles.primaryCard}>
+            <div style={styles.primaryTop}>
+              <p style={styles.primaryLabel}>Available balance</p>
+              <Link to="/wallet" style={styles.viewWalletsLink}>
+                View all wallets →
+              </Link>
+            </div>
+            <h2 style={styles.primaryBalance}>
+              {primaryWallet.symbol}
+              {Number(primaryWallet.balance).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </h2>
+            <p style={styles.primaryCurrency}>
+              {primaryWallet.currency_code} · {primaryWallet.currency_name}
+            </p>
+          </div>
+        ) : (
           <div style={styles.emptyWallet}>
-            <p>No wallets found</p>
-            <Link to="/wallet" style={{ color: "#2563eb" }}>
+            <p>No wallet found</p>
+            <Link to="/wallet" style={{ color: "#2563eb", fontWeight: 600 }}>
               Go to Wallet
             </Link>
           </div>
-        ) : (
-          wallets.map((wallet) => (
-            <div
-              key={wallet.id}
-              style={{
-                ...styles.walletCard,
-                background: getWalletGradient(wallet.currency_code),
-              }}
-            >
-              <div style={styles.walletTop}>
-                <span style={styles.currencyCode}>{wallet.currency_code}</span>
-                {wallet.is_default && (
-                  <span style={styles.defaultBadge}>Default</span>
-                )}
-              </div>
-              <p style={styles.currencyName}>{wallet.currency_name}</p>
-              <h2 style={styles.balance}>
-                {wallet.symbol}
-                {Number(wallet.balance).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
-              </h2>
-            </div>
-          ))
         )}
       </div>
 
@@ -328,51 +316,51 @@ const styles = {
     background: "#f0fdf4",
     color: "#166534",
   },
-  walletsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: 16,
+  primaryBalanceSection: {
     marginBottom: 24,
   },
-  walletCard: {
+  primaryCard: {
+    background: "linear-gradient(135deg, #1e40af, #3b82f6)",
     color: "white",
     borderRadius: 16,
-    padding: "20px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+    padding: "28px 24px",
+    boxShadow: "0 8px 24px rgba(30, 64, 175, 0.2)",
   },
-  walletTop: {
+  primaryTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  currencyCode: {
-    fontSize: 13,
-    fontWeight: 600,
+  primaryLabel: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 500,
     opacity: 0.9,
   },
-  defaultBadge: {
-    fontSize: 10,
-    background: "rgba(255,255,255,0.25)",
-    padding: "2px 8px",
-    borderRadius: 10,
+  viewWalletsLink: {
+    color: "white",
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: "none",
+    opacity: 0.9,
   },
-  currencyName: {
-    margin: "0 0 10px 0",
-    fontSize: 12,
-    opacity: 0.85,
-  },
-  balance: {
-    margin: 0,
-    fontSize: 24,
+  primaryBalance: {
+    margin: "4px 0 6px",
+    fontSize: 36,
     fontWeight: 700,
   },
+  primaryCurrency: {
+    margin: 0,
+    fontSize: 14,
+    opacity: 0.85,
+  },
   emptyWallet: {
-    gridColumn: "1 / -1",
     textAlign: "center",
-    padding: 30,
+    padding: 40,
     background: "white",
-    borderRadius: 12,
+    borderRadius: 16,
+    border: "1px solid #f3f4f6",
   },
   actionsRow: {
     display: "grid",

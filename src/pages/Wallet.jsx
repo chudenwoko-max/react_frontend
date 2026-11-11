@@ -91,11 +91,6 @@ export default function Wallet() {
           <h1 style={styles.title}>Wallets</h1>
           <p style={styles.subtitle}>View and manage your balances</p>
         </div>
-        {hasWallets && (
-          <button onClick={() => setShowConvert(true)} style={styles.convertBtn}>
-            Convert
-          </button>
-        )}
       </div>
 
       {/* Funding context note */}
