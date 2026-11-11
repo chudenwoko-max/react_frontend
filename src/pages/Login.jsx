@@ -13,6 +13,11 @@ export default function Login() {
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 2FA state
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [tempToken, setTempToken] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!username.trim() || passcode.length !== 6) {
@@ -25,6 +30,16 @@ export default function Login() {
         username: username.trim(),
         passcode,
       });
+
+      // 2FA required
+      if (res.data?.requires_2fa) {
+        setTempToken(res.data.temp_token);
+        setRequires2FA(true);
+        setLoading(false);
+        return;
+      }
+
+      // Normal login
       localStorage.setItem("payhost_username", username.trim());
       if (res.data?.user) {
         setUser(res.data.user);
@@ -38,11 +53,79 @@ export default function Login() {
     }
   };
 
+  const handle2FA = async (e) => {
+    e.preventDefault();
+    if (totpCode.length !== 6) {
+      toast.error("Enter the 6-digit code");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axiosClient.post("login/2fa/", {
+        temp_token: tempToken,
+        code: totpCode,
+      });
+      localStorage.setItem("payhost_username", username.trim());
+      if (res.data?.user) {
+        setUser(res.data.user);
+      }
+      toast.success("Welcome back");
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Invalid code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const useDifferentAccount = () => {
     localStorage.removeItem("payhost_username");
     setUsername("");
     setPasscode("");
+    setRequires2FA(false);
+    setTempToken("");
+    setTotpCode("");
   };
+
+  if (requires2FA) {
+    return (
+      <div style={styles.page}>
+        <form onSubmit={handle2FA} style={styles.card}>
+          <h1 style={styles.title}>Two-factor authentication</h1>
+          <p style={{ textAlign: "center", color: "#6b7280", marginTop: 0, marginBottom: 20 }}>
+            Enter the 6-digit code from your authenticator app
+          </p>
+
+          <label style={styles.label}>Authentication code</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={totpCode}
+            onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="••••••"
+            style={styles.input}
+            autoFocus
+          />
+
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? "Verifying..." : "Verify"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRequires2FA(false);
+              setTotpCode("");
+            }}
+            style={{ ...styles.switchAccount, marginTop: 16, width: "100%", textAlign: "center" }}
+          >
+            Back to login
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
