@@ -1,75 +1,104 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 
 function FundWallet() {
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("");
+  const [method, setMethod] = useState("card");
   const [loading, setLoading] = useState(false);
+  const verificationRequest = useRef(null);
 
   const quickAmounts = [1000, 2000, 5000, 10000, 20000, 50000];
 
-    const handleFund = async () => {
-  if (!amount || Number(amount) <= 0) {
-    toast.error("Please enter a valid amount");
-    return;
-  }
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference") || params.get("trxref");
 
-  // --- IDEMPOTENCY KEY (one per tap) ---
-  const existingIdem = sessionStorage.getItem("fund_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("fund_idem", idem);
+    if (!reference) return;
 
-  setLoading(true);
-  try {
-    const res = await axiosClient.post(
-      "wallet/fund/initialize/",
-      {
-        amount: amount,
-        idempotency_key: idem,
-      },
-      {
-        headers: { "Idempotency-Key": idem },
-      }
-    );
+    verificationRequest.current ||= axiosClient.get("wallet/fund/verify/", {
+      params: { reference },
+    });
+    let redirectTimer;
+    let cancelled = false;
+    verificationRequest.current
+      .then(() => {
+        if (cancelled) return;
+        toast.success("Wallet funded successfully");
+        redirectTimer = window.setTimeout(() => {
+          window.location.replace("/dashboard");
+        }, 1500);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toast.error(
+          error.response?.data?.error || "Could not verify payment"
+        );
+      });
 
-    const url =
-      res.data.authorization_url ||
-      res.data.data?.authorization_url;
+    return () => {
+      cancelled = true;
+      window.clearTimeout(redirectTimer);
+    };
+  }, []);
 
-    if (!url) {
-      toast.error("No checkout URL from Paystack");
+  const handleFund = async () => {
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Please enter a valid amount");
       return;
     }
+    if (loading) return;
 
-    // Drop key only after Paystack opens
-    sessionStorage.removeItem("fund_idem");
+    const existingIdem = sessionStorage.getItem("fund_idem");
+    const idem = existingIdem || crypto.randomUUID();
+    sessionStorage.setItem("fund_idem", idem);
 
-    window.location.href = url;
-  } catch (error) {
-    console.error("Fund wallet error:", error);
-    toast.error(error.response?.data?.error || "Funding failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const res = await axiosClient.post(
+        "wallet/fund/initialize/",
+        {
+          amount,
+          method,
+          idempotency_key: idem,
+        },
+        { headers: { "Idempotency-Key": idem } }
+      );
 
+      const url =
+        res.data.authorization_url ||
+        res.data.data?.authorization_url;
+
+      if (!url) {
+        toast.error("No checkout URL received");
+        return;
+      }
+
+      sessionStorage.removeItem("fund_idem");
+      window.location.href = url;
+    } catch (error) {
+      console.error("Fund wallet error:", error);
+      toast.error(error.response?.data?.error || "Funding failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>Add Money</h1>
-        <p style={styles.subtitle}>Add money to your wallet securely</p>
+        <p style={styles.subtitle}>Fund your wallet securely</p>
       </div>
 
       <div style={styles.card}>
-        {/* Amount Input */}
         <div style={styles.formGroup}>
-          <label style={styles.label}>Amount</label>
+          <label style={styles.label}>Amount (NGN)</label>
           <div style={styles.amountWrapper}>
             <span style={styles.currency}>₦</span>
             <input
               type="number"
+              inputMode="decimal"
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -78,11 +107,11 @@ function FundWallet() {
           </div>
         </div>
 
-        {/* Quick Amounts */}
         <div style={styles.quickGrid}>
           {quickAmounts.map((amt) => (
             <button
               key={amt}
+              type="button"
               onClick={() => setAmount(amt.toString())}
               style={{
                 ...styles.quickBtn,
@@ -96,10 +125,8 @@ function FundWallet() {
           ))}
         </div>
 
-        {/* Payment Method */}
         <div style={styles.formGroup}>
           <label style={styles.label}>Payment Method</label>
-
           <div style={styles.methodsGrid}>
             {[
               { value: "card", label: "Debit / Credit Card", icon: "💳" },
@@ -122,16 +149,15 @@ function FundWallet() {
           </div>
         </div>
 
-        {/* Fund Button */}
         <button
           onClick={handleFund}
-          disabled={loading}
+          disabled={loading || !amount}
           style={{
             ...styles.fundBtn,
-            opacity: loading ? 0.7 : 1,
+            opacity: loading || !amount ? 0.7 : 1,
           }}
         >
-          {loading ? "Processing..." : "Fund Wallet"}
+          {loading ? "Processing…" : "Continue to Paystack"}
         </button>
       </div>
     </div>
@@ -140,16 +166,13 @@ function FundWallet() {
 
 export default FundWallet;
 
-// ================= STYLES =================
 const styles = {
   page: {
     padding: "32px 28px",
     maxWidth: 520,
     margin: "0 auto",
   },
-  header: {
-    marginBottom: 28,
-  },
+  header: { marginBottom: 28 },
   title: {
     fontSize: 26,
     fontWeight: 700,
@@ -168,9 +191,7 @@ const styles = {
     border: "1px solid #f3f4f6",
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   },
-  formGroup: {
-    marginBottom: 24,
-  },
+  formGroup: { marginBottom: 24 },
   label: {
     display: "block",
     fontSize: 13,
@@ -229,7 +250,6 @@ const styles = {
     borderRadius: 12,
     border: "1.5px solid #e5e7eb",
     cursor: "pointer",
-    transition: "all 0.2s",
   },
   methodLabel: {
     fontSize: 14,
