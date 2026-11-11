@@ -12,26 +12,56 @@ export default function Security() {
   const [lockingWallet, setLockingWallet] = useState(false);
   const [lockError, setLockError] = useState("");
 
+  // 2FA setup state
+  const [setupData, setSetupData] = useState(null); // { qr_code, secret }
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+
   useEffect(() => {
     axiosClient.get("/2fa/status/")
       .then((res) => setIs2FAEnabled(res.data.is_2fa_enabled))
       .catch(() => {});
   }, []);
 
-  const toggle2FA = async () => {
+  const startSetup = async () => {
     setLoading2FA(true);
     try {
-      if (is2FAEnabled) {
-        await axiosClient.post("/2fa/disable/");
-        setIs2FAEnabled(false);
-        toast.success("Two-factor authentication disabled");
-      } else {
-        await axiosClient.post("/2fa/enable/");
-        setIs2FAEnabled(true);
-        toast.success("Two-factor authentication enabled");
-      }
+      const res = await axiosClient.post("/2fa/setup/");
+      setSetupData(res.data);
     } catch {
-      toast.error("Failed to update 2FA");
+      toast.error("Failed to start 2FA setup");
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const verifyAndEnable = async () => {
+    if (verifyCode.length !== 6) {
+      toast.error("Enter the 6-digit code");
+      return;
+    }
+    setVerifying(true);
+    try {
+      await axiosClient.post("/2fa/verify-setup/", { code: verifyCode });
+      setIs2FAEnabled(true);
+      setSetupData(null);
+      setVerifyCode("");
+      toast.success("Two-factor authentication enabled");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Invalid code");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const disable2FA = async () => {
+    setLoading2FA(true);
+    try {
+      await axiosClient.post("/2fa/disable/");
+      setIs2FAEnabled(false);
+      toast.success("Two-factor authentication disabled");
+    } catch {
+      toast.error("Failed to disable 2FA");
     } finally {
       setLoading2FA(false);
     }
@@ -68,21 +98,91 @@ export default function Security() {
               {is2FAEnabled ? "Enabled" : "Disabled"}
             </p>
           </div>
-          <button
-            onClick={toggle2FA}
-            disabled={loading2FA}
-            style={{
-              padding: "9px 18px",
-              borderRadius: 8,
-              border: "1px solid",
-              background: is2FAEnabled ? "#fef2f2" : "#f0fdf4",
-              color: is2FAEnabled ? "#dc2626" : "#16a34a",
-              cursor: "pointer",
-            }}
-          >
-            {loading2FA ? "Please wait…" : is2FAEnabled ? "Disable" : "Enable"}
-          </button>
+          {is2FAEnabled ? (
+            <button
+              onClick={disable2FA}
+              disabled={loading2FA}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 8,
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+                color: "#dc2626",
+                cursor: "pointer",
+              }}
+            >
+              {loading2FA ? "Please wait…" : "Disable"}
+            </button>
+          ) : (
+            <button
+              onClick={startSetup}
+              disabled={loading2FA}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 8,
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#16a34a",
+                cursor: "pointer",
+              }}
+            >
+              {loading2FA ? "Please wait…" : "Enable"}
+            </button>
+          )}
         </div>
+
+        {/* Setup modal / inline */}
+        {setupData && (
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid #f3f4f6" }}>
+            <p style={{ margin: "0 0 12px", fontWeight: 600 }}>Scan the QR code</p>
+            <img
+              src={setupData.qr_code}
+              alt="2FA QR Code"
+              style={{ width: 200, height: 200, marginBottom: 12 }}
+            />
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
+              Or enter this secret manually: <code>{setupData.secret}</code>
+            </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={verifyCode}
+              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="Enter 6-digit code"
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                marginBottom: 12,
+                boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setSetupData(null)}
+                style={{ padding: "10px 16px", border: "1px solid #d1d5db", borderRadius: 8, background: "#fff" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={verifyAndEnable}
+                disabled={verifying}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  borderRadius: 8,
+                  background: "#16a34a",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                {verifying ? "Verifying…" : "Verify & Enable"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginTop: 24, paddingTop: 20, borderTop: "1px solid #f3f4f6" }}>
           <div>
