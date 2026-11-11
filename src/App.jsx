@@ -86,6 +86,8 @@ function AppShell({ marketing = false } = {}) {
         <Route path="business" element={<Business />} />
         <Route path="pay" element={<PayMerchant />} />
         <Route path="how-to-use" element={<HowToUse />} />
+        // In your router
+<Route path="/merchant/callback" element={<MerchantCallback />} />
       </Route>
     </>
   );
