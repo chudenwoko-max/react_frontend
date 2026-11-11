@@ -52,9 +52,11 @@ export default function Transactions() {
   };
 
   const getTypeColor = (type) => {
-    const t = type?.toLowerCase() || "";
-    if (t.includes("fund") || t.includes("receive")) return { bg: "#dcfce7", color: "#16a34a" };
-    if (t.includes("withdraw")) return { bg: "#fee2e2", color: "#dc2626" };
+    const t = (type || "").toLowerCase();
+    if (t.includes("withdraw") || t.includes("card_funding") || t === "savings")
+      return { bg: "#fee2e2", color: "#dc2626" };
+    if (t.includes("fund") || t.includes("receive") || t === "funding")
+      return { bg: "#dcfce7", color: "#16a34a" };
     return { bg: "#dbeafe", color: "#2563eb" };
   };
 
@@ -79,24 +81,25 @@ export default function Transactions() {
         />
 
         <select
-  value={type}
-  onChange={(e) => {
-    setType(e.target.value);
-    setPage(1);
-  }}
-  style={styles.select}
->
-  <option value="">All Types</option>
-  <option value="fund">Fund</option>
-  <option value="withdraw">Withdraw</option>
-  <option value="send">Send</option>
-  <option value="merchant">Merchant</option>
-  <option value="airtime">Airtime</option>
-  <option value="data">Data</option>
-  <option value="electricity">Electricity</option>
-  <option value="cable">Cable</option>
-</select>
-
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setPage(1);
+          }}
+          style={styles.select}
+        >
+          <option value="">All Types</option>
+          <option value="fund">Fund</option>
+          <option value="withdraw">Withdraw</option>
+          <option value="send">Send</option>
+          <option value="merchant">Merchant</option>
+          <option value="airtime">Airtime</option>
+          <option value="data">Data</option>
+          <option value="electricity">Electricity</option>
+          <option value="cable">Cable</option>
+          <option value="card_funding">Card funding</option>
+          <option value="savings">Savings</option>
+        </select>
 
         <select
           value={dateRange}
