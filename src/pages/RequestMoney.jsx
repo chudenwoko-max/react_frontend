@@ -87,6 +87,7 @@ export default function RequestMoney() {
     try {
       await axiosClient.post(`/request-money/${id}/pay/`);
       toast.success("Payment successful!");
+      window.dispatchEvent(new Event("payhost:balance-changed"));
       fetchRequests();
     } catch (err) {
       toast.error(err.response?.data?.error || "Payment failed");
