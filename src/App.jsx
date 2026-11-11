@@ -40,6 +40,7 @@ import ResetPassword from "./pages/ResetPassword";
 import HowToUse from "./pages/HowToUse";
 import SetPin from "./pages/SetPin";
 import ChangePin from "./pages/ChangePin";
+import MerchantCallback from "./pages/MerchantCallback";
 
 const host = window.location.hostname;
 const isMarketing =
