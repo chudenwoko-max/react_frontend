@@ -87,8 +87,7 @@ function AppShell({ marketing = false } = {}) {
         <Route path="business" element={<Business />} />
         <Route path="pay" element={<PayMerchant />} />
         <Route path="how-to-use" element={<HowToUse />} />
-        // In your router
-<Route path="/merchant/callback" element={<MerchantCallback />} />
+    
       </Route>
     </>
   );
@@ -104,7 +103,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
-
+<Route path="/merchant/callback" element={<MerchantCallback />} />
       {AppShell({ marketing: isMarketing })}
     </Routes>
   );
