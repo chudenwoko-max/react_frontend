@@ -4,6 +4,15 @@ import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem("payhost_device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("payhost_device_id", id);
+  }
+  return id;
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
@@ -26,9 +35,12 @@ export default function Login() {
     }
     setLoading(true);
     try {
+      const deviceId = getOrCreateDeviceId();
       const res = await axiosClient.post("login/", {
         username: username.trim(),
         passcode,
+        device_id: deviceId,
+        device_fingerprint: deviceId,
       });
 
       // 2FA required
