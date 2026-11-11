@@ -108,7 +108,6 @@ export default function BillPayments() {
 
   const quickAmounts = [100, 200, 500, 1000, 2000, 5000];
 
-  // ✅ Hard redirect version
   const goHomeAfterSuccess = (message) => {
     toast.success(message);
     window.location.replace("/");
@@ -127,139 +126,145 @@ export default function BillPayments() {
     }
   };
 
- const handleBuyAirtime = async () => {
-  if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
-  if (!amount || Number(amount) < 50) return toast.error("Minimum amount is ₦50");
-  if (loading) return;
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setPhone(value);
+  };
 
-  // Idempotency key
-  const existingIdem = sessionStorage.getItem("bill_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("bill_idem", idem);
+  const handleMeterChange = (e) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setMeterNumber(value);
+  };
 
-  setLoading(true);
-  try {
-    await axiosClient.post(
-      "/bills/airtime/",
-      { provider, phone, amount, idempotency_key: idem },
-      { headers: { "Idempotency-Key": idem } }
-    );
+  const handleSmartcardChange = (e) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setSmartcard(value);
+  };
 
-    sessionStorage.removeItem("bill_idem");
-    goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
-  } catch (err) {
-    if (isPaymentHoldError(err)) setShowClearHold(true);
-    toast.error(err.response?.data?.error || "Purchase failed");
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleBuyAirtime = async () => {
+    if (phone.length !== 11) return toast.error("Enter a valid 11-digit phone number");
+    if (!amount || Number(amount) < 50) return toast.error("Minimum amount is ₦50");
+    if (loading) return;
 
+    const existingIdem = sessionStorage.getItem("bill_idem");
+    const idem = existingIdem || crypto.randomUUID();
+    sessionStorage.setItem("bill_idem", idem);
+
+    setLoading(true);
+    try {
+      await axiosClient.post(
+        "/bills/airtime/",
+        { provider, phone, amount, idempotency_key: idem },
+        { headers: { "Idempotency-Key": idem } }
+      );
+      sessionStorage.removeItem("bill_idem");
+      goHomeAfterSuccess(`Airtime of ₦${amount} sent successfully`);
+    } catch (err) {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      toast.error(err.response?.data?.error || "Purchase failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBuyData = async () => {
-  if (!phone || phone.length < 10) return toast.error("Enter a valid phone number");
-  if (!selectedPlan) return toast.error("Please select a data plan");
-  if (loading) return;
+    if (phone.length !== 11) return toast.error("Enter a valid 11-digit phone number");
+    if (!selectedPlan) return toast.error("Please select a data plan");
+    if (loading) return;
 
-  const existingIdem = sessionStorage.getItem("bill_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("bill_idem", idem);
+    const existingIdem = sessionStorage.getItem("bill_idem");
+    const idem = existingIdem || crypto.randomUUID();
+    sessionStorage.setItem("bill_idem", idem);
 
-  setLoading(true);
-  try {
-    await axiosClient.post(
-      "/bills/data/",
-      {
-        provider,
-        phone,
-        amount: selectedPlan.amount,
-        package_name: selectedPlan.name,
-        idempotency_key: idem,
-      },
-      { headers: { "Idempotency-Key": idem } }
-    );
-
-    sessionStorage.removeItem("bill_idem");
-    goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
-  } catch (err) {
-    if (isPaymentHoldError(err)) setShowClearHold(true);
-    toast.error(err.response?.data?.error || "Purchase failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    setLoading(true);
+    try {
+      await axiosClient.post(
+        "/bills/data/",
+        {
+          provider,
+          phone,
+          amount: selectedPlan.amount,
+          package_name: selectedPlan.name,
+          idempotency_key: idem,
+        },
+        { headers: { "Idempotency-Key": idem } }
+      );
+      sessionStorage.removeItem("bill_idem");
+      goHomeAfterSuccess(`${selectedPlan.name} purchased successfully`);
+    } catch (err) {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      toast.error(err.response?.data?.error || "Purchase failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePayElectricity = async () => {
-  if (!meterNumber) return toast.error("Enter meter number");
-  if (!elecAmount || Number(elecAmount) < 500) return toast.error("Minimum amount is ₦500");
-  if (loading) return;
+    if (meterNumber.length !== 11) return toast.error("Enter an 11-digit meter number");
+    if (!elecAmount || Number(elecAmount) < 500) return toast.error("Minimum amount is ₦500");
+    if (loading) return;
 
-  const existingIdem = sessionStorage.getItem("bill_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("bill_idem", idem);
+    const existingIdem = sessionStorage.getItem("bill_idem");
+    const idem = existingIdem || crypto.randomUUID();
+    sessionStorage.setItem("bill_idem", idem);
 
-  setLoading(true);
-  try {
-    await axiosClient.post(
-      "/bills/electricity/",
-      {
-        provider: disco,
-        meter_number: meterNumber,
-        amount: elecAmount,
-        meter_type: meterType,
-        idempotency_key: idem,
-      },
-      { headers: { "Idempotency-Key": idem } }
-    );
-
-    sessionStorage.removeItem("bill_idem");
-    goHomeAfterSuccess("Electricity payment successful");
-  } catch (err) {
-    if (isPaymentHoldError(err)) setShowClearHold(true);
-    toast.error(err.response?.data?.error || "Payment failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    setLoading(true);
+    try {
+      await axiosClient.post(
+        "/bills/electricity/",
+        {
+          provider: disco,
+          meter_number: meterNumber,
+          amount: elecAmount,
+          meter_type: meterType,
+          idempotency_key: idem,
+        },
+        { headers: { "Idempotency-Key": idem } }
+      );
+      sessionStorage.removeItem("bill_idem");
+      goHomeAfterSuccess("Electricity payment successful");
+    } catch (err) {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      toast.error(err.response?.data?.error || "Payment failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePayCable = async () => {
-  if (!smartcard) return toast.error("Enter smartcard number");
-  if (!cablePackage) return toast.error("Please select a package");
-  if (loading) return;
+    if (smartcard.length !== 10) return toast.error("Enter a 10-digit smartcard / IUC number");
+    if (!cablePackage) return toast.error("Please select a package");
+    if (loading) return;
 
-  const existingIdem = sessionStorage.getItem("bill_idem");
-  const idem = existingIdem || crypto.randomUUID();
-  sessionStorage.setItem("bill_idem", idem);
+    const existingIdem = sessionStorage.getItem("bill_idem");
+    const idem = existingIdem || crypto.randomUUID();
+    sessionStorage.setItem("bill_idem", idem);
 
-  setLoading(true);
-  try {
-    await axiosClient.post(
-      "/bills/cable/",
-      {
-        provider: cableProvider,
-        smartcard_number: smartcard,
-        amount: cablePackage.amount,
-        package_name: cablePackage.name,
-        idempotency_key: idem,
-      },
-      { headers: { "Idempotency-Key": idem } }
-    );
-
-    sessionStorage.removeItem("bill_idem");
-    goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
-  } catch (err) {
-    if (isPaymentHoldError(err)) setShowClearHold(true);
-    toast.error(err.response?.data?.error || "Payment failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      await axiosClient.post(
+        "/bills/cable/",
+        {
+          provider: cableProvider,
+          smartcard_number: smartcard,
+          amount: cablePackage.amount,
+          package_name: cablePackage.name,
+          idempotency_key: idem,
+        },
+        { headers: { "Idempotency-Key": idem } }
+      );
+      sessionStorage.removeItem("bill_idem");
+      goHomeAfterSuccess(`${cablePackage.name} subscription successful`);
+    } catch (err) {
+      if (isPaymentHoldError(err)) setShowClearHold(true);
+      toast.error(err.response?.data?.error || "Payment failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const currentCablePackages =
     CABLE_PROVIDERS.find((p) => p.id === cableProvider)?.packages || [];
-
 
   return (
     <div style={styles.page}>
@@ -286,6 +291,7 @@ export default function BillPayments() {
 
       <div style={styles.card}>
         {showClearHold && <ClearHoldButton />}
+
         {activeTab === "airtime" && (
           <div>
             <label style={styles.label}>Select Network</label>
@@ -306,12 +312,14 @@ export default function BillPayments() {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Phone Number</label>
+              <label style={styles.label}>Phone Number (11 digits)</label>
               <input
                 type="tel"
-                placeholder="0801 234 5678"
+                inputMode="numeric"
+                placeholder="08012345678"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={handlePhoneChange}
+                maxLength={11}
                 style={styles.input}
               />
             </div>
@@ -322,6 +330,7 @@ export default function BillPayments() {
                 <span style={styles.currency}>₦</span>
                 <input
                   type="number"
+                  inputMode="decimal"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -376,12 +385,14 @@ export default function BillPayments() {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Phone Number</label>
+              <label style={styles.label}>Phone Number (11 digits)</label>
               <input
                 type="tel"
-                placeholder="0801 234 5678"
+                inputMode="numeric"
+                placeholder="08012345678"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={handlePhoneChange}
+                maxLength={11}
                 style={styles.input}
               />
             </div>
@@ -449,12 +460,14 @@ export default function BillPayments() {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Meter Number</label>
+              <label style={styles.label}>Meter Number (11 digits)</label>
               <input
                 type="text"
-                placeholder="Enter meter number"
+                inputMode="numeric"
+                placeholder="Enter 11-digit meter number"
                 value={meterNumber}
-                onChange={(e) => setMeterNumber(e.target.value)}
+                onChange={handleMeterChange}
+                maxLength={11}
                 style={styles.input}
               />
             </div>
@@ -465,6 +478,7 @@ export default function BillPayments() {
                 <span style={styles.currency}>₦</span>
                 <input
                   type="number"
+                  inputMode="decimal"
                   placeholder="0.00"
                   value={elecAmount}
                   onChange={(e) => setElecAmount(e.target.value)}
@@ -503,12 +517,14 @@ export default function BillPayments() {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Smartcard / IUC Number</label>
+              <label style={styles.label}>Smartcard / IUC Number (10 digits)</label>
               <input
                 type="text"
-                placeholder="Enter smartcard number"
+                inputMode="numeric"
+                placeholder="Enter 10-digit number"
                 value={smartcard}
-                onChange={(e) => setSmartcard(e.target.value)}
+                onChange={handleSmartcardChange}
+                maxLength={10}
                 style={styles.input}
               />
             </div>
@@ -639,6 +655,7 @@ const styles = {
     border: "1px solid #d1d5db",
     fontSize: 15,
     outline: "none",
+    boxSizing: "border-box",
   },
   amountWrapper: {
     display: "flex",
