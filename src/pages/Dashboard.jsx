@@ -45,8 +45,6 @@ const QUICK_ACTIONS = [
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [wallets, setWallets] = useState([]);
-  const [kycStatus, setKycStatus] = useState(null);
-  const [kycTier, setKycTier] = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -59,17 +57,6 @@ export default function Dashboard() {
       setWallets(Array.isArray(walletsRes.data) ? walletsRes.data : []);
     } catch (err) {
       console.log(err);
-    }
-
-    try {
-      const { data: kycData } = await axiosClient.get("kyc/");
-      const status = String(kycData.status || "").toLowerCase();
-      setKycStatus(status === "approved" ? "verified" : status);
-      setKycTier(kycData.tier ?? null);
-    } catch (err) {
-      console.log(err);
-      setKycStatus(null);
-      setKycTier(null);
     }
   }, []);
 
@@ -145,19 +132,6 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
-
-      {kycStatus === "pending" && (
-        <div role="status" style={styles.kycPendingBanner}>
-          <strong>KYC Status: Under Review</strong>
-          <br />
-          We’ll notify you once approved.
-        </div>
-      )}
-      {kycStatus === "verified" && (
-        <div role="status" style={styles.kycVerifiedBanner}>
-          <strong>KYC Status: Verified · Tier {kycTier ?? "—"}</strong>
-        </div>
-      )}
 
       {/* Primary NGN balance only */}
       <div style={styles.primaryBalanceSection}>
@@ -318,23 +292,6 @@ const styles = {
     fontSize: 14,
     fontWeight: 600,
     textDecoration: "none",
-  },
-  kycPendingBanner: {
-    marginBottom: 24,
-    padding: "14px 16px",
-    border: "1px solid #fcd34d",
-    borderRadius: 12,
-    background: "#fffbeb",
-    color: "#92400e",
-    lineHeight: 1.5,
-  },
-  kycVerifiedBanner: {
-    marginBottom: 24,
-    padding: "14px 16px",
-    border: "1px solid #86efac",
-    borderRadius: 12,
-    background: "#f0fdf4",
-    color: "#166534",
   },
   primaryBalanceSection: {
     marginBottom: 28,
