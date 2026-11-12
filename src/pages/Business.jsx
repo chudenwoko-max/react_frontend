@@ -291,7 +291,7 @@ const input = {
 };
 const btn = {
   padding: "10px 16px",
-  background: "#0f172a",
+  background: "#2563eb",
   color: "#fff",
   border: "none",
   borderRadius: 6,
