@@ -19,8 +19,6 @@ export default function Terms() {
         <img src="/payhost-logo.png" alt="Payhost" height={56} />
       </a>
 
-      <p><Link to="/">← Payhost</Link></p>
-
       <h1>Terms of use</h1>
       <p>
         By using Payhost you agree to these terms. The service is provided by

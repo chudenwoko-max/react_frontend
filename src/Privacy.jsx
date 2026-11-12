@@ -19,8 +19,6 @@ export default function Privacy() {
         <img src="/payhost-logo.png" alt="Payhost" height={56} />
       </a>
 
-      <p><Link to="/">← Payhost</Link></p>
-
       <h1>Privacy policy</h1>
       <p>PAYHOST TECHNOLOGIES LTD (“Payhost”, “we”) operates payhost.dev and the Payhost apps.</p>
 
