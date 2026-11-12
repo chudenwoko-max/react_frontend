@@ -13,6 +13,14 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+import {
+  FaPlus,
+  FaPaperPlane,
+  FaArrowDown,
+  FaMobileAlt,
+  FaStore,
+  FaBriefcase,
+} from "react-icons/fa";
 
 ChartJS.register(
   CategoryScale,
@@ -26,10 +34,12 @@ ChartJS.register(
 );
 
 const QUICK_ACTIONS = [
-  { label: "Add Money", to: "/fund-wallet" },
-  { label: "Transfer", to: "/send-money" },
-  { label: "Pay Merchant", to: "/pay" },
-  { label: "Withdraw", to: "/withdraw" },
+  { label: "Add Money", to: "/fund-wallet", icon: FaPlus },
+  { label: "Transfer Money", to: "/send-money", icon: FaPaperPlane },
+  { label: "Withdraw", to: "/withdraw", icon: FaArrowDown },
+  { label: "Bill Payments", to: "/bills", icon: FaMobileAlt },
+  { label: "Pay a Business", to: "/pay", icon: FaStore },
+  { label: "My Business", to: "/business", icon: FaBriefcase },
 ];
 
 export default function Dashboard() {
@@ -180,12 +190,22 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div style={styles.actionsRow}>
-        {QUICK_ACTIONS.map((action) => (
-          <Link key={action.to} to={action.to} style={styles.actionTile}>
-            {action.label}
-          </Link>
-        ))}
+      {/* Quick Links – round icons */}
+      <div style={styles.quickLinksSection}>
+        <h3 style={styles.quickLinksTitle}>Quick Links</h3>
+        <div style={styles.quickLinksGrid}>
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.to} to={action.to} style={styles.quickLinkItem}>
+                <div style={styles.iconCircle}>
+                  <Icon size={22} color="#ffffff" />
+                </div>
+                <span style={styles.quickLinkLabel}>{action.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <div style={styles.statsGrid}>
@@ -317,7 +337,7 @@ const styles = {
     color: "#166534",
   },
   primaryBalanceSection: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   primaryCard: {
     background: "linear-gradient(135deg, #1e40af, #3b82f6)",
@@ -362,25 +382,44 @@ const styles = {
     borderRadius: 16,
     border: "1px solid #f3f4f6",
   },
-  actionsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 12,
-    marginBottom: 24,
+  quickLinksSection: {
+    marginBottom: 28,
   },
-  actionTile: {
+  quickLinksTitle: {
+    margin: "0 0 16px 0",
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#111827",
+  },
+  quickLinksGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "20px 12px",
+  },
+  quickLinkItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    textDecoration: "none",
+    color: "#111827",
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #1e40af, #3b82f6)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    textAlign: "center",
-    minHeight: 52,
-    padding: "12px 10px",
-    background: "#0f172a",
-    color: "#fff",
-    borderRadius: 12,
-    textDecoration: "none",
+    marginBottom: 8,
+    boxShadow: "0 4px 12px rgba(30, 64, 175, 0.25)",
+  },
+  quickLinkLabel: {
+    fontSize: 13,
     fontWeight: 600,
-    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 1.3,
+    color: "#1f2937",
   },
   statsGrid: {
     display: "grid",
