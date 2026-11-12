@@ -79,13 +79,18 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
             border: "none",
             cursor: "pointer",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
+            gap: 2,
             padding: 4,
             color: "#0F172A",
           }}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          <FaBars size={20} />
+          <FaBars size={18} />
+          <span style={{ fontSize: 11, fontWeight: 600, lineHeight: 1 }}>
+            Menu
+          </span>
         </button>
       </div>
 
