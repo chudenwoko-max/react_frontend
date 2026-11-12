@@ -20,7 +20,6 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/profile", label: "Profile", icon: <FaUser /> },
     { path: "/avatar-upload", label: "Avatar Upload", icon: <FaImage /> },
     { path: "/bank-account", label: "Bank Account", icon: <FaUniversity /> },
-    { path: "/bills", label: "Bill Payments", icon: <FaMobileAlt /> },
     { path: "/savings", label: "Savings Goals", icon: <FaPiggyBank /> },
     { path: "/cards", label: "Virtual Cards", icon: <FaCreditCard /> },
     { path: "/referral", label: "Refer & Earn", icon: <FaUserFriends /> },
