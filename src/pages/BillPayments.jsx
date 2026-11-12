@@ -110,7 +110,7 @@ export default function BillPayments() {
 
   const goHomeAfterSuccess = (message) => {
     toast.success(message);
-    window.location.replace("/");
+    navigate("/dashboard", { replace: true });
   };
 
   useEffect(() => {
