@@ -26,6 +26,8 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/scheduled", label: "Scheduled", icon: <FaClock /> },
     { path: "/support", label: "Help & Support", icon: <FaHeadset /> },
     { path: "/statements", label: "Statements", icon: <FaFileAlt /> },
+    { path: "/terms", label: "Terms", icon: <FaFileAlt /> },
+    { path: "/privacy", label: "Privacy", icon: <FaFileAlt /> },
   ];
 
   return (

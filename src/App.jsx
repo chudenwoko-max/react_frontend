@@ -1,10 +1,9 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
-import Landing from "./pages/Landing";
 import Privacy from "./Privacy";
 import Terms from "./Terms";
 
@@ -42,72 +41,64 @@ import SetPin from "./pages/SetPin";
 import ChangePin from "./pages/ChangePin";
 import MerchantCallback from "./pages/MerchantCallback";
 
-const host = window.location.hostname;
-const isMarketing =
-  host === "www.payhost.dev" || host === "payhost.dev";
-
-function AppShell({ marketing = false } = {}) {
+function AppShell() {
   return (
-    <>
-      {marketing && <Route path="/" element={<Landing />} />}
-      <Route
-        path={marketing ? undefined : "/"}
-        element={
-          <ErrorBoundary>
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          </ErrorBoundary>
-        }
-      >
-        {!marketing && <Route index element={<Dashboard />} />}
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="wallet" element={<Wallet />} />
-        <Route path="send-money" element={<SendMoney />} />
-        <Route path="set-pin" element={<SetPin />} />
-        <Route path="change-pin" element={<ChangePin />} />
-        <Route path="fund-wallet" element={<FundWallet />} />
-        <Route path="withdraw" element={<Withdraw />} />
-        <Route path="transactions" element={<Transactions />} />
-        <Route path="converter" element={<CurrencyConverter />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="avatar-upload" element={<AvatarUpload />} />
-        <Route path="bank-account" element={<BankAccount />} />
-        <Route path="kyc" element={<KYC />} />
-        <Route path="security" element={<Security />} />
-        <Route path="logout" element={<Logout />} />
-        <Route path="request-money" element={<RequestMoney />} />
-        <Route path="bills" element={<BillPayments />} />
-        <Route path="savings" element={<Savings />} />
-        <Route path="cards" element={<VirtualCards />} />
-        <Route path="referral" element={<Referral />} />
-        <Route path="scheduled" element={<ScheduledTransfers />} />
-        <Route path="support" element={<Support />} />
-        <Route path="statements" element={<Statements />} />
-        <Route path="business" element={<Business />} />
-        <Route path="pay" element={<PayMerchant />} />
-        <Route path="how-to-use" element={<HowToUse />} />
-    
-      </Route>
-    </>
+    <Route
+      element={
+        <ErrorBoundary>
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        </ErrorBoundary>
+      }
+    >
+      <Route path="dashboard" element={<Dashboard />} />
+      <Route path="wallet" element={<Wallet />} />
+      <Route path="send-money" element={<SendMoney />} />
+      <Route path="set-pin" element={<SetPin />} />
+      <Route path="change-pin" element={<ChangePin />} />
+      <Route path="fund-wallet" element={<FundWallet />} />
+      <Route path="withdraw" element={<Withdraw />} />
+      <Route path="transactions" element={<Transactions />} />
+      <Route path="converter" element={<CurrencyConverter />} />
+      <Route path="profile" element={<Profile />} />
+      <Route path="avatar-upload" element={<AvatarUpload />} />
+      <Route path="bank-account" element={<BankAccount />} />
+      <Route path="kyc" element={<KYC />} />
+      <Route path="security" element={<Security />} />
+      <Route path="logout" element={<Logout />} />
+      <Route path="request-money" element={<RequestMoney />} />
+      <Route path="bills" element={<BillPayments />} />
+      <Route path="savings" element={<Savings />} />
+      <Route path="cards" element={<VirtualCards />} />
+      <Route path="referral" element={<Referral />} />
+      <Route path="scheduled" element={<ScheduledTransfers />} />
+      <Route path="support" element={<Support />} />
+      <Route path="statements" element={<Statements />} />
+      <Route path="business" element={<Business />} />
+      <Route path="pay" element={<PayMerchant />} />
+      <Route path="how-to-use" element={<HowToUse />} />
+      <Route path="privacy" element={<Privacy />} />
+      <Route path="terms" element={<Terms />} />
+    </Route>
   );
 }
 
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<Login />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/forgot-passcode" element={<ForgotPasscode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/terms" element={<Terms />} />
 
       {/* Public callback – must be outside ProtectedRoute */}
       <Route path="/merchant/callback" element={<MerchantCallback />} />
 
-      {AppShell({ marketing: isMarketing })}
+      {AppShell()}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
