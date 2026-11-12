@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaBars, FaTimes } from "react-icons/fa";
+import { FaBars } from "react-icons/fa";
 import axiosClient from "../axiosClient";
 import { useAuth } from "../context/AuthContext";
 
@@ -80,16 +80,12 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 8,
             padding: 4,
             color: "#0F172A",
           }}
           aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
         >
-          {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-          <span style={{ fontSize: 14, fontWeight: 600 }}>
-            {isSidebarOpen ? "Close" : "Menu"}
-          </span>
+          <FaBars size={20} />
         </button>
       </div>
 
