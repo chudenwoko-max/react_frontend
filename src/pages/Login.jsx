@@ -206,6 +206,6 @@ const styles = {
     padding: "4px 0 12px",
     textDecoration: "underline",
   },
-  button: { width: "100%", padding: 13, background: "#0F172A", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
+  button: { width: "100%", padding: 13, background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
   linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
 };
