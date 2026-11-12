@@ -392,7 +392,7 @@ const styles = {
   },
   balanceBtn: {
     background: "white",
-    color: "#1e40af",
+    color: "#2563eb",
     border: "none",
     borderRadius: 8,
     padding: "10px 18px",
@@ -442,7 +442,7 @@ const styles = {
   tabBtnActive: {
     color: "#111827",
     fontWeight: 600,
-    borderBottom: "2px solid #1e40af",
+    borderBottom: "2px solid #2563eb",
   },
   card: {
     background: "white",
@@ -469,7 +469,7 @@ const styles = {
   },
   btn: {
     padding: "10px 16px",
-    background: "#1e40af",
+    background:"#2563eb",
     color: "#fff",
     border: "none",
     borderRadius: 8,
