@@ -8,6 +8,10 @@ export default function PayMerchant() {
   const [cards, setCards] = useState([]);
   const [cardId, setCardId] = useState("");
   const [merchantId, setMerchantId] = useState("");
+  const [merchantQuery, setMerchantQuery] = useState("");
+  const [merchantResults, setMerchantResults] = useState([]);
+  const [selectedMerchant, setSelectedMerchant] = useState(null);
+  const [searching, setSearching] = useState(false);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [pin, setPin] = useState("");
@@ -21,9 +25,39 @@ export default function PayMerchant() {
       .catch(() => setCards([]));
   }, []);
 
+  useEffect(() => {
+    if (!merchantQuery || merchantQuery.length < 2 || selectedMerchant) {
+      setMerchantResults([]);
+      setSearching(false);
+      return;
+    }
+
+    let active = true;
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await axiosClient.get("merchant/search/", {
+          params: { q: merchantQuery },
+        });
+        if (active) {
+          setMerchantResults(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch {
+        if (active) setMerchantResults([]);
+      } finally {
+        if (active) setSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [merchantQuery, selectedMerchant]);
+
   const validateCommon = () => {
     if (!merchantId.trim()) {
-      toast.error("Enter merchant ID");
+      toast.error("Select a business");
       return false;
     }
     if (!amount || Number(amount) <= 0) {
@@ -168,13 +202,55 @@ export default function PayMerchant() {
 
       <div style={styles.card}>
         <div style={styles.formGroup}>
-          <label style={styles.label}>Merchant ID</label>
+          <label style={styles.label}>Business</label>
           <input
-            value={merchantId}
-            onChange={(e) => setMerchantId(e.target.value)}
-            placeholder="Enter merchant ID"
+            value={selectedMerchant ? selectedMerchant.business_name : merchantQuery}
+            onChange={(e) => {
+              setSelectedMerchant(null);
+              setMerchantId("");
+              setMerchantQuery(e.target.value);
+            }}
+            placeholder="Search business name"
             style={styles.input}
           />
+          {searching && (
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>
+              Searching…
+            </p>
+          )}
+
+          {merchantResults.length > 0 && !selectedMerchant && (
+            <div
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                marginTop: 4,
+                background: "#fff",
+                maxHeight: 200,
+                overflowY: "auto",
+              }}
+            >
+              {merchantResults.map((merchant) => (
+                <div
+                  key={merchant.id}
+                  onClick={() => {
+                    setSelectedMerchant(merchant);
+                    setMerchantId(String(merchant.id));
+                    setMerchantQuery(merchant.business_name);
+                    setMerchantResults([]);
+                  }}
+                  style={{
+                    padding: "10px 12px",
+                    cursor: "pointer",
+                    borderBottom: "1px solid #f3f4f6",
+                    fontSize: 14,
+                  }}
+                >
+                  {merchant.business_name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={styles.formGroup}>
