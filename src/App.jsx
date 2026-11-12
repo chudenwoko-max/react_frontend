@@ -40,6 +40,7 @@ import HowToUse from "./pages/HowToUse";
 import SetPin from "./pages/SetPin";
 import ChangePin from "./pages/ChangePin";
 import MerchantCallback from "./pages/MerchantCallback";
+import FundCallback from "./pages/FundCallback";
 
 function AppShell() {
   return (
@@ -96,6 +97,7 @@ function App() {
 
       {/* Public callback – must be outside ProtectedRoute */}
       <Route path="/merchant/callback" element={<MerchantCallback />} />
+      <Route path="/fund/callback" element={<FundCallback />} />
 
       {AppShell()}
       <Route path="*" element={<Navigate to="/" replace />} />
