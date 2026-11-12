@@ -84,6 +84,10 @@ export default function PayMerchant() {
     e.preventDefault();
     if (busy) return;
     if (!validateCommon()) return;
+    if (pin.length !== 4) {
+      toast.error("Enter your 4-digit transfer PIN");
+      return;
+    }
     if (!cardId) {
       toast.error("Select a saved card");
       return;
@@ -93,11 +97,21 @@ export default function PayMerchant() {
     setShowClearHold(false);
 
     try {
+      const verified = await axiosClient.post("verify-pin/", { pin: String(pin) });
+      const pinToken = verified.data?.pin_token || verified.data?.token || "";
+      if (!pinToken) {
+        toast.error("Could not verify PIN");
+        setBusy(false);
+        return;
+      }
+
       await axiosClient.post("merchant/pay-card/", {
         merchant_id: Number(merchantId),
         card_id: Number(cardId),
         amount,
         description: description || "Card payment",
+        pin,
+        pin_token: pinToken,
       });
       toast.success("Paid with saved card");
       window.location.href = "/dashboard";
@@ -111,15 +125,29 @@ export default function PayMerchant() {
   const addCardCheckout = async () => {
     if (busy) return;
     if (!validateCommon()) return;
+    if (pin.length !== 4) {
+      toast.error("Enter your 4-digit transfer PIN");
+      return;
+    }
 
     setBusy(true);
     setShowClearHold(false);
 
     try {
+      const verified = await axiosClient.post("verify-pin/", { pin: String(pin) });
+      const pinToken = verified.data?.pin_token || verified.data?.token || "";
+      if (!pinToken) {
+        toast.error("Could not verify PIN");
+        setBusy(false);
+        return;
+      }
+
       const res = await axiosClient.post("merchant/pay-checkout/", {
         merchant_id: Number(merchantId),
         amount,
         description: description || "Save card + pay",
+        pin,
+        pin_token: pinToken,
       });
       const url = res.data?.authorization_url;
       if (!url) throw new Error("No checkout URL");
