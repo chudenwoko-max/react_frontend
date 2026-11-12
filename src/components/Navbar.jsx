@@ -103,7 +103,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
           onClick={handleLogout}
           style={{
             padding: "8px 14px",
-            background: "#0F172A",
+            background: "#2563eb",
             color: "#fff",
             border: "none",
             borderRadius: 8,
