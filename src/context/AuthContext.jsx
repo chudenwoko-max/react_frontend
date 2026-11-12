@@ -12,7 +12,13 @@ export function AuthProvider({ children }) {
     axiosClient
       .get("profile/")
       .then((res) => setUser(res.data))
-      .catch(() => setUser(null));
+      .catch((err) => {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setUser(null);
+          return;
+        }
+        console.error("Could not verify the current session:", err);
+      });
   }, []);
 
   const logout = async () => {

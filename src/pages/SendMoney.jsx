@@ -94,7 +94,7 @@ export default function SendMoney() {
 
       sessionStorage.removeItem("send_idem");
       toast.success("Transfer successful");
-      navigate("/");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       if (isPaymentHoldError(err)) setShowClearHold(true);
       toast.error(err.response?.data?.error || "Transfer failed");
