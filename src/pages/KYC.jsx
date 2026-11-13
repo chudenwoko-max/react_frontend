@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axiosClient from "../axiosClient";
+import * as faceapi from "@vladmandic/face-api";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
