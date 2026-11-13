@@ -64,7 +64,7 @@ export default function Withdraw() {
     sessionStorage.removeItem("withdraw_idem");
 
     toast.success("Withdrawal submitted");
-    navigate("/");
+    navigate("/dashboard", { replace: true });
   } catch (error) {
     if (isPaymentHoldError(error)) setShowClearHold(true);
     toast.error(error.response?.data?.error || "Withdrawal failed");
