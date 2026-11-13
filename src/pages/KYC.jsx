@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axiosClient from "../axiosClient";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
@@ -57,6 +57,224 @@ function RequiredLabel({ field, required, children }) {
   );
 }
 
+function SelfieCamera({ onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (e) {
+        setError("Camera access denied or unavailable. Please allow camera permission.");
+      }
+    })();
+
+    return () => {
+      active = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      setPreview({ file, url });
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    }, "image/jpeg", 0.92);
+  };
+
+  const retake = () => {
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+    setError("");
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch {
+        setError("Could not restart camera.");
+      }
+    })();
+  };
+
+  const usePhoto = () => {
+    if (preview?.file) onCapture(preview.file);
+    onClose();
+  };
+
+  return (
+    <div style={camStyles.overlay}>
+      <div style={camStyles.modal}>
+        <div style={camStyles.topBar}>
+          <span style={{ fontWeight: 600 }}>Take a selfie</span>
+          <button type="button" onClick={onClose} style={camStyles.closeBtn}>✕</button>
+        </div>
+
+        <div style={camStyles.previewWrap}>
+          {preview ? (
+            <img src={preview.url} alt="Selfie preview" style={camStyles.previewImg} />
+          ) : (
+            <>
+              <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
+              <div style={camStyles.faceGuide} />
+            </>
+          )}
+        </div>
+
+        {error && <p style={camStyles.error}>{error}</p>}
+
+        <div style={camStyles.bottomBar}>
+          {preview ? (
+            <>
+              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>Retake</button>
+              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>Use photo</button>
+            </>
+          ) : (
+            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
+          )}
+        </div>
+        <p style={camStyles.hint}>Position your face inside the frame</p>
+      </div>
+    </div>
+  );
+}
+
+const camStyles = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15, 23, 42, 0.72)",
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modal: {
+    background: "#0f172a",
+    color: "#fff",
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 420,
+    padding: "16px 16px 20px",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.4)",
+  },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  closeBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#fff",
+    fontSize: 20,
+    cursor: "pointer",
+  },
+  previewWrap: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "3 / 4",
+    borderRadius: 16,
+    overflow: "hidden",
+    background: "#1e293b",
+  },
+  video: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    transform: "scaleX(-1)",
+  },
+  previewImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  faceGuide: {
+    position: "absolute",
+    inset: "12% 18%",
+    border: "3px solid rgba(255,255,255,0.85)",
+    borderRadius: "50%",
+    boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
+    pointerEvents: "none",
+  },
+  bottomBar: {
+    display: "flex",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 16,
+  },
+  shutter: {
+    width: 68,
+    height: 68,
+    borderRadius: "50%",
+    border: "4px solid #fff",
+    background: "#3b82f6",
+    cursor: "pointer",
+  },
+  primaryBtn: {
+    padding: "12px 20px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  secondaryBtn: {
+    padding: "12px 20px",
+    background: "transparent",
+    color: "#fff",
+    border: "1px solid #475569",
+    borderRadius: 10,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  hint: {
+    textAlign: "center",
+    fontSize: 13,
+    color: "#94a3b8",
+    margin: "10px 0 0",
+  },
+  error: {
+    color: "#fca5a5",
+    fontSize: 13,
+    textAlign: "center",
+    margin: "8px 0 0",
+  },
+};
+
 export default function KYC() {
   const [status, setStatus] = useState("");
   const [missing, setMissing] = useState(null);
@@ -70,6 +288,7 @@ export default function KYC() {
   const [backendHasBvn, setBackendHasBvn] = useState(false);
   const [backendHasNin, setBackendHasNin] = useState(false);
   const [backendHasProofOfAddress, setBackendHasProofOfAddress] = useState(false);
+  const [showSelfieCam, setShowSelfieCam] = useState(false);
 
   const isApproved = ["approved", "verified"].includes(status.toLowerCase());
 
@@ -176,7 +395,7 @@ export default function KYC() {
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontFamily: "serif", fontSize: 26, marginBottom: 12 }}>Verify your identity</h1>
+      <h1 style={{ fontFamily: "serif", fontSize: 26, marginBottom: 12 }}>Get Verified</h1>
       {status && <p style={{ color: "#475569" }}>Current status: {status.toUpperCase()}</p>}
       {limits?.tier != null && (
         <p style={{ color: "#475569" }}>
@@ -205,6 +424,32 @@ export default function KYC() {
 
           {fieldsToRender.map((field) => {
             const required = isFieldRequired(field, ctx);
+
+            if (field === "selfie") {
+              return (
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required} />
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfieCam(true)}
+                    style={{
+                      padding: "12px 18px",
+                      background: "#1e40af",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 10,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {files.selfie ? "Retake selfie" : "Take selfie"}
+                  </button>
+                  {files.selfie && (
+                    <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie captured</span>
+                  )}
+                </div>
+              );
+            }
 
             if (fileFields.has(field)) {
               return (
@@ -327,6 +572,13 @@ export default function KYC() {
         </>
       )}
       {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
+
+      {showSelfieCam && (
+        <SelfieCamera
+          onCapture={(file) => handleFile("selfie", file)}
+          onClose={() => setShowSelfieCam(false)}
+        />
+      )}
     </div>
   );
 }
