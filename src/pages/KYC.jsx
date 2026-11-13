@@ -57,7 +57,6 @@ function RequiredLabel({ field, required, children }) {
     </label>
   );
 }
-import * as faceapi from "@vladmandic/face-api";
 
 function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
