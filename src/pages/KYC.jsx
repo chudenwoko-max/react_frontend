@@ -56,75 +56,131 @@ function RequiredLabel({ field, required, children }) {
     </label>
   );
 }
-
 function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
+  const [hint, setHint] = useState("Position your face in the oval");
+  const [ready, setReady] = useState(false);
+  const steadyTimer = useRef(null);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  const startCamera = async () => {
+    setError("");
+    setHint("Position your face in the oval");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 960 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setReady(true);
+    } catch {
+      setError("Camera access denied or unavailable. Allow camera permission and try again.");
+      setReady(false);
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false,
-        });
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (e) {
-        setError("Camera access denied or unavailable. Please allow camera permission.");
-      }
-    })();
-
+    startCamera();
     return () => {
-      active = false;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      clearTimeout(steadyTimer.current);
+      stopStream();
+      if (preview?.url) URL.revokeObjectURL(preview.url);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Simple guidance + auto-capture after a short steady period
+  useEffect(() => {
+    if (!ready || preview) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    let frames = 0;
+    const check = () => {
+      if (!video.videoWidth) return;
+      frames += 1;
+
+      // Rough “closeness” heuristic from video size vs element
+      const ratio = video.videoWidth / (video.clientWidth || 1);
+      if (ratio < 1.1) {
+        setHint("Move closer");
+        clearTimeout(steadyTimer.current);
+        steadyTimer.current = null;
+      } else if (ratio > 2.2) {
+        setHint("Move back a little");
+        clearTimeout(steadyTimer.current);
+        steadyTimer.current = null;
+      } else {
+        setHint("Hold still…");
+        if (!steadyTimer.current) {
+          steadyTimer.current = setTimeout(() => {
+            takePhoto();
+          }, 1200);
+        }
+      }
+    };
+
+    const id = setInterval(check, 400);
+    return () => {
+      clearInterval(id);
+      clearTimeout(steadyTimer.current);
+      steadyTimer.current = null;
+    };
+  }, [ready, preview]);
 
   const takePhoto = () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !video.videoWidth) return;
+
+    clearTimeout(steadyTimer.current);
+    steadyTimer.current = null;
+
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
-    ctx.translate(canvas.width, 0);
+
+    // Mirror so the saved photo matches what the user saw
+    ctx.translate(w, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
-      const url = URL.createObjectURL(blob);
-      setPreview({ file, url });
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    }, "image/jpeg", 0.92);
+    ctx.drawImage(video, 0, 0, w, h);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setError("Could not capture photo. Please try again.");
+          return;
+        }
+        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+        const url = URL.createObjectURL(blob);
+        setPreview({ file, url });
+        setHint("Looking good");
+        stopStream();
+      },
+      "image/jpeg",
+      0.92
+    );
   };
 
-  const retake = () => {
+  const retake = async () => {
     if (preview?.url) URL.revokeObjectURL(preview.url);
     setPreview(null);
-    setError("");
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false,
-        });
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      } catch {
-        setError("Could not restart camera.");
-      }
-    })();
+    setHint("Position your face in the oval");
+    await startCamera();
   };
 
   const usePhoto = () => {
@@ -137,7 +193,9 @@ function SelfieCamera({ onCapture, onClose }) {
       <div style={camStyles.modal}>
         <div style={camStyles.topBar}>
           <span style={{ fontWeight: 600 }}>Take a selfie</span>
-          <button type="button" onClick={onClose} style={camStyles.closeBtn}>✕</button>
+          <button type="button" onClick={onClose} style={camStyles.closeBtn} aria-label="Close">
+            ✕
+          </button>
         </div>
 
         <div style={camStyles.previewWrap}>
@@ -151,19 +209,23 @@ function SelfieCamera({ onCapture, onClose }) {
           )}
         </div>
 
+        <p style={camStyles.hint}>{hint}</p>
         {error && <p style={camStyles.error}>{error}</p>}
 
         <div style={camStyles.bottomBar}>
           {preview ? (
             <>
-              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>Retake</button>
-              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>Use photo</button>
+              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>
+                Retake
+              </button>
+              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>
+                Use photo
+              </button>
             </>
           ) : (
-            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
+            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Capture now" />
           )}
         </div>
-        <p style={camStyles.hint}>Position your face inside the frame</p>
       </div>
     </div>
   );
