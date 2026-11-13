@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axiosClient from "../axiosClient";
-import * as faceapi from "@vladmandic/face-api";
+
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
@@ -57,7 +57,7 @@ function RequiredLabel({ field, required, children }) {
     </label>
   );
 }
-import * as faceapi from "face-api.js";
+import * as faceapi from "@vladmandic/face-api";
 
 function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
