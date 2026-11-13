@@ -35,7 +35,7 @@ export default function HowToUse() {
           <li>Makes your account ready for when real money is enabled</li>
         </ul>
         <p>
-          Without KYC your account stays on the lowest tier. Complete it from <strong>Verify Identity</strong> as soon as possible.
+          Without KYC your account stays on the lowest tier. Complete it from <strong>Get Verified</strong> as soon as possible.
         </p>
       </section>
 
@@ -130,10 +130,10 @@ export default function HowToUse() {
       </section>
 
       <section style={styles.section}>
-        <h2 style={styles.h2}>Verify Identity (KYC)</h2>
-        <p>Verify your identity to raise your account tier and stay compliant.</p>
+        <h2 style={styles.h2}>Get Verified (KYC)</h2>
+        <p>Get verified to raise your account tier and stay compliant.</p>
         <ol>
-          <li>Go to <strong>Verify Identity</strong>.</li>
+          <li>Go to <strong>Get Verified</strong>.</li>
           <li>Fill in the required personal details.</li>
           <li>Upload a valid government ID, proof of address, and a clear selfie.</li>
           <li>Submit and wait for review.</li>
