@@ -55,13 +55,13 @@ function RequiredLabel({ field, required, children }) {
       {required && <span style={{ color: "#B91C1C" }}> *</span>}
     </label>
   );
-}
-function SelfieCamera({ onCapture, onClose }) {
+}function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
   const [hint, setHint] = useState("Position your face in the oval");
+  const [strength, setStrength] = useState("weak"); // weak | ok | good
   const [ready, setReady] = useState(false);
   const steadyTimer = useRef(null);
 
@@ -73,9 +73,10 @@ function SelfieCamera({ onCapture, onClose }) {
   const startCamera = async () => {
     setError("");
     setHint("Position your face in the oval");
+    setStrength("weak");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 960 } },
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -85,7 +86,7 @@ function SelfieCamera({ onCapture, onClose }) {
       }
       setReady(true);
     } catch {
-      setError("Camera access denied or unavailable. Allow camera permission and try again.");
+      setError("Camera access denied or unavailable.");
       setReady(false);
     }
   };
@@ -100,39 +101,38 @@ function SelfieCamera({ onCapture, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Simple guidance + auto-capture after a short steady period
   useEffect(() => {
     if (!ready || preview) return;
-
     const video = videoRef.current;
     if (!video) return;
 
-    let frames = 0;
-    const check = () => {
-      if (!video.videoWidth) return;
-      frames += 1;
+    const tick = () => {
+      if (!video.videoWidth || !video.clientWidth) return;
 
-      // Rough “closeness” heuristic from video size vs element
-      const ratio = video.videoWidth / (video.clientWidth || 1);
-      if (ratio < 1.1) {
+      // Better closeness heuristic: how much of the frame the face area roughly fills
+      const fill = Math.min(video.videoWidth / 400, video.videoHeight / 500);
+      // fill ~1.0 = good distance, <0.7 = too far, >1.6 = too close
+
+      if (fill < 0.75) {
         setHint("Move closer");
+        setStrength("weak");
         clearTimeout(steadyTimer.current);
         steadyTimer.current = null;
-      } else if (ratio > 2.2) {
+      } else if (fill > 1.55) {
         setHint("Move back a little");
+        setStrength("ok");
         clearTimeout(steadyTimer.current);
         steadyTimer.current = null;
       } else {
         setHint("Hold still…");
+        setStrength("good");
         if (!steadyTimer.current) {
-          steadyTimer.current = setTimeout(() => {
-            takePhoto();
-          }, 1200);
+          steadyTimer.current = setTimeout(() => takePhoto(), 1100);
         }
       }
     };
 
-    const id = setInterval(check, 400);
+    const id = setInterval(tick, 350);
     return () => {
       clearInterval(id);
       clearTimeout(steadyTimer.current);
@@ -142,44 +142,32 @@ function SelfieCamera({ onCapture, onClose }) {
 
   const takePhoto = () => {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-
+    if (!video?.videoWidth) return;
     clearTimeout(steadyTimer.current);
     steadyTimer.current = null;
 
     const canvas = document.createElement("canvas");
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-
-    // Mirror so the saved photo matches what the user saw
-    ctx.translate(w, 0);
+    ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, w, h);
+    ctx.drawImage(video, 0, 0);
 
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setError("Could not capture photo. Please try again.");
-          return;
-        }
-        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-        const url = URL.createObjectURL(blob);
-        setPreview({ file, url });
-        setHint("Looking good");
-        stopStream();
-      },
-      "image/jpeg",
-      0.92
-    );
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      setPreview({ file, url });
+      setHint("Perfect");
+      setStrength("good");
+      stopStream();
+    }, "image/jpeg", 0.92);
   };
 
   const retake = async () => {
     if (preview?.url) URL.revokeObjectURL(preview.url);
     setPreview(null);
-    setHint("Position your face in the oval");
     await startCamera();
   };
 
@@ -188,14 +176,15 @@ function SelfieCamera({ onCapture, onClose }) {
     onClose();
   };
 
+  const ovalColor =
+    strength === "good" ? "#22c55e" : strength === "ok" ? "#f59e0b" : "#ef4444";
+
   return (
     <div style={camStyles.overlay}>
       <div style={camStyles.modal}>
         <div style={camStyles.topBar}>
           <span style={{ fontWeight: 600 }}>Take a selfie</span>
-          <button type="button" onClick={onClose} style={camStyles.closeBtn} aria-label="Close">
-            ✕
-          </button>
+          <button type="button" onClick={onClose} style={camStyles.closeBtn}>✕</button>
         </div>
 
         <div style={camStyles.previewWrap}>
@@ -204,26 +193,28 @@ function SelfieCamera({ onCapture, onClose }) {
           ) : (
             <>
               <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
-              <div style={camStyles.faceGuide} />
+              <div
+                style={{
+                  ...camStyles.faceGuide,
+                  borderColor: ovalColor,
+                  boxShadow: `0 0 0 9999px rgba(0,0,0,0.35), inset 0 0 0 2px ${ovalColor}`,
+                }}
+              />
             </>
           )}
         </div>
 
-        <p style={camStyles.hint}>{hint}</p>
+        <p style={{ ...camStyles.hint, color: ovalColor }}>{hint}</p>
         {error && <p style={camStyles.error}>{error}</p>}
 
         <div style={camStyles.bottomBar}>
           {preview ? (
             <>
-              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>
-                Retake
-              </button>
-              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>
-                Use photo
-              </button>
+              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>Retake</button>
+              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>Use photo</button>
             </>
           ) : (
-            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Capture now" />
+            <button type="button" onClick={takePhoto} style={camStyles.shutter} />
           )}
         </div>
       </div>
@@ -284,13 +275,13 @@ const camStyles = {
     objectFit: "cover",
   },
   faceGuide: {
-    position: "absolute",
-    inset: "12% 18%",
-    border: "3px solid rgba(255,255,255,0.85)",
-    borderRadius: "50%",
-    boxShadow: "0 0 0 9999px rgba(0,0,0,0.25)",
-    pointerEvents: "none",
-  },
+  position: "absolute",
+  inset: "14% 20%",
+  border: "4px solid #ef4444",
+  borderRadius: "50%",
+  pointerEvents: "none",
+  transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+},
   bottomBar: {
     display: "flex",
     justifyContent: "center",
