@@ -367,6 +367,8 @@ export default function KYC() {
     setLoading(true);
     setError("");
 
+    const navigate = useNavigate();
+
     const ctx = { isNewUser, forceTier2, forceTier3 };
     const requiredMissing = fieldsToRender.filter((field) => {
       if (!isFieldRequired(field, ctx)) return false;
@@ -397,7 +399,7 @@ export default function KYC() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       alert("Submitted successfully.");
-      window.location.href = "/";
+navigate("/dashboard", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.error || err.message || "Failed to submit.";
       setError(msg);
