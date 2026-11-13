@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import axiosClient from "../axiosClient";
+import { useNavigate } from "react-router-dom";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
@@ -311,6 +312,7 @@ export default function KYC() {
   const [backendHasNin, setBackendHasNin] = useState(false);
   const [backendHasProofOfAddress, setBackendHasProofOfAddress] = useState(false);
   const [showSelfieCam, setShowSelfieCam] = useState(false);
+  const navigate = useNavigate();
 
   const isApproved = ["approved", "verified"].includes(status.toLowerCase());
 
@@ -367,7 +369,7 @@ export default function KYC() {
     setLoading(true);
     setError("");
 
-    const navigate = useNavigate();
+  
 
     const ctx = { isNewUser, forceTier2, forceTier3 };
     const requiredMissing = fieldsToRender.filter((field) => {
