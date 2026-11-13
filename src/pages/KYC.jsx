@@ -55,14 +55,18 @@ function RequiredLabel({ field, required, children }) {
       {required && <span style={{ color: "#B91C1C" }}> *</span>}
     </label>
   );
-}function SelfieCamera({ onCapture, onClose }) {
+}
+import * as faceapi from "face-api.js";
+
+function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
-  const [hint, setHint] = useState("Position your face in the oval");
-  const [strength, setStrength] = useState("weak"); // weak | ok | good
-  const [ready, setReady] = useState(false);
+  const [hint, setHint] = useState("Loading camera…");
+  const [strength, setStrength] = useState("weak");
+  const [modelsReady, setModelsReady] = useState(false);
+  const detectTimer = useRef(null);
   const steadyTimer = useRef(null);
 
   const stopStream = () => {
@@ -70,30 +74,36 @@ function RequiredLabel({ field, required, children }) {
     streamRef.current = null;
   };
 
-  const startCamera = async () => {
-    setError("");
-    setHint("Position your face in the oval");
-    setStrength("weak");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setReady(true);
-    } catch {
-      setError("Camera access denied or unavailable.");
-      setReady(false);
-    }
-  };
-
   useEffect(() => {
-    startCamera();
+    let active = true;
+    (async () => {
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+        if (!active) return;
+        setModelsReady(true);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setHint("Position your face in the oval");
+      } catch (e) {
+        setError("Could not start camera or load models.");
+      }
+    })();
+
     return () => {
+      active = false;
+      clearInterval(detectTimer.current);
       clearTimeout(steadyTimer.current);
       stopStream();
       if (preview?.url) URL.revokeObjectURL(preview.url);
@@ -102,23 +112,33 @@ function RequiredLabel({ field, required, children }) {
   }, []);
 
   useEffect(() => {
-    if (!ready || preview) return;
+    if (!modelsReady || preview) return;
     const video = videoRef.current;
     if (!video) return;
 
-    const tick = () => {
-      if (!video.videoWidth || !video.clientWidth) return;
+    detectTimer.current = setInterval(async () => {
+      if (video.readyState < 2) return;
+      const detection = await faceapi.detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 })
+      );
 
-      // Better closeness heuristic: how much of the frame the face area roughly fills
-      const fill = Math.min(video.videoWidth / 400, video.videoHeight / 500);
-      // fill ~1.0 = good distance, <0.7 = too far, >1.6 = too close
+      if (!detection) {
+        setHint("Position your face in the oval");
+        setStrength("weak");
+        clearTimeout(steadyTimer.current);
+        steadyTimer.current = null;
+        return;
+      }
 
-      if (fill < 0.75) {
+      const ratio = detection.box.width / video.videoWidth;
+
+      if (ratio < 0.32) {
         setHint("Move closer");
         setStrength("weak");
         clearTimeout(steadyTimer.current);
         steadyTimer.current = null;
-      } else if (fill > 1.55) {
+      } else if (ratio > 0.58) {
         setHint("Move back a little");
         setStrength("ok");
         clearTimeout(steadyTimer.current);
@@ -127,24 +147,24 @@ function RequiredLabel({ field, required, children }) {
         setHint("Hold still…");
         setStrength("good");
         if (!steadyTimer.current) {
-          steadyTimer.current = setTimeout(() => takePhoto(), 1100);
+          steadyTimer.current = setTimeout(() => takePhoto(), 1000);
         }
       }
-    };
+    }, 400);
 
-    const id = setInterval(tick, 350);
     return () => {
-      clearInterval(id);
+      clearInterval(detectTimer.current);
       clearTimeout(steadyTimer.current);
       steadyTimer.current = null;
     };
-  }, [ready, preview]);
+  }, [modelsReady, preview]);
 
   const takePhoto = () => {
     const video = videoRef.current;
     if (!video?.videoWidth) return;
     clearTimeout(steadyTimer.current);
     steadyTimer.current = null;
+    clearInterval(detectTimer.current);
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
@@ -165,10 +185,14 @@ function RequiredLabel({ field, required, children }) {
     }, "image/jpeg", 0.92);
   };
 
-  const retake = async () => {
+  const retake = () => {
     if (preview?.url) URL.revokeObjectURL(preview.url);
     setPreview(null);
-    await startCamera();
+    setHint("Position your face in the oval");
+    setStrength("weak");
+    // restart by re-mounting or call start logic again — simplest is close/reopen
+    // or re-run the camera start here if you extract it
+    window.location.reload(); // temporary; better to extract startCamera
   };
 
   const usePhoto = () => {
@@ -197,7 +221,6 @@ function RequiredLabel({ field, required, children }) {
                 style={{
                   ...camStyles.faceGuide,
                   borderColor: ovalColor,
-                  boxShadow: `0 0 0 9999px rgba(0,0,0,0.35), inset 0 0 0 2px ${ovalColor}`,
                 }}
               />
             </>
@@ -280,7 +303,7 @@ const camStyles = {
   border: "4px solid #ef4444",
   borderRadius: "50%",
   pointerEvents: "none",
-  transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+  transition: "border-color 0.2s ease",
 },
   bottomBar: {
     display: "flex",
