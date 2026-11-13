@@ -90,7 +90,7 @@ export default function BankAccount() {
       account_name: form.account_name,
     });
     toast.success("Bank account saved");
-    navigate("/");
+navigate("/dashboard", { replace: true });
   } catch (err) {
     toast.error(
       err.response?.data?.error ||
