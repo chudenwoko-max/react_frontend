@@ -83,10 +83,12 @@ function SelfieCamera({ onCapture, onClose }) {
       if (video) {
         video.srcObject = stream;
         await video.play();
-        // wait until dimensions are real
         await new Promise((resolve) => {
-          if (video.videoWidth) return resolve();
-          video.onloadedmetadata = () => resolve();
+          const check = () => {
+            if (video.videoWidth > 0) resolve();
+            else setTimeout(check, 100);
+          };
+          check();
         });
         setReady(true);
       }
@@ -99,48 +101,55 @@ function SelfieCamera({ onCapture, onClose }) {
     startCamera();
     return () => {
       stopStream();
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const takePhoto = () => {
     const video = videoRef.current;
-    if (!video || !video.videoWidth || !video.videoHeight) {
-      setError("Camera not ready. Wait a second and try again.");
+    if (!video) return;
+
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) {
+      setError("Camera not ready yet. Wait 1 second and tap again.");
       return;
     }
 
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      setError("Could not capture photo.");
+      return;
+    }
 
-    // mirror
-    ctx.translate(canvas.width, 0);
+    ctx.save();
+    ctx.translate(w, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
 
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setError("Could not capture photo.");
-          return;
-        }
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    if (!dataUrl || dataUrl.length < 100) {
+      setError("Capture failed. Please try again.");
+      return;
+    }
+
+    fetch(dataUrl)
+      .then((res) => res.blob())
+      .then((blob) => {
         const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-        const url = URL.createObjectURL(blob);
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
         setCapturedFile(file);
-        setPreviewUrl(url);
+        setPreviewUrl(dataUrl);
         stopStream();
-      },
-      "image/jpeg",
-      0.92
-    );
+        setError("");
+      })
+      .catch(() => setError("Could not save photo."));
   };
 
   const retake = async () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl("");
     setCapturedFile(null);
     setError("");
@@ -165,7 +174,12 @@ function SelfieCamera({ onCapture, onClose }) {
             <img
               src={previewUrl}
               alt="Snapped selfie"
-              style={camStyles.previewImg}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
             />
           ) : (
             <>
