@@ -21,6 +21,9 @@ export default function Login() {
   );
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showFreeze, setShowFreeze] = useState(false);
+  const [freezeEmail, setFreezeEmail] = useState("");
+  const [freezeLoading, setFreezeLoading] = useState(false);
 
   // 2FA state
   const [requires2FA, setRequires2FA] = useState(false);
@@ -90,6 +93,31 @@ export default function Login() {
     }
   };
 
+  const handleFreezeRequest = async (e) => {
+    e.preventDefault();
+    const email = freezeEmail.trim();
+    if (!email) {
+      toast.error("Enter your account email");
+      return;
+    }
+
+    setFreezeLoading(true);
+    try {
+      await axiosClient.post("security/request-freeze/", { email });
+      toast.success(
+        "If the account exists, a freeze link has been sent to your email."
+      );
+      setFreezeEmail("");
+      setShowFreeze(false);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Could not send the freeze link. Please try again."
+      );
+    } finally {
+      setFreezeLoading(false);
+    }
+  };
+
   const useDifferentAccount = () => {
     localStorage.removeItem("payhost_username");
     setUsername("");
@@ -141,51 +169,87 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
-      <form onSubmit={handleLogin} style={styles.card}>
-        <h1 style={styles.title}>Sign in</h1>
+      <div style={styles.card}>
+        <form onSubmit={handleLogin}>
+          <h1 style={styles.title}>Sign in</h1>
 
-        <label style={styles.label}>Username</label>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          disabled={!!localStorage.getItem("payhost_username")}
-          style={styles.input}
-          autoComplete="username"
-        />
+          <label style={styles.label}>Username</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={!!localStorage.getItem("payhost_username")}
+            style={styles.input}
+            autoComplete="username"
+          />
 
-        {!!localStorage.getItem("payhost_username") && (
-          <button
-            type="button"
-            onClick={useDifferentAccount}
-            style={styles.switchAccount}
-          >
-            Use a different account
+          {!!localStorage.getItem("payhost_username") && (
+            <button
+              type="button"
+              onClick={useDifferentAccount}
+              style={styles.switchAccount}
+            >
+              Use a different account
+            </button>
+          )}
+
+          <label style={styles.label}>Passcode</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
+            placeholder="••••••"
+            style={styles.input}
+          />
+
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? "Signing in..." : "Sign in"}
           </button>
-        )}
 
-        <label style={styles.label}>Passcode</label>
-        <input
-          type="password"
-          inputMode="numeric"
-          maxLength={6}
-          value={passcode}
-          onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
-          placeholder="••••••"
-          style={styles.input}
-        />
+          <p style={styles.linkRow}>
+            <Link to="/forgot-passcode">Forgot passcode?</Link>
+          </p>
 
-        <button type="submit" disabled={loading} style={styles.button}>
-          {loading ? "Signing in..." : "Sign in"}
+          <p style={styles.linkRow}>
+            Don't have an account? <Link to="/register">Create Account</Link>
+          </p>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => setShowFreeze((show) => !show)}
+          style={styles.freezeLink}
+          aria-expanded={showFreeze}
+          aria-controls="freeze-request-form"
+        >
+          Freeze account / Report stolen device
         </button>
 
-        <p style={styles.linkRow}>
-          <Link to="/forgot-passcode">Forgot passcode?</Link>
-        </p>
-
-        <p style={styles.linkRow}>
-          Don't have an account? <Link to="/register">Create Account</Link>
-        </p>
-      </form>
+        {showFreeze && (
+          <form
+            id="freeze-request-form"
+            onSubmit={handleFreezeRequest}
+            style={styles.freezeForm}
+          >
+            <label htmlFor="freeze-email" style={styles.label}>
+              Account email
+            </label>
+            <input
+              id="freeze-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={freezeEmail}
+              onChange={(e) => setFreezeEmail(e.target.value)}
+              style={styles.input}
+            />
+            <button type="submit" disabled={freezeLoading} style={styles.button}>
+              {freezeLoading ? "Sending..." : "Send freeze link"}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -208,4 +272,16 @@ const styles = {
   },
   button: { width: "100%", padding: 13, background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
   linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
+  freezeLink: {
+    display: "block",
+    margin: "20px auto 0",
+    padding: 0,
+    background: "none",
+    border: "none",
+    color: "#b91c1c",
+    fontSize: 14,
+    cursor: "pointer",
+    textDecoration: "underline",
+  },
+  freezeForm: { marginTop: 20 },
 };
