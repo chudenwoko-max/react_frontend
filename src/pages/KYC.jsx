@@ -62,8 +62,6 @@ function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
-  const [preview, setPreview] = useState(null);
-  const [hint, setHint] = useState("Position your face in the oval");
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -95,7 +93,6 @@ function SelfieCamera({ onCapture, onClose }) {
     return () => {
       active = false;
       stopStream();
-      if (preview?.url) URL.revokeObjectURL(preview.url);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -118,36 +115,10 @@ function SelfieCamera({ onCapture, onClose }) {
         return;
       }
       const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-      const url = URL.createObjectURL(blob);
-      setPreview({ file, url });
-      setHint("Looking good");
       stopStream();
+      onCapture(file);
+      onClose();
     }, "image/jpeg", 0.92);
-  };
-
-  const retake = async () => {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-    setPreview(null);
-    setHint("Position your face in the oval");
-    setError("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-    } catch {
-      setError("Could not restart camera.");
-    }
-  };
-
-  const usePhoto = () => {
-    if (preview?.file) onCapture(preview.file);
-    onClose();
   };
 
   return (
@@ -161,32 +132,15 @@ function SelfieCamera({ onCapture, onClose }) {
         </div>
 
         <div style={camStyles.previewWrap}>
-          {preview ? (
-            <img src={preview.url} alt="Selfie preview" style={camStyles.previewImg} />
-          ) : (
-            <>
-              <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
-              <div style={camStyles.faceGuide} />
-            </>
-          )}
+          <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
+          <div style={camStyles.faceGuide} />
         </div>
 
-        <p style={camStyles.hint}>{hint}</p>
+        <p style={camStyles.hint}>Position your face in the oval</p>
         {error && <p style={camStyles.error}>{error}</p>}
 
         <div style={camStyles.bottomBar}>
-          {preview ? (
-            <>
-              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>
-                Retake
-              </button>
-              <button type="button" onClick={usePhoto} style={camStyles.primaryBtn}>
-                Use photo
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
-          )}
+          <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
         </div>
       </div>
     </div>
@@ -240,11 +194,6 @@ const camStyles = {
     objectFit: "cover",
     transform: "scaleX(-1)",
   },
-  previewImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
   faceGuide: {
     position: "absolute",
     inset: "14% 20%",
@@ -264,24 +213,6 @@ const camStyles = {
     borderRadius: "50%",
     border: "4px solid #fff",
     background: "#3b82f6",
-    cursor: "pointer",
-  },
-  primaryBtn: {
-    padding: "12px 20px",
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: 10,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  secondaryBtn: {
-    padding: "12px 20px",
-    background: "transparent",
-    color: "#fff",
-    border: "1px solid #475569",
-    borderRadius: 10,
-    fontWeight: 600,
     cursor: "pointer",
   },
   hint: {
@@ -312,7 +243,14 @@ export default function KYC() {
   const [backendHasNin, setBackendHasNin] = useState(false);
   const [backendHasProofOfAddress, setBackendHasProofOfAddress] = useState(false);
   const [showSelfieCam, setShowSelfieCam] = useState(false);
+  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [selfieAccepted, setSelfieAccepted] = useState(false);
+  const selfiePreviewUrlRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => () => {
+    if (selfiePreviewUrlRef.current) URL.revokeObjectURL(selfiePreviewUrlRef.current);
+  }, []);
 
   const isApproved = ["approved", "verified"].includes(status.toLowerCase());
 
@@ -345,6 +283,15 @@ export default function KYC() {
   const handleFile = (field, file) => {
     if (!file) return;
     setFiles((prev) => ({ ...prev, [field]: file }));
+  };
+
+  const handleSelfieCapture = (file) => {
+    if (selfiePreview?.url) URL.revokeObjectURL(selfiePreview.url);
+    const url = URL.createObjectURL(file);
+    selfiePreviewUrlRef.current = url;
+    setSelfiePreview({ file, url });
+    setSelfieAccepted(false);
+    setFiles((prev) => ({ ...prev, selfie: file }));
   };
 
   const isNewUser = !isApproved;
@@ -455,23 +402,68 @@ navigate("/dashboard", { replace: true });
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel field={field} required={required} />
-                  <button
-                    type="button"
-                    onClick={() => setShowSelfieCam(true)}
-                    style={{
-                      padding: "12px 18px",
-                      background: "#1e40af",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 10,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {files.selfie ? "Retake selfie" : "Take selfie"}
-                  </button>
-                  {files.selfie && (
-                    <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie captured</span>
+                  {!selfiePreview ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowSelfieCam(true)}
+                      style={{
+                        padding: "12px 18px",
+                        background: "#1e40af",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Take selfie
+                    </button>
+                  ) : (
+                    <div>
+                      <img
+                        src={selfiePreview.url}
+                        alt="Selfie"
+                        style={{
+                          width: 180,
+                          height: 240,
+                          objectFit: "cover",
+                          borderRadius: 12,
+                          display: "block",
+                          marginBottom: 12,
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowSelfieCam(true)}
+                          style={{
+                            padding: "10px 16px",
+                            background: "transparent",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Retake
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelfieAccepted(true)}
+                          disabled={selfieAccepted}
+                          style={{
+                            padding: "10px 16px",
+                            background: selfieAccepted ? "#16a34a" : "#2563eb",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {selfieAccepted ? "Accepted" : "Accept"}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -601,7 +593,7 @@ navigate("/dashboard", { replace: true });
 
       {showSelfieCam && (
         <SelfieCamera
-          onCapture={(file) => handleFile("selfie", file)}
+          onCapture={handleSelfieCapture}
           onClose={() => setShowSelfieCam(false)}
         />
       )}
