@@ -57,6 +57,15 @@ function RequiredLabel({ field, required, children }) {
     </label>
   );
 }
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = (header.match(/:(.*?);/) || [])[1] || "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -119,7 +128,7 @@ function SelfieCamera({ onCapture, onClose }) {
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const ctx = canvas.getContext("2d");
     if (!ctx) {
       setError("Could not capture photo.");
       return;
@@ -131,22 +140,29 @@ function SelfieCamera({ onCapture, onClose }) {
     ctx.drawImage(video, 0, 0, w, h);
     ctx.restore();
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-    if (!dataUrl || dataUrl.length < 100) {
+    let dataUrl = "";
+    try {
+      dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    } catch {
+      setError("Capture blocked by the browser.");
+      return;
+    }
+
+    if (!dataUrl || !dataUrl.startsWith("data:image")) {
       setError("Capture failed. Please try again.");
       return;
     }
 
-    fetch(dataUrl)
-      .then((res) => res.blob())
-      .then((blob) => {
-        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-        setCapturedFile(file);
-        setPreviewUrl(dataUrl);
-        stopStream();
-        setError("");
-      })
-      .catch(() => setError("Could not save photo."));
+    try {
+      const blob = dataUrlToBlob(dataUrl);
+      const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+      setCapturedFile(file);
+      setPreviewUrl(dataUrl);
+      setError("");
+      stopStream();
+    } catch {
+      setError("Could not save photo.");
+    }
   };
 
   const retake = async () => {
