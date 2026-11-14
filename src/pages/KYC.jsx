@@ -57,42 +57,41 @@ function RequiredLabel({ field, required, children }) {
     </label>
   );
 }
-
 function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
+  const [preview, setPreview] = useState(null); // { file, url }
+  const [hint, setHint] = useState("Position your face in the oval");
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   };
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false,
-        });
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-      } catch {
-        setError("Camera access denied or unavailable. Please allow camera permission.");
+  const startCamera = async () => {
+    setError("");
+    setHint("Position your face in the oval");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
-    })();
+    } catch {
+      setError("Camera access denied or unavailable. Please allow camera permission.");
+    }
+  };
 
+  useEffect(() => {
+    startCamera();
     return () => {
-      active = false;
       stopStream();
+      if (preview?.url) URL.revokeObjectURL(preview.url);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -115,10 +114,22 @@ function SelfieCamera({ onCapture, onClose }) {
         return;
       }
       const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      setPreview({ file, url });
+      setHint("");
       stopStream();
-      onCapture(file);
-      onClose();
     }, "image/jpeg", 0.92);
+  };
+
+  const retake = async () => {
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+    await startCamera();
+  };
+
+  const accept = () => {
+    if (preview?.file) onCapture(preview.file);
+    onClose();
   };
 
   return (
@@ -132,15 +143,32 @@ function SelfieCamera({ onCapture, onClose }) {
         </div>
 
         <div style={camStyles.previewWrap}>
-          <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
-          <div style={camStyles.faceGuide} />
+          {preview ? (
+            <img src={preview.url} alt="Snapped selfie" style={camStyles.previewImg} />
+          ) : (
+            <>
+              <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
+              <div style={camStyles.faceGuide} />
+            </>
+          )}
         </div>
 
-        <p style={camStyles.hint}>Position your face in the oval</p>
+        {hint ? <p style={camStyles.hint}>{hint}</p> : null}
         {error && <p style={camStyles.error}>{error}</p>}
 
         <div style={camStyles.bottomBar}>
-          <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
+          {preview ? (
+            <>
+              <button type="button" onClick={retake} style={camStyles.secondaryBtn}>
+                Retake
+              </button>
+              <button type="button" onClick={accept} style={camStyles.primaryBtn}>
+                Accept
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
+          )}
         </div>
       </div>
     </div>
@@ -399,76 +427,30 @@ navigate("/dashboard", { replace: true });
             const required = isFieldRequired(field, ctx);
 
             if (field === "selfie") {
-              return (
-                <div key={field} style={{ marginBottom: 16 }}>
-                  <RequiredLabel field={field} required={required} />
-                  {!selfiePreview ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowSelfieCam(true)}
-                      style={{
-                        padding: "12px 18px",
-                        background: "#1e40af",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 10,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Take selfie
-                    </button>
-                  ) : (
-                    <div>
-                      <img
-                        src={selfiePreview.url}
-                        alt="Selfie"
-                        style={{
-                          width: 180,
-                          height: 240,
-                          objectFit: "cover",
-                          borderRadius: 12,
-                          display: "block",
-                          marginBottom: 12,
-                        }}
-                      />
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <button
-                          type="button"
-                          onClick={() => setShowSelfieCam(true)}
-                          style={{
-                            padding: "10px 16px",
-                            background: "transparent",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: 8,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Retake
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelfieAccepted(true)}
-                          disabled={selfieAccepted}
-                          style={{
-                            padding: "10px 16px",
-                            background: selfieAccepted ? "#16a34a" : "#2563eb",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 8,
-                            cursor: "pointer",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {selfieAccepted ? "Accepted" : "Accept"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
+  return (
+    <div key={field} style={{ marginBottom: 16 }}>
+      <RequiredLabel field={field} required={required} />
+      <button
+        type="button"
+        onClick={() => setShowSelfieCam(true)}
+        style={{
+          padding: "12px 18px",
+          background: "#1e40af",
+          color: "#fff",
+          border: "none",
+          borderRadius: 10,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        {files.selfie ? "Retake selfie" : "Take selfie"}
+      </button>
+      {files.selfie && (
+        <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>
+      )}
+    </div>
+  );
+}
             if (fileFields.has(field)) {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
