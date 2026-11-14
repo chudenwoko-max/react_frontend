@@ -61,8 +61,9 @@ function SelfieCamera({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState("");
-  const [preview, setPreview] = useState(null); // { file, url }
-  const [hint, setHint] = useState("Position your face in the oval");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [capturedFile, setCapturedFile] = useState(null);
+  const [ready, setReady] = useState(false);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -71,19 +72,26 @@ function SelfieCamera({ onCapture, onClose }) {
 
   const startCamera = async () => {
     setError("");
-    setHint("Position your face in the oval");
+    setReady(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user" },
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+        // wait until dimensions are real
+        await new Promise((resolve) => {
+          if (video.videoWidth) return resolve();
+          video.onloadedmetadata = () => resolve();
+        });
+        setReady(true);
       }
     } catch {
-      setError("Camera access denied or unavailable. Please allow camera permission.");
+      setError("Camera access denied or unavailable.");
     }
   };
 
@@ -91,44 +99,56 @@ function SelfieCamera({ onCapture, onClose }) {
     startCamera();
     return () => {
       stopStream();
-      if (preview?.url) URL.revokeObjectURL(preview.url);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const takePhoto = () => {
     const video = videoRef.current;
-    if (!video?.videoWidth) return;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setError("Camera not ready. Wait a second and try again.");
+      return;
+    }
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
+
+    // mirror
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        setError("Could not capture photo.");
-        return;
-      }
-      const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
-      const url = URL.createObjectURL(blob);
-      setPreview({ file, url });
-      setHint("");
-      stopStream();
-    }, "image/jpeg", 0.92);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setError("Could not capture photo.");
+          return;
+        }
+        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+        const url = URL.createObjectURL(blob);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setCapturedFile(file);
+        setPreviewUrl(url);
+        stopStream();
+      },
+      "image/jpeg",
+      0.92
+    );
   };
 
   const retake = async () => {
-    if (preview?.url) URL.revokeObjectURL(preview.url);
-    setPreview(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
+    setCapturedFile(null);
+    setError("");
     await startCamera();
   };
 
   const accept = () => {
-    if (preview?.file) onCapture(preview.file);
+    if (capturedFile) onCapture(capturedFile);
     onClose();
   };
 
@@ -137,27 +157,34 @@ function SelfieCamera({ onCapture, onClose }) {
       <div style={camStyles.modal}>
         <div style={camStyles.topBar}>
           <span style={{ fontWeight: 600 }}>Take a selfie</span>
-          <button type="button" onClick={onClose} style={camStyles.closeBtn} aria-label="Close">
-            ✕
-          </button>
+          <button type="button" onClick={onClose} style={camStyles.closeBtn}>✕</button>
         </div>
 
         <div style={camStyles.previewWrap}>
-          {preview ? (
-            <img src={preview.url} alt="Snapped selfie" style={camStyles.previewImg} />
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="Snapped selfie"
+              style={camStyles.previewImg}
+            />
           ) : (
             <>
-              <video ref={videoRef} autoPlay playsInline muted style={camStyles.video} />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={camStyles.video}
+              />
               <div style={camStyles.faceGuide} />
             </>
           )}
         </div>
 
-        {hint ? <p style={camStyles.hint}>{hint}</p> : null}
         {error && <p style={camStyles.error}>{error}</p>}
 
         <div style={camStyles.bottomBar}>
-          {preview ? (
+          {previewUrl ? (
             <>
               <button type="button" onClick={retake} style={camStyles.secondaryBtn}>
                 Retake
@@ -167,7 +194,16 @@ function SelfieCamera({ onCapture, onClose }) {
               </button>
             </>
           ) : (
-            <button type="button" onClick={takePhoto} style={camStyles.shutter} aria-label="Take photo" />
+            <button
+              type="button"
+              onClick={takePhoto}
+              disabled={!ready}
+              style={{
+                ...camStyles.shutter,
+                opacity: ready ? 1 : 0.5,
+              }}
+              aria-label="Take photo"
+            />
           )}
         </div>
       </div>
