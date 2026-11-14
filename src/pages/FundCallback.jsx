@@ -6,6 +6,12 @@ export default function FundCallback() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reference = params.get("reference") || params.get("trxref");
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile && reference) {
+      window.location.href = `payhost://fund/callback?reference=${encodeURIComponent(reference)}`;
+      return;
+    }
 
     if (!reference) {
       toast.error("No payment reference found");
