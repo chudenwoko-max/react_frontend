@@ -216,15 +216,7 @@ export default function Login() {
           </p>
         </form>
 
-        <button
-          type="button"
-          onClick={() => setShowFreeze((show) => !show)}
-          style={styles.freezeLink}
-          aria-expanded={showFreeze}
-          aria-controls="freeze-request-form"
-        >
-          Freeze account / Report stolen device
-        </button>
+        
 
         {showFreeze && (
           <form
