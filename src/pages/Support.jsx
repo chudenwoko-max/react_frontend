@@ -9,22 +9,21 @@ export default function Support() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketDetail, setTicketDetail] = useState(null);
 
-  // Create form
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [category, setCategory] = useState("general");
   const [creating, setCreating] = useState(false);
 
-  // Reply
   const [reply, setReply] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
   const fetchTickets = async () => {
     try {
       const res = await axiosClient.get("/support/");
-      setTickets(res.data);
+      setTickets(Array.isArray(res.data) ? res.data : res.data.results || []);
     } catch (err) {
       console.error(err);
+      toast.error("Could not load tickets");
     } finally {
       setLoading(false);
     }
@@ -36,7 +35,7 @@ export default function Support() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!subject || !message) {
+    if (!subject.trim() || !message.trim()) {
       toast.error("Subject and message are required");
       return;
     }
@@ -44,8 +43,8 @@ export default function Support() {
     setCreating(true);
     try {
       await axiosClient.post("/support/create/", {
-        subject,
-        message,
+        subject: subject.trim(),
+        message: message.trim(),
         category,
       });
       toast.success("Ticket created successfully");
@@ -80,11 +79,11 @@ export default function Support() {
     setSendingReply(true);
     try {
       await axiosClient.post(`/support/${selectedTicket}/reply/`, {
-        message: reply,
+        message: reply.trim(),
       });
       toast.success("Reply sent");
       setReply("");
-      openTicket(selectedTicket); // refresh messages
+      openTicket(selectedTicket);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to send reply");
     } finally {
@@ -93,13 +92,13 @@ export default function Support() {
   };
 
   const getStatusStyle = (status) => {
-    const styles = {
+    const map = {
       open: { bg: "#dbeafe", color: "#2563eb" },
       in_progress: { bg: "#fef3c7", color: "#d97706" },
       resolved: { bg: "#dcfce7", color: "#16a34a" },
       closed: { bg: "#f3f4f6", color: "#6b7280" },
     };
-    return styles[status] || styles.open;
+    return map[status] || map.open;
   };
 
   return (
@@ -112,6 +111,22 @@ export default function Support() {
         <button onClick={() => setShowCreate(true)} style={styles.createBtn}>
           + New Ticket
         </button>
+      </div>
+
+      {/* Emergency contact */}
+      <div style={styles.emergencyBox}>
+        <strong>Phone or device stolen?</strong>
+        <p style={{ margin: "6px 0 0", fontSize: 14 }}>
+          Lock your wallet from the Security page if you still have access.  
+          Otherwise contact support immediately:
+        </p>
+        <p style={{ margin: "8px 0 0", fontWeight: 600 }}>
+          WhatsApp / Call: +234 7066435071<br />
+          Email: support@payhost.dev
+        </p>
+        <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
+          Have your registered email and a recent transaction ready for verification.
+        </p>
       </div>
 
       {/* Create Ticket Modal */}
@@ -132,6 +147,7 @@ export default function Support() {
                   <option value="kyc">KYC / Verification</option>
                   <option value="card">Virtual Card</option>
                   <option value="login">Login / Security</option>
+                  <option value="stolen">Stolen device / Freeze account</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -174,7 +190,7 @@ export default function Support() {
         </div>
       )}
 
-      {/* Ticket Detail View */}
+      {/* Ticket Detail */}
       {selectedTicket && ticketDetail ? (
         <div style={styles.detailCard}>
           <button
@@ -189,7 +205,9 @@ export default function Support() {
 
           <div style={styles.detailHeader}>
             <div>
-              <h2 style={{ margin: 0 }}>#{ticketDetail.id} – {ticketDetail.subject}</h2>
+              <h2 style={{ margin: 0 }}>
+                #{ticketDetail.id} – {ticketDetail.subject}
+              </h2>
               <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 14 }}>
                 {ticketDetail.category} • {ticketDetail.created_at}
               </p>
@@ -205,9 +223,8 @@ export default function Support() {
             </span>
           </div>
 
-          {/* Messages */}
           <div style={styles.messages}>
-            {ticketDetail.messages.map((msg) => (
+            {ticketDetail.messages?.map((msg) => (
               <div
                 key={msg.id}
                 style={{
@@ -225,7 +242,6 @@ export default function Support() {
             ))}
           </div>
 
-          {/* Reply Box */}
           {ticketDetail.status !== "closed" && ticketDetail.status !== "resolved" && (
             <div style={styles.replyBox}>
               <textarea
@@ -245,7 +261,6 @@ export default function Support() {
           )}
         </div>
       ) : (
-        /* Tickets List */
         <div>
           {loading ? (
             <p style={{ textAlign: "center", color: "#6b7280" }}>Loading tickets...</p>
@@ -294,30 +309,16 @@ export default function Support() {
   );
 }
 
-// ================= STYLES =================
 const styles = {
-  page: {
-    padding: "32px 28px",
-    maxWidth: 800,
-    margin: "0 auto",
-  },
+  page: { padding: "32px 28px", maxWidth: 800, margin: "0 auto" },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 20,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: "#111827",
-    margin: 0,
-  },
-  subtitle: {
-    color: "#6b7280",
-    marginTop: 4,
-    fontSize: 14,
-  },
+  title: { fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 },
+  subtitle: { color: "#6b7280", marginTop: 4, fontSize: 14 },
   createBtn: {
     background: "#2563eb",
     color: "white",
@@ -327,11 +328,15 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
+  emergencyBox: {
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: 12,
+    padding: "16px 18px",
+    marginBottom: 24,
+    color: "#7f1d1d",
   },
+  list: { display: "flex", flexDirection: "column", gap: 12 },
   ticketCard: {
     background: "white",
     padding: "16px 20px",
@@ -342,16 +347,8 @@ const styles = {
     alignItems: "center",
     cursor: "pointer",
   },
-  ticketSubject: {
-    margin: 0,
-    fontWeight: 600,
-    fontSize: 15,
-  },
-  ticketMeta: {
-    margin: "4px 0 0",
-    fontSize: 13,
-    color: "#6b7280",
-  },
+  ticketSubject: { margin: 0, fontWeight: 600, fontSize: 15 },
+  ticketMeta: { margin: "4px 0 0", fontSize: 13, color: "#6b7280" },
   badge: {
     padding: "4px 10px",
     borderRadius: 20,
@@ -395,31 +392,11 @@ const styles = {
     maxHeight: 400,
     overflowY: "auto",
   },
-  messageBubble: {
-    maxWidth: "75%",
-    padding: "12px 16px",
-    borderRadius: 12,
-  },
-  msgSender: {
-    margin: 0,
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#6b7280",
-  },
-  msgText: {
-    margin: "4px 0",
-    fontSize: 14,
-    color: "#111827",
-  },
-  msgTime: {
-    margin: 0,
-    fontSize: 11,
-    color: "#9ca3af",
-  },
-  replyBox: {
-    borderTop: "1px solid #f3f4f6",
-    paddingTop: 16,
-  },
+  messageBubble: { maxWidth: "75%", padding: "12px 16px", borderRadius: 12 },
+  msgSender: { margin: 0, fontSize: 12, fontWeight: 600, color: "#6b7280" },
+  msgText: { margin: "4px 0", fontSize: 14, color: "#111827" },
+  msgTime: { margin: 0, fontSize: 11, color: "#9ca3af" },
+  replyBox: { borderTop: "1px solid #f3f4f6", paddingTop: 16 },
   modalOverlay: {
     position: "fixed",
     top: 0,
@@ -439,9 +416,7 @@ const styles = {
     width: "90%",
     maxWidth: 480,
   },
-  formGroup: {
-    marginBottom: 16,
-  },
+  formGroup: { marginBottom: 16 },
   label: {
     display: "block",
     fontSize: 13,
@@ -456,6 +431,7 @@ const styles = {
     border: "1px solid #d1d5db",
     fontSize: 15,
     outline: "none",
+    boxSizing: "border-box",
   },
   primaryBtn: {
     flex: 1,
