@@ -1,9 +1,25 @@
 import { NavLink } from "react-router-dom";
-import {
-  FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
-  FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
-  FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
-  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes, FaKey, FaFileAlt, 
+import { 
+  FaHome, 
+  FaWallet, 
+  FaPaperPlane, 
+  FaMoneyBill, 
+  FaArrowDown, 
+  FaExchangeAlt, 
+  FaUser, 
+  FaImage, 
+  FaUniversity, 
+  FaShieldAlt, 
+  FaHandHoldingUsd, 
+  FaPiggyBank, 
+  FaCreditCard, 
+  FaUserFriends, 
+  FaClock, 
+  FaHeadset, 
+  FaMobileAlt, 
+  FaTimes, 
+  FaKey, 
+  FaFileAlt, 
   FaInfoCircle, 
   FaEnvelope 
 } from "react-icons/fa";
