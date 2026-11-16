@@ -43,6 +43,8 @@ import MerchantCallback from "./pages/MerchantCallback";
 import FundCallback from "./pages/FundCallback";
 import FreezeConfirm from "./pages/FreezeConfirm";
 import PaymentDone from "./pages/PaymentDone"; // ← add this import
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 
 function AppShell() {
