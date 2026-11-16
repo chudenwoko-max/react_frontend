@@ -1,23 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  Image,
-  TouchableOpacity,
-} from "react-native";
-import { Button, HelperText, TextInput } from "react-native-paper";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import * as ImagePicker from "expo-image-picker";
-import { CameraView, useCameraPermissions } from "expo-camera";
-import { router } from "expo-router";
-import axios from "axios";
 import axiosClient from "../axiosClient";
+import { useNavigate } from "react-router-dom";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
@@ -49,41 +32,155 @@ function getFieldLabel(field) {
   return fieldLabels[field] || field.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
-function RequiredLabel({ children }) {
+function getTargetTier(data) {
+  const tier = data.target_tier ?? data.next_tier ?? data.ts;
+  return tier === "" || tier == null ? null : String(tier);
+}
+
+function isFieldRequired(field, { isNewUser, forceTier2, forceTier3 }) {
+  if (isNewUser) {
+    return [
+      "full_name", "date_of_birth", "gender", "phone_number",
+      "address", "city", "state", "country",
+    ].includes(field);
+  }
+  if (forceTier2) return false; // BVN or NIN — optional individually
+  if (forceTier3) return ["proof_of_address"].includes(field);
+  return true;
+}
+
+function RequiredLabel({ field, required, children }) {
   return (
-    <Text style={styles.fieldLabel}>
-      {children}
-      <Text style={{ color: "#DC2626" }}> *</Text>
-    </Text>
+    <label style={{ display: "block", fontWeight: 600, marginBottom: 8 }}>
+      {children || getFieldLabel(field)}
+      {required && <span style={{ color: "#B91C1C" }}> *</span>}
+    </label>
   );
 }
 
-function getTargetTier(data) {
-  const tier = data.target_tier ?? data.next_tier;
-  return tier == null || tier === "" ? null : String(tier);
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = (header.match(/:(.*?);/) || [])[1] || "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
 }
 
-function getErrorMessage(error, fallback) {
-  if (axios.isAxiosError(error)) {
-    const data = error.response && error.response.data;
-    return data?.error || data?.detail || fallback;
-  }
-  return error instanceof Error ? error.message : fallback;
+function SelfieCamera({ onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [capturedFile, setCapturedFile] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  };
+
+  const startCamera = async () => {
+    setError("");
+    setReady(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+        await new Promise((resolve) => {
+          const check = () => {
+            if (video.videoWidth > 0) resolve();
+            else setTimeout(check, 100);
+          };
+          check();
+        });
+        setReady(true);
+      }
+    } catch {
+      setError("Camera access denied or unavailable.");
+    }
+  };
+
+  useEffect(() => {
+    startCamera();
+    return () => stopStream();
+  }, []);
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) {
+      setError("Camera not ready yet.");
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.restore();
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: "image/jpeg" });
+    setCapturedFile(file);
+    setPreviewUrl(dataUrl);
+    stopStream();
+  };
+
+  const retake = async () => {
+    setPreviewUrl("");
+    setCapturedFile(null);
+    await startCamera();
+  };
+
+  const accept = () => {
+    if (capturedFile) onCapture(capturedFile);
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.72)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#0f172a", color: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, padding: "16px 16px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <span style={{ fontWeight: 600 }}>Take a selfie</span>
+          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", borderRadius: 16, overflow: "hidden", background: "#1e293b" }}>
+          {previewUrl ? (
+            <img src={previewUrl} alt="Selfie" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
+          )}
+        </div>
+        {error && <p style={{ color: "#fca5a5", textAlign: "center", marginTop: 8 }}>{error}</p>}
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 16 }}>
+          {previewUrl ? (
+            <>
+              <button type="button" onClick={retake} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #fff", background: "transparent", color: "#fff" }}>Retake</button>
+              <button type="button" onClick={accept} style={{ padding: "10px 16px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff" }}>Accept</button>
+            </>
+          ) : (
+            <button type="button" onClick={takePhoto} disabled={!ready} style={{ width: 68, height: 68, borderRadius: "50%", border: "4px solid #fff", background: "#3b82f6", opacity: ready ? 1 : 0.5 }} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function appendImage(formData, fieldName, asset) {
-  if (Platform.OS === "web" && asset.file) {
-    formData.append(fieldName, asset.file, asset.fileName || `${fieldName}.jpg`);
-    return;
-  }
-  formData.append(fieldName, {
-    uri: asset.uri,
-    name: asset.fileName || `${fieldName}.jpg`,
-    type: asset.mimeType || "image/jpeg",
-  });
-}
-
-export default function KycScreen() {
+export default function KYC() {
   const [status, setStatus] = useState("");
   const [missing, setMissing] = useState(null);
   const [targetTier, setTargetTier] = useState(null);
@@ -93,17 +190,11 @@ export default function KycScreen() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
-  const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [backendHasBvn, setBackendHasBvn] = useState(false);
   const [backendHasNin, setBackendHasNin] = useState(false);
   const [backendHasProofOfAddress, setBackendHasProofOfAddress] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraField, setCameraField] = useState(null);
-  const [capturedUri, setCapturedUri] = useState(null);
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef(null);
+  const [showSelfieCam, setShowSelfieCam] = useState(false);
+  const navigate = useNavigate();
 
   const isApproved = ["approved", "verified"].includes(status.toLowerCase());
 
@@ -124,165 +215,28 @@ export default function KycScreen() {
         setBackendHasNin(!!data.nin);
         setBackendHasProofOfAddress(!!data.has_proof_of_address || !!data.proof_of_address);
       } catch (err) {
-        if (active) setError(getErrorMessage(err, "Could not load your KYC status."));
+        if (active) setError(err.response?.data?.error || err.message || "Could not load KYC status.");
       } finally {
         if (active) setFetching(false);
       }
     };
     fetchStatus();
     return () => { active = false; };
-  }, [refreshAttempt]);
+  }, []);
 
-  const openCamera = async (field) => {
-    if (!permission?.granted) {
-      const res = await requestPermission();
-      if (!res.granted) {
-        setError("Camera permission required.");
-        return;
-      }
-    }
-    setCameraField(field);
-    setCapturedUri(null);
-    setCameraOpen(true);
+  const handleFile = (field, file) => {
+    if (!file) return;
+    setFiles((prev) => ({ ...prev, [field]: file }));
   };
 
-  const takePicture = async () => {
-    if (!cameraRef.current) return;
-    const photo = await cameraRef.current.takePictureAsync({ quality: 0.85 });
-    setCapturedUri(photo.uri);
+  const handleSelfieCapture = (file) => {
+    setFiles((prev) => ({ ...prev, selfie: file }));
   };
 
-  const acceptPhoto = () => {
-    if (!capturedUri || !cameraField) return;
-    setFiles((prev) => ({
-      ...prev,
-      [cameraField]: { uri: capturedUri, fileName: `${cameraField}.jpg`, mimeType: "image/jpeg" },
-    }));
-    setCameraOpen(false);
-    setCapturedUri(null);
-    setCameraField(null);
-  };
-
-  const retakePhoto = () => setCapturedUri(null);
-  const cancelCamera = () => {
-    setCameraOpen(false);
-    setCapturedUri(null);
-    setCameraField(null);
-  };
-
-  const chooseImageSource = (field) => {
-    Alert.alert(getFieldLabel(field), "Choose an option", [
-      { text: "Choose from gallery", onPress: () => pickFromGallery(field) },
-      { text: "Take photo", onPress: () => openCamera(field) },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const pickFromGallery = async (field) => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError("Permission required.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setFiles((prev) => ({ ...prev, [field]: result.assets[0] }));
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!missing) return;
-
-    // Client-side check: Tier 2 requires at least one of BVN or NIN
-    if (forceTier2 && !values.bvn?.trim() && !values.nin?.trim()) {
-      const msg = "Please provide either BVN or NIN.";
-      setError(msg);
-      Alert.alert("Required", msg);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const formData = new FormData();
-      for (const field of fieldsToRender) {
-        if (fileFields.has(field)) {
-          if (files[field]) appendImage(formData, field, files[field]);
-        } else if (values[field]?.trim()) {
-          formData.append(field, values[field].trim());
-        }
-      }
-      const endpoint = isApproved ? `kyc/upgrade/${targetTier || "2"}/` : "kyc/submit/";
-      await axiosClient.post(endpoint, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      Alert.alert("Success", "Submitted successfully.", [
-        { text: "OK", onPress: () => router.replace("/(tabs)") },
-      ]);
-    } catch (err) {
-      const msg = err.response?.data?.error || err.message || "Failed to submit.";
-      setError(msg);
-      Alert.alert("Error", msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onDateChange = (_event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const iso = selectedDate.toISOString().split("T")[0];
-      setValues((prev) => ({ ...prev, date_of_birth: iso }));
-    }
-  };
-
-  if (cameraOpen) {
-    const facing = cameraField === "selfie" ? "front" : "back";
-    return (
-      <View style={{ flex: 1, backgroundColor: "#000" }}>
-        {!capturedUri ? (
-          <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing}>
-            <View style={styles.cameraControls}>
-              <TouchableOpacity style={styles.captureButton} onPress={takePicture} />
-              <TouchableOpacity onPress={cancelCamera} style={{ marginTop: 16 }}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </CameraView>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <Image source={{ uri: capturedUri }} style={{ flex: 1 }} resizeMode="contain" />
-            <View style={styles.previewButtons}>
-              <Button mode="outlined" onPress={retakePhoto} textColor="#000" style={{ flex: 1, marginRight: 8, backgroundColor: "#fff" }}>
-                Retake
-              </Button>
-              <Button mode="contained" onPress={acceptPhoto} buttonColor="#2563EB" textColor="#fff" style={{ flex: 1 }}>
-                Accept
-              </Button>
-            </View>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  if (fetching) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0F172A" />
-      </View>
-    );
-  }
-
+  const isNewUser = !isApproved;
   const hasBvn = backendHasBvn;
   const hasNin = backendHasNin;
   const isFullyVerified = isApproved && (hasBvn || hasNin) && backendHasProofOfAddress;
-  const isNewUser = !isApproved;
-
   const forceTier2 = isApproved && !hasBvn && !hasNin && !backendHasProofOfAddress;
   const forceTier3 = isApproved && (hasBvn || hasNin) && !backendHasProofOfAddress;
 
@@ -296,33 +250,71 @@ export default function KycScreen() {
     ? ["bvn", "nin"]
     : (missing || []);
 
+  const handleSubmit = async () => {
+    if (!missing) return;
+
+    if (forceTier2 && !values.bvn?.trim() && !values.nin?.trim()) {
+      const msg = "Please provide either BVN or NIN.";
+      setError(msg);
+      alert(msg);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      for (const field of fieldsToRender) {
+        if (fileFields.has(field)) {
+          if (files[field]) formData.append(field, files[field]);
+        } else if (values[field]?.trim()) {
+          formData.append(field, values[field].trim());
+        }
+      }
+      const endpoint = isApproved ? `kyc/upgrade/${targetTier || "2"}/` : "kyc/submit/";
+      await axiosClient.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert("Submitted successfully.");
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || "Failed to submit.";
+      setError(msg);
+      alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) {
+    return <div style={{ padding: 40, textAlign: "center" }}>Loading KYC status…</div>;
+  }
+
   const dailyLimit = limits?.daily_send_ngn || limits?.daily_send_limit || "—";
   const perSendLimit = limits?.single_send_ngn || limits?.per_send_limit || "—";
-
-  const isOptionalField = (field) => forceTier2 && (field === "bvn" || field === "nin");
+  const ctx = { isNewUser, forceTier2, forceTier3 };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Get Verified</Text>
-      {status ? <Text style={styles.status}>Current status: {status.toUpperCase()}</Text> : null}
-      {limits?.tier != null ? (
-        <Text style={styles.status}>
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
+      <h1 style={{ fontFamily: "serif", fontSize: 26, marginBottom: 12 }}>Get Verified</h1>
+      {status && <p style={{ color: "#475569" }}>Current status: {status.toUpperCase()}</p>}
+      {limits?.tier != null && (
+        <p style={{ color: "#475569" }}>
           Current tier: {limits.tier} · Daily: ₦{dailyLimit} · Per send: ₦{perSendLimit}
-        </Text>
-      ) : null}
+        </p>
+      )}
 
       {missing === null ? (
-        <Button mode="outlined" onPress={() => setRefreshAttempt((a) => a + 1)} textColor="#000">
-          Retry
-        </Button>
+        <button onClick={() => window.location.reload()}>Retry</button>
       ) : isFullyVerified ? (
-        <View style={{ alignItems: "center", marginTop: 40 }}>
-          <Text style={styles.message}>Fully verified</Text>
-          <Text style={styles.subtitle}>Your account is at the highest tier.</Text>
-        </View>
+        <div style={{ textAlign: "center", marginTop: 40 }}>
+          <p style={{ color: "#166534", fontWeight: 600 }}>Fully verified</p>
+          <p style={{ color: "#64748B" }}>Your account is at the highest tier.</p>
+        </div>
       ) : (
         <>
-          <Text style={styles.subtitle}>
+          <p style={{ color: "#64748B", marginBottom: 16 }}>
             {isNewUser
               ? "Complete Tier 1 verification (basic details)."
               : forceTier3
@@ -330,180 +322,123 @@ export default function KycScreen() {
               : forceTier2
               ? "Provide BVN or NIN (at least one) to complete Tier 2."
               : "Provide the remaining information."}
-          </Text>
+          </p>
 
           {fieldsToRender.map((field) => {
+            const required = isFieldRequired(field, ctx);
+
+            if (field === "selfie") {
+              return (
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required} />
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfieCam(true)}
+                    style={{ padding: "12px 18px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    {files.selfie ? "Retake selfie" : "Take selfie"}
+                  </button>
+                  {files.selfie && <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>}
+                </div>
+              );
+            }
+
             if (fileFields.has(field)) {
               return (
-                <View key={field} style={styles.field}>
-                  <RequiredLabel>{getFieldLabel(field)}</RequiredLabel>
-                  <Button
-                    mode="outlined"
-                    onPress={() => chooseImageSource(field)}
-                    textColor="#000"
-                    style={styles.whiteButton}
-                  >
-                    {files[field] ? "Captured" : `Upload ${getFieldLabel(field)}`}
-                  </Button>
-                  {files[field] && <Text style={styles.captured}>✓ Captured</Text>}
-                </View>
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required} />
+                  <input type="file" accept="image/*" onChange={(e) => handleFile(field, e.target.files[0])} />
+                  {files[field] && <span style={{ color: "#166534", marginLeft: 8 }}>✓ Selected</span>}
+                </div>
               );
             }
 
             if (field === "gender") {
               return (
-                <View key={field} style={styles.field}>
-                  <RequiredLabel>{getFieldLabel(field)}</RequiredLabel>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={values[field] || ""}
-                      onValueChange={(v) => setValues((p) => ({ ...p, [field]: v }))}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select gender" value="" color="#000" />
-                      <Picker.Item label="Male" value="male" color="#000" />
-                      <Picker.Item label="Female" value="female" color="#000" />
-                      <Picker.Item label="Other" value="other" color="#000" />
-                    </Picker>
-                  </View>
-                </View>
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required}>Gender</RequiredLabel>
+                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               );
             }
 
             if (field === "state") {
               return (
-                <View key={field} style={styles.field}>
-                  <RequiredLabel>{getFieldLabel(field)}</RequiredLabel>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={values[field] || ""}
-                      onValueChange={(v) => setValues((p) => ({ ...p, [field]: v }))}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select state" value="" color="#000" />
-                      {NIGERIAN_STATES.map((st) => (
-                        <Picker.Item key={st} label={st} value={st} color="#000" />
-                      ))}
-                    </Picker>
-                  </View>
-                </View>
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required}>State</RequiredLabel>
+                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                    <option value="">Select state</option>
+                    {NIGERIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+                  </select>
+                </div>
               );
             }
 
             if (field === "government_id_type") {
               return (
-                <View key={field} style={styles.field}>
-                  <RequiredLabel>{getFieldLabel(field)}</RequiredLabel>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={values[field] || ""}
-                      onValueChange={(v) => setValues((p) => ({ ...p, [field]: v }))}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Select ID type" value="" color="#000" />
-                      <Picker.Item label="National ID (NIN Slip / Card)" value="national_id" color="#000" />
-                      <Picker.Item label="International Passport" value="passport" color="#000" />
-                      <Picker.Item label="Driver's Licence" value="drivers_license" color="#000" />
-                      <Picker.Item label="Voter's Card (PVC)" value="voters_card" color="#000" />
-                    </Picker>
-                  </View>
-                </View>
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required}>Government ID type</RequiredLabel>
+                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                    <option value="">Select ID type</option>
+                    <option value="national_id">National ID (NIN Slip / Card)</option>
+                    <option value="passport">International Passport</option>
+                    <option value="drivers_license">Driver's Licence</option>
+                    <option value="voters_card">Voter's Card (PVC)</option>
+                  </select>
+                </div>
               );
             }
 
             if (field === "date_of_birth") {
               return (
-                <View key={field} style={styles.field}>
-                  <RequiredLabel>{getFieldLabel(field)}</RequiredLabel>
-                  <Button
-                    mode="outlined"
-                    onPress={() => setShowDatePicker(true)}
-                    textColor="#000"
-                    style={styles.whiteButton}
-                  >
-                    {values[field] || "Select date of birth"}
-                  </Button>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={values[field] ? new Date(values[field]) : new Date(2000, 0, 1)}
-                      mode="date"
-                      display="default"
-                      onChange={onDateChange}
-                      maximumDate={new Date()}
-                    />
-                  )}
-                </View>
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required}>Date of birth</RequiredLabel>
+                  <input type="date" value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }} />
+                </div>
               );
             }
 
             return (
-              <TextInput
-                key={field}
-                label={
-                  isOptionalField(field) ? (
-                    getFieldLabel(field)
-                  ) : (
-                    <Text>
-                      {getFieldLabel(field)}
-                      <Text style={{ color: "#DC2626" }}> *</Text>
-                    </Text>
-                  )
-                }
-                value={values[field] || ""}
-                onChangeText={(v) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    [field]:
-                      field === "nin" || field === "bvn" || field === "phone_number"
-                        ? v.replace(/\D/g, "")
-                        : v,
-                  }))
-                }
-                mode="outlined"
-                keyboardType={field === "nin" || field === "bvn" || field === "phone_number" ? "numeric" : "default"}
-                maxLength={field === "nin" || field === "bvn" ? 11 : undefined}
-                style={styles.field}
-                textColor="#000"
-                theme={{ colors: { background: "#FFFFFF", primary: "#2563EB" } }}
-              />
+              <div key={field} style={{ marginBottom: 16 }}>
+                <RequiredLabel field={field} required={required} />
+                <input
+                  type={field === "nin" || field === "bvn" || field === "phone_number" ? "tel" : "text"}
+                  value={values[field] || ""}
+                  onChange={(e) => {
+                    let v = e.target.value;
+                    if (field === "nin" || field === "bvn" || field === "phone_number") v = v.replace(/\D/g, "");
+                    setValues({ ...values, [field]: v });
+                  }}
+                  maxLength={field === "nin" || field === "bvn" ? 11 : undefined}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                />
+              </div>
             );
           })}
 
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            loading={loading}
+          <button
+            onClick={handleSubmit}
             disabled={loading}
-            style={styles.submit}
-            buttonColor="#2563EB"
-            textColor="#FFFFFF"
+            style={{ marginTop: 8, padding: "12px 20px", background: "#2563EB", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}
           >
             {loading ? "Submitting..." : isApproved ? "Upgrade tier" : "Submit Tier 1"}
-          </Button>
+          </button>
+
+          <p style={{ textAlign: "center", color: "#64748B", fontSize: 13, marginTop: 16 }}>
+            🔒 Your information is secure and encrypted.
+          </p>
         </>
       )}
-      {error ? <HelperText type="error" visible>{error}</HelperText> : null}
-    </ScrollView>
+      {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
+
+      {showSelfieCam && (
+        <SelfieCamera onCapture={handleSelfieCapture} onClose={() => setShowSelfieCam(false)} />
+      )}
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 32 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" },
-  title: { fontFamily: "serif", fontSize: 26, fontWeight: "700", color: "#0F172A", marginBottom: 12 },
-  subtitle: { fontFamily: "serif", color: "#64748B", marginBottom: 16 },
-  status: { color: "#475569", marginBottom: 8 },
-  message: { color: "#166534", fontSize: 16, fontWeight: "600", marginTop: 12 },
-  field: { marginBottom: 16 },
-  fieldLabel: { color: "#334155", fontWeight: "600", marginBottom: 8 },
-  pickerContainer: { backgroundColor: "#FFFFFF", borderRadius: 8, borderWidth: 1, borderColor: "#E2E8F0" },
-  picker: { backgroundColor: "#FFFFFF", color: "#000000" },
-  whiteButton: { backgroundColor: "#FFFFFF", borderColor: "#E2E8F0" },
-  captured: { color: "#166534", fontWeight: "600", marginTop: 6 },
-  submit: { marginTop: 8, borderRadius: 10 },
-  cameraControls: { flex: 1, justifyContent: "flex-end", alignItems: "center", paddingBottom: 50 },
-  captureButton: { width: 72, height: 72, borderRadius: 36, backgroundColor: "#fff", borderWidth: 4, borderColor: "#2563EB" },
-  cancelText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  previewButtons: { flexDirection: "row", padding: 16, backgroundColor: "#F8FAFC" },
-});
