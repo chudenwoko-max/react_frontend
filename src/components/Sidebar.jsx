@@ -28,6 +28,8 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/statements", label: "Statements", icon: <FaFileAlt /> },
     { path: "/terms", label: "Terms", icon: <FaFileAlt /> },
     { path: "/privacy", label: "Privacy", icon: <FaFileAlt /> },
+    { path: "/about", label: "About", icon: <FaInfoCircle /> },
+{ path: "/contact", label: "Contact", icon: <FaEnvelope /> },
   ];
 
   return (

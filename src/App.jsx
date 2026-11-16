@@ -44,6 +44,7 @@ import FundCallback from "./pages/FundCallback";
 import FreezeConfirm from "./pages/FreezeConfirm";
 import PaymentDone from "./pages/PaymentDone"; // ← add this import
 
+
 function AppShell() {
   return (
     <Route
@@ -102,6 +103,8 @@ function App() {
       <Route path="/fund/callback" element={<FundCallback />} />
       <Route path="/freeze/confirm" element={<FreezeConfirm />} />
       <Route path="/payment-done" element={<PaymentDone />} /> {/* ← public */}
+      <Route path="/about" element={<About />} />
+<Route path="/contact" element={<Contact />} />
 
       {AppShell()}
       <Route path="*" element={<Navigate to="/" replace />} />

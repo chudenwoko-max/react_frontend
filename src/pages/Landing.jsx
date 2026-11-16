@@ -16,6 +16,8 @@ export default function Landing() {
         <nav style={nav}>
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>
+          <Link to="/about">About</Link>
+<Link to="/contact">Contact</Link>
           <a href="https://dashboard.payhost.dev">Sign in</a>
         </nav>
       </header>
