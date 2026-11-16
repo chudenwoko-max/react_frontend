@@ -79,33 +79,46 @@ function SelfieCamera({ onCapture, onClose }) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   };
-
-  const startCamera = async () => {
-    setError("");
-    setReady(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      const video = videoRef.current;
-      if (video) {
-        video.srcObject = stream;
-        await video.play();
-        await new Promise((resolve) => {
-          const check = () => {
-            if (video.videoWidth > 0) resolve();
-            else setTimeout(check, 100);
-          };
-          check();
-        });
-        setReady(true);
-      }
-    } catch {
-      setError("Camera access denied or unavailable.");
+const startCamera = async () => {
+  setError("");
+  setReady(false);
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera not supported in this browser.");
     }
-  };
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+
+    streamRef.current = stream;
+    const video = videoRef.current;
+    if (video) {
+      video.srcObject = stream;
+      await video.play();
+      await new Promise((resolve) => {
+        const check = () => {
+          if (video.videoWidth > 0) resolve();
+          else setTimeout(check, 100);
+        };
+        check();
+      });
+      setReady(true);
+    }
+  } catch (err) {
+    console.error("Camera error:", err);
+    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      setError("Camera permission denied. Allow camera access in your browser settings and try again.");
+    } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+      setError("No camera found on this device.");
+    } else if (err.name === "NotReadableError") {
+      setError("Camera is already in use by another application.");
+    } else {
+      setError("Camera unavailable. You can upload a photo instead.");
+    }
+  }
+};
 
   useEffect(() => {
     startCamera();
@@ -326,23 +339,31 @@ export default function KYC() {
 
           {fieldsToRender.map((field) => {
             const required = isFieldRequired(field, ctx);
-
-            if (field === "selfie") {
-              return (
-                <div key={field} style={{ marginBottom: 16 }}>
-                  <RequiredLabel field={field} required={required} />
-                  <button
-                    type="button"
-                    onClick={() => setShowSelfieCam(true)}
-                    style={{ padding: "12px 18px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    {files.selfie ? "Retake selfie" : "Take selfie"}
-                  </button>
-                  {files.selfie && <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>}
-                </div>
-              );
-            }
-
+if (field === "selfie") {
+  return (
+    <div key={field} style={{ marginBottom: 16 }}>
+      <RequiredLabel field={field} required={required} />
+      <button
+        type="button"
+        onClick={() => setShowSelfieCam(true)}
+        style={{
+          padding: "12px 18px",
+          background: "#1e40af",
+          color: "#fff",
+          border: "none",
+          borderRadius: 10,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        {files.selfie ? "Retake selfie" : "Take selfie"}
+      </button>
+      {files.selfie && (
+        <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>
+      )}
+    </div>
+  );
+}
             if (fileFields.has(field)) {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
