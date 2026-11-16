@@ -42,6 +42,7 @@ import ChangePin from "./pages/ChangePin";
 import MerchantCallback from "./pages/MerchantCallback";
 import FundCallback from "./pages/FundCallback";
 import FreezeConfirm from "./pages/FreezeConfirm";
+import PaymentDone from "./pages/PaymentDone"; // ← add this import
 
 function AppShell() {
   return (
@@ -96,10 +97,11 @@ function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Public callback – must be outside ProtectedRoute */}
+      {/* Public callbacks – must be outside ProtectedRoute */}
       <Route path="/merchant/callback" element={<MerchantCallback />} />
       <Route path="/fund/callback" element={<FundCallback />} />
       <Route path="/freeze/confirm" element={<FreezeConfirm />} />
+      <Route path="/payment-done" element={<PaymentDone />} /> {/* ← public */}
 
       {AppShell()}
       <Route path="*" element={<Navigate to="/" replace />} />
