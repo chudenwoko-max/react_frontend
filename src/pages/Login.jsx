@@ -118,19 +118,13 @@ export default function Login() {
     }
   };
 
-  const useDifferentAccount = () => {
-    localStorage.removeItem("payhost_username");
-    setUsername("");
-    setPasscode("");
-    setRequires2FA(false);
-    setTempToken("");
-    setTotpCode("");
-  };
-
   if (requires2FA) {
     return (
       <div style={styles.page}>
         <form onSubmit={handle2FA} style={styles.card}>
+          <div style={styles.logoWrap}>
+            <img src="/logo.png" alt="Payhost" style={styles.logo} />
+          </div>
           <h1 style={styles.title}>Two-factor authentication</h1>
           <p style={{ textAlign: "center", color: "#6b7280", marginTop: 0, marginBottom: 20 }}>
             Enter the 6-digit code from your authenticator app
@@ -170,6 +164,10 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
+        <div style={styles.logoWrap}>
+          <img src="/logo.png" alt="Payhost" style={styles.logo} />
+        </div>
+
         <form onSubmit={handleLogin}>
           <h1 style={styles.title}>Sign in</h1>
 
@@ -177,20 +175,10 @@ export default function Login() {
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            disabled={!!localStorage.getItem("payhost_username")}
             style={styles.input}
             autoComplete="username"
+            autoFocus
           />
-
-          {!!localStorage.getItem("payhost_username") && (
-            <button
-              type="button"
-              onClick={useDifferentAccount}
-              style={styles.switchAccount}
-            >
-              Use a different account
-            </button>
-          )}
 
           <label style={styles.label}>Passcode</label>
           <input
@@ -215,8 +203,6 @@ export default function Login() {
             Don't have an account? <Link to="/register">Create Account</Link>
           </p>
         </form>
-
-        
 
         {showFreeze && (
           <form
@@ -249,6 +235,8 @@ export default function Login() {
 const styles = {
   page: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" },
   card: { background: "#fff", padding: 32, borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" },
+  logoWrap: { display: "flex", justifyContent: "center", marginBottom: 8 },
+  logo: { height: 48, width: "auto" },
   title: { margin: "0 0 24px", fontSize: 24, textAlign: "center" },
   label: { display: "block", fontSize: 13, marginBottom: 6, color: "#374151" },
   input: { width: "100%", padding: "12px 14px", marginBottom: 16, borderRadius: 10, border: "1px solid #d1d5db", fontSize: 16, boxSizing: "border-box" },
@@ -264,16 +252,5 @@ const styles = {
   },
   button: { width: "100%", padding: 13, background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
   linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
-  freezeLink: {
-    display: "block",
-    margin: "20px auto 0",
-    padding: 0,
-    background: "none",
-    border: "none",
-    color: "#b91c1c",
-    fontSize: 14,
-    cursor: "pointer",
-    textDecoration: "underline",
-  },
   freezeForm: { marginTop: 20 },
 };
