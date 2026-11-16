@@ -3,7 +3,9 @@ import {
   FaHome, FaWallet, FaPaperPlane, FaMoneyBill, FaArrowDown,
   FaExchangeAlt, FaUser, FaImage, FaUniversity, FaShieldAlt,
   FaHandHoldingUsd, FaPiggyBank, FaCreditCard, FaUserFriends,
-  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes, FaKey
+  FaClock, FaHeadset, FaFileAlt, FaMobileAlt, FaTimes, FaKey, FaFileAlt, 
+  FaInfoCircle, 
+  FaEnvelope 
 } from "react-icons/fa";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -29,7 +31,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/terms", label: "Terms", icon: <FaFileAlt /> },
     { path: "/privacy", label: "Privacy", icon: <FaFileAlt /> },
     { path: "/about", label: "About", icon: <FaInfoCircle /> },
-{ path: "/contact", label: "Contact", icon: <FaEnvelope /> },
+    { path: "/contact", label: "Contact", icon: <FaEnvelope /> },
   ];
 
   return (
