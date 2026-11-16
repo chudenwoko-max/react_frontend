@@ -123,7 +123,7 @@ export default function Login() {
       <div style={styles.page}>
         <form onSubmit={handle2FA} style={styles.card}>
           <div style={styles.logoWrap}>
-            <img src="/logo.png" alt="Payhost" style={styles.logo} />
+            <img src="/payhost-mark.png" alt="Payhost" style={styles.logo} />
           </div>
           <h1 style={styles.title}>Two-factor authentication</h1>
           <p style={{ textAlign: "center", color: "#6b7280", marginTop: 0, marginBottom: 20 }}>
@@ -165,7 +165,7 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.logoWrap}>
-          <img src="/logo.png" alt="Payhost" style={styles.logo} />
+          <img src="/payhost-mark.png" alt="Payhost" style={styles.logo} />
         </div>
 
         <form onSubmit={handleLogin}>
