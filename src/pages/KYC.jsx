@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
 import axios from "axios";
-import axiosClient from "../src/api/axiosClient";
+import axiosClient from "../axiosClient";
 
 const fileFields = new Set(["government_id", "proof_of_address", "selfie"]);
 const fieldLabels = {
