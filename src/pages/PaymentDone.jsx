@@ -1,21 +1,10 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 export default function PaymentDone() {
-  const navigate = useNavigate();
-
   useEffect(() => {
-    // Try to open the mobile app
-    const deepLink = "payhost://fund/callback";
-    window.location.href = deepLink;
-
-    // If still on the page after 1.5s, user is on web → go to dashboard
-    const timer = setTimeout(() => {
-      navigate("/dashboard", { replace: true });
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    // Only try to open the app. Do not redirect to a protected route.
+    window.location.href = "payhost://fund/callback";
+  }, []);
 
   return (
     <div
@@ -29,9 +18,15 @@ export default function PaymentDone() {
         color: "#475569",
         background: "#f8fafc",
         margin: 0,
+        textAlign: "center",
+        padding: 24,
       }}
     >
       Confirming payment...
+      <br />
+      <span style={{ fontSize: 14, marginTop: 12, display: "block" }}>
+        If the app didn’t open, you can close this tab and return to Payhost.
+      </span>
     </div>
   );
 }
