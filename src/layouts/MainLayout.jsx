@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Outlet, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import useIdleLogout from "../hooks/useIdleLogout";
 
 export default function MainLayout() {
+  useIdleLogout();
+
   // Always start closed → hamburger shows first
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
