@@ -11,20 +11,63 @@ body {
   min-height: 100vh;
 }
 
-body {
-  font-family: "Inter", sans-serif;
-  padding: 0;
+body,
+button,
+input,
+textarea,
+select,
+p,
+span,
+div,
+li,
+label,
+a,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: Georgia, "Times New Roman", Times, serif;
+}
+
+body,
+p,
+span,
+div,
+li,
+label,
+input,
+textarea,
+select {
+  color: #475569; /* soft slate grey */
 }
 
 /* Headings */
-h1, h2, h3 {
-  color: #333;
+h1, h2, h3, h4, h5, h6 {
+  color: #0f172a; /* darker for headings */
   margin: 0;
 }
 
 /* Remove default link underline */
 a {
   text-decoration: none;
+  color: #2563eb;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: Georgia, "Times New Roman", Times, serif;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  color: #0f172a;
 }
 
 /* Smooth transitions for UI elements */
@@ -108,8 +151,6 @@ a {
 /* ===============================
    Responsive Sidebar
    =============================== */
-
-/* ❌ Removed empty .sidebar { } block */
 
 @media (min-width: 1024px) {
   .sidebar {
