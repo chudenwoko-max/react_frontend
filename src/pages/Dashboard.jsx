@@ -324,8 +324,10 @@ const styles = {
   },
   primaryBalance: {
     margin: "4px 0 6px",
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 700,
+    letterSpacing: "-0.5px",
+    wordBreak: "break-all",
   },
   primaryCurrency: {
     margin: 0,
