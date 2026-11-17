@@ -32,7 +32,6 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/change-pin", label: "Change Transfer PIN", icon: <FaKey /> },
     { path: "/request-money", label: "Request Money", icon: <FaHandHoldingUsd /> },
     { path: "/transactions", label: "Transactions", icon: <FaExchangeAlt /> },
-    { path: "/converter", label: "Currency Converter", icon: <FaExchangeAlt /> },
     { path: "/kyc", label: "Get Verified", icon: <FaShieldAlt /> },
     { path: "/security", label: "Security", icon: <FaShieldAlt /> },
     { path: "/profile", label: "Profile", icon: <FaUser /> },
