@@ -203,18 +203,20 @@ export default function Login() {
 
           <div style={styles.passcodeContainer} onPaste={handlePaste}>
             {passcode.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => (inputsRef.current[index] = el)}
-                type="password"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handlePasscodeChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                style={styles.passcodeBox}
-                autoComplete="off"
-              />
+              <div key={index} style={styles.passcodeBox}>
+                <span style={styles.dot}>{digit ? "•" : ""}</span>
+                <input
+                  ref={(el) => (inputsRef.current[index] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handlePasscodeChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  style={styles.hiddenInput}
+                  autoComplete="off"
+                />
+              </div>
             ))}
           </div>
 
@@ -299,14 +301,31 @@ const styles = {
   passcodeBox: {
     width: 36,
     height: 44,
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: 600,
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     border: "1.5px solid #d1d5db",
     borderRadius: 8,
-    outline: "none",
     background: "#fff",
-    caretColor: "#2563eb",
+  },
+  dot: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#111827",
+    pointerEvents: "none",
+    lineHeight: 1,
+  },
+  hiddenInput: {
+    position: "absolute",
+    inset: 0,
+    opacity: 0,
+    width: "100%",
+    height: "100%",
+    border: "none",
+    background: "transparent",
+    caretColor: "transparent",
+    fontSize: 16,
   },
   switchAccount: {
     background: "none",
