@@ -41,9 +41,9 @@ export default function HowToUse() {
 
       <section style={styles.section}>
         <h2 style={styles.h2}>Sign in</h2>
-        <p>PayHost uses a 6-digit passcode.</p>
+        <p>PayHost uses a 6-digit passcode on a recognised device.</p>
         <ul>
-          <li>Enter your <strong>username</strong> and <strong>6-digit passcode</strong>.</li>
+          <li>Enter your <strong>6-digit passcode</strong> in the boxes.</li>
           <li>If two-factor authentication is enabled, enter the code from your authenticator app.</li>
           <li>Use <strong>Forgot passcode?</strong> if you need to reset it.</li>
           <li>New users can create an account from the sign-in page.</li>
