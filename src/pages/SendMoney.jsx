@@ -117,7 +117,7 @@ export default function SendMoney() {
         <h1 style={styles.title}>Send Money</h1>
         <p style={styles.subtitle}>Transfer funds to friends and family instantly</p>
         {limits && (
-          <p>
+          <p style={styles.limits}>
             Limit ₦{Number(limits.per_send_limit).toLocaleString()} per send · ₦
             {Number(limits.remaining_today).toLocaleString()} left today
           </p>
@@ -207,19 +207,23 @@ export default function SendMoney() {
           </div>
 
           <div style={styles.formGroup}>
-            <label htmlFor="transfer-pin" style={styles.label}>
-              Enter transfer PIN
-            </label>
-            <input
-              id="transfer-pin"
-              type="password"
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={4}
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              style={styles.input}
-            />
+            <label style={styles.label}>Enter transfer PIN</label>
+            <div style={styles.pinContainer}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={styles.pinBox}>
+                  {pin[i] ? "•" : ""}
+                </div>
+              ))}
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                maxLength={4}
+                style={styles.hiddenPinInput}
+              />
+            </div>
           </div>
 
           <button type="submit" disabled={busy} style={styles.sendBtn}>
@@ -245,6 +249,7 @@ const styles = {
   header: { marginBottom: 28 },
   title: { fontSize: 26, fontWeight: 700, color: "#111827", margin: 0 },
   subtitle: { color: "#6b7280", marginTop: 4, fontSize: 14 },
+  limits: { color: "#6b7280", fontSize: 13, marginTop: 8 },
   card: {
     background: "#ffffff",
     borderRadius: 16,
@@ -326,6 +331,34 @@ const styles = {
     fontSize: 18,
     fontWeight: 600,
     outline: "none",
+  },
+  pinContainer: {
+    position: "relative",
+    display: "flex",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  pinBox: {
+    width: 48,
+    height: 56,
+    border: "1.5px solid #d1d5db",
+    borderRadius: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 28,
+    fontWeight: 700,
+    color: "#111827",
+    background: "#fff",
+  },
+  hiddenPinInput: {
+    position: "absolute",
+    inset: 0,
+    opacity: 0,
+    cursor: "text",
+    width: "100%",
+    height: "100%",
   },
   sendBtn: {
     width: "100%",
