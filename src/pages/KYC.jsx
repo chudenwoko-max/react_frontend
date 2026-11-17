@@ -450,9 +450,7 @@ if (field === "selfie") {
             {loading ? "Submitting..." : isApproved ? "Upgrade tier" : "Submit Tier 1"}
           </button>
 
-          <p style={{ textAlign: "center", color: "#64748B", fontSize: 13, marginTop: 16 }}>
-            🔒 Your information is secure and encrypted.
-          </p>
+         
         </>
       )}
       {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
