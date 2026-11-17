@@ -93,7 +93,6 @@ export default function Wallet() {
         </div>
       </div>
 
-      {/* Funding context note */}
       <div style={styles.infoBanner}>
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
           <strong>Local funding:</strong> Add money via bank transfer to your NGN wallet.{" "}
@@ -123,7 +122,7 @@ export default function Wallet() {
           <p style={{ color: "#6b7280", marginBottom: 16 }}>
             Your wallets will appear here once they are created.
           </p>
-          <Link to="/fund-wallet" style={styles.convertBtn}>
+          <Link to="/fund-wallet" style={styles.primaryBtn}>
             Add money
           </Link>
         </div>
@@ -309,7 +308,7 @@ const styles = {
     marginTop: 4,
     fontSize: 14,
   },
-  convertBtn: {
+  primaryBtn: {
     background: "#2563eb",
     color: "white",
     border: "none",
@@ -479,16 +478,6 @@ const styles = {
     padding: "12px 14px",
     borderRadius: 10,
     marginTop: 8,
-  },
-  primaryBtn: {
-    flex: 1,
-    padding: "11px",
-    background: "#2563eb",
-    color: "white",
-    border: "none",
-    borderRadius: 10,
-    fontWeight: 600,
-    cursor: "pointer",
   },
   cancelBtn: {
     flex: 1,
