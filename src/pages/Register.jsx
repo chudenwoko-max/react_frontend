@@ -6,11 +6,9 @@ import toast from "react-hot-toast";
 export default function Register() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirm_password: "",
-  });
+  username: "",
+  email: "",
+});
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -58,78 +56,51 @@ export default function Register() {
           <h1 style={styles.title}>Create Account</h1>
           <p style={styles.subtitle}>Join Payhost and start sending money instantly</p>
         </div>
+<form onSubmit={handleSubmit}>
+  <div style={styles.formGroup}>
+    <label style={styles.label}>Username</label>
+    <input
+      type="text"
+      name="username"
+      placeholder="Choose a username"
+      value={formData.username}
+      onChange={handleChange}
+      style={styles.input}
+      required
+    />
+  </div>
 
-      <form onSubmit={handleSubmit}>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Username</label>
-          <input
-            type="text"
-            name="username"
-            placeholder="Choose a username"
-            value={formData.username}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-        </div>
+  <div style={styles.formGroup}>
+    <label style={styles.label}>Email</label>
+    <input
+      type="email"
+      name="email"
+      placeholder="Enter your email"
+      value={formData.email}
+      onChange={handleChange}
+      style={styles.input}
+      required
+    />
+  </div>
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Email</label>
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter your email"
-            value={formData.email}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-        </div>
+  <div style={styles.formGroup}>
+    <label style={styles.label}>6-digit passcode</label>
+    <input
+      type="password"
+      inputMode="numeric"
+      maxLength={6}
+      value={passcode}
+      onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
+      placeholder="Create a 6-digit passcode"
+      style={styles.input}
+      required
+    />
+  </div>
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Password</label>
-          <input
-            type="password"
-            name="password"
-            placeholder="Create a password"
-            value={formData.password}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Confirm Password</label>
-          <input
-            type="password"
-            name="confirm_password"
-            placeholder="Confirm your password"
-            value={formData.confirm_password}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>6-digit passcode</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
-            placeholder="6-digit passcode"
-            style={styles.input}
-            required
-          />
-        </div>
-
-        <button type="submit" style={styles.button} disabled={loading}>
-          {loading ? "Creating Account..." : "Create Account"}
-        </button>
-      </form>
+  <button type="submit" style={styles.button} disabled={loading}>
+    {loading ? "Creating Account..." : "Create Account"}
+  </button>
+</form>
 
       <p style={styles.footerText}>
         Already have an account?{" "}
