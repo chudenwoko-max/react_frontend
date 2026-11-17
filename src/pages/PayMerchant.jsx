@@ -220,16 +220,7 @@ export default function PayMerchant() {
           )}
 
           {merchantResults.length > 0 && !selectedMerchant && (
-            <div
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: 8,
-                marginTop: 4,
-                background: "#fff",
-                maxHeight: 200,
-                overflowY: "auto",
-              }}
-            >
+            <div style={styles.resultsBox}>
               {merchantResults.map((merchant) => (
                 <div
                   key={merchant.id}
@@ -239,12 +230,7 @@ export default function PayMerchant() {
                     setMerchantQuery(merchant.business_name);
                     setMerchantResults([]);
                   }}
-                  style={{
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #f3f4f6",
-                    fontSize: 14,
-                  }}
+                  style={styles.resultItem}
                 >
                   {merchant.business_name}
                 </div>
@@ -279,16 +265,23 @@ export default function PayMerchant() {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Transfer PIN (4 digits)</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={4}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            placeholder="••••"
-            style={styles.input}
-          />
+          <label style={styles.label}>Transfer PIN</label>
+          <div style={styles.pinContainer}>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} style={styles.pinBox}>
+                {pin[i] ? "•" : ""}
+              </div>
+            ))}
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              maxLength={4}
+              style={styles.hiddenPinInput}
+            />
+          </div>
         </div>
 
         <button
@@ -393,6 +386,20 @@ const styles = {
     outline: "none",
     boxSizing: "border-box",
   },
+  resultsBox: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    marginTop: 4,
+    background: "#fff",
+    maxHeight: 200,
+    overflowY: "auto",
+  },
+  resultItem: {
+    padding: "10px 12px",
+    cursor: "pointer",
+    borderBottom: "1px solid #f3f4f6",
+    fontSize: 14,
+  },
   amountWrapper: {
     display: "flex",
     alignItems: "center",
@@ -413,6 +420,34 @@ const styles = {
     fontSize: 18,
     fontWeight: 600,
     outline: "none",
+  },
+  pinContainer: {
+    position: "relative",
+    display: "flex",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  pinBox: {
+    width: 48,
+    height: 56,
+    border: "1.5px solid #d1d5db",
+    borderRadius: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 28,
+    fontWeight: 700,
+    color: "#111827",
+    background: "#fff",
+  },
+  hiddenPinInput: {
+    position: "absolute",
+    inset: 0,
+    opacity: 0,
+    cursor: "text",
+    width: "100%",
+    height: "100%",
   },
   primaryBtn: {
     width: "100%",
