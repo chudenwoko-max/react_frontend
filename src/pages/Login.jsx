@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
@@ -16,37 +16,69 @@ function getOrCreateDeviceId() {
 export default function Login() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const [username, setUsername] = useState(
-    () => localStorage.getItem("payhost_username") || ""
-  );
-  const [passcode, setPasscode] = useState("");
+  const [passcode, setPasscode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [showFreeze, setShowFreeze] = useState(false);
   const [freezeEmail, setFreezeEmail] = useState("");
   const [freezeLoading, setFreezeLoading] = useState(false);
 
-  // 2FA state
   const [requires2FA, setRequires2FA] = useState(false);
   const [tempToken, setTempToken] = useState("");
   const [totpCode, setTotpCode] = useState("");
 
+  const inputsRef = useRef([]);
+
+  useEffect(() => {
+    inputsRef.current[0]?.focus();
+  }, []);
+
+  const handlePasscodeChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newPasscode = [...passcode];
+    newPasscode[index] = value.slice(-1);
+    setPasscode(newPasscode);
+
+    if (value && index < 5) {
+      inputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !passcode[index] && index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const newPasscode = [...passcode];
+    for (let i = 0; i < 6; i++) {
+      newPasscode[i] = pasted[i] || "";
+    }
+    setPasscode(newPasscode);
+    const nextIndex = Math.min(pasted.length, 5);
+    inputsRef.current[nextIndex]?.focus();
+  };
+
+  const fullPasscode = passcode.join("");
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!username.trim() || passcode.length !== 6) {
-      toast.error("Enter username and 6-digit passcode");
+    if (fullPasscode.length !== 6) {
+      toast.error("Enter your 6-digit passcode");
       return;
     }
     setLoading(true);
     try {
       const deviceId = getOrCreateDeviceId();
       const res = await axiosClient.post("login/", {
-        username: username.trim(),
-        passcode,
+        passcode: fullPasscode,
         device_id: deviceId,
         device_fingerprint: deviceId,
       });
 
-      // 2FA required
       if (res.data?.requires_2fa) {
         setTempToken(res.data.temp_token);
         setRequires2FA(true);
@@ -54,8 +86,6 @@ export default function Login() {
         return;
       }
 
-      // Normal login
-      localStorage.setItem("payhost_username", username.trim());
       if (res.data?.user) {
         setUser(res.data.user);
       }
@@ -80,7 +110,6 @@ export default function Login() {
         temp_token: tempToken,
         code: totpCode,
       });
-      localStorage.setItem("payhost_username", username.trim());
       if (res.data?.user) {
         setUser(res.data.user);
       }
@@ -123,7 +152,7 @@ export default function Login() {
       <div style={styles.page}>
         <form onSubmit={handle2FA} style={styles.card}>
           <div style={styles.logoWrap}>
-            <img src="/payhost-mark.png" alt="Payhost" style={styles.logo} />
+            <img src="/payhost-mark.png" alt="PayHost" style={styles.logo} />
           </div>
           <h1 style={styles.title}>Two-factor authentication</h1>
           <p style={{ textAlign: "center", color: "#6b7280", marginTop: 0, marginBottom: 20 }}>
@@ -165,33 +194,31 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.logoWrap}>
-          <img src="/payhost-mark.png" alt="Payhost" style={styles.logo} />
+          <img src="/payhost-mark.png" alt="PayHost" style={styles.logo} />
         </div>
 
         <form onSubmit={handleLogin}>
           <h1 style={styles.title}>Sign in</h1>
+          <p style={styles.subtitle}>Enter your 6-digit passcode</p>
 
-          <label style={styles.label}>Username</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={styles.input}
-            autoComplete="username"
-            autoFocus
-          />
+          <div style={styles.passcodeContainer} onPaste={handlePaste}>
+            {passcode.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => (inputsRef.current[index] = el)}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handlePasscodeChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                style={styles.passcodeBox}
+                autoComplete="off"
+              />
+            ))}
+          </div>
 
-          <label style={styles.label}>Passcode</label>
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, ""))}
-            placeholder="••••••"
-            style={styles.input}
-          />
-
-          <button type="submit" disabled={loading} style={styles.button}>
+          <button type="submit" disabled={loading || fullPasscode.length !== 6} style={styles.button}>
             {loading ? "Signing in..." : "Sign in"}
           </button>
 
@@ -233,13 +260,54 @@ export default function Login() {
 }
 
 const styles = {
-  page: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" },
-  card: { background: "#fff", padding: 32, borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" },
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#f8fafc",
+    padding: 16,
+  },
+  card: {
+    background: "#fff",
+    padding: 32,
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 380,
+    boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+  },
   logoWrap: { display: "flex", justifyContent: "center", marginBottom: 8 },
   logo: { height: 48, width: "auto" },
-  title: { margin: "0 0 24px", fontSize: 24, textAlign: "center" },
+  title: { margin: "0 0 8px", fontSize: 24, textAlign: "center" },
+  subtitle: { textAlign: "center", color: "#6b7280", margin: "0 0 24px", fontSize: 14 },
   label: { display: "block", fontSize: 13, marginBottom: 6, color: "#374151" },
-  input: { width: "100%", padding: "12px 14px", marginBottom: 16, borderRadius: 10, border: "1px solid #d1d5db", fontSize: 16, boxSizing: "border-box" },
+  input: {
+    width: "100%",
+    padding: "12px 14px",
+    marginBottom: 16,
+    borderRadius: 10,
+    border: "1px solid #d1d5db",
+    fontSize: 16,
+    boxSizing: "border-box",
+  },
+  passcodeContainer: {
+    display: "flex",
+    justifyContent: "center",
+    gap: 10,
+    marginBottom: 24,
+  },
+  passcodeBox: {
+    width: 48,
+    height: 56,
+    textAlign: "center",
+    fontSize: 24,
+    fontWeight: 600,
+    border: "1.5px solid #d1d5db",
+    borderRadius: 10,
+    outline: "none",
+    background: "#fff",
+    caretColor: "#2563eb",
+  },
   switchAccount: {
     background: "none",
     border: "none",
@@ -250,7 +318,16 @@ const styles = {
     padding: "4px 0 12px",
     textDecoration: "underline",
   },
-  button: { width: "100%", padding: 13, background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, fontWeight: 600, cursor: "pointer" },
+  button: {
+    width: "100%",
+    padding: 13,
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    borderRadius: 10,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
   linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
   freezeForm: { marginTop: 20 },
 };
