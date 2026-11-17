@@ -35,7 +35,6 @@ export default function Sidebar({ isOpen, onClose }) {
     { path: "/kyc", label: "Get Verified", icon: <FaShieldAlt /> },
     { path: "/security", label: "Security", icon: <FaShieldAlt /> },
     { path: "/profile", label: "Profile", icon: <FaUser /> },
-    { path: "/avatar-upload", label: "Avatar Upload", icon: <FaImage /> },
     { path: "/bank-account", label: "Bank Account", icon: <FaUniversity /> },
     { path: "/savings", label: "Savings Goals", icon: <FaPiggyBank /> },
     { path: "/cards", label: "Virtual Cards", icon: <FaCreditCard /> },

@@ -82,9 +82,7 @@ function Profile() {
         </div>
 
         <div style={styles.actions}>
-          <Link to="/avatar-upload" style={styles.secondaryBtn}>
-            Change Avatar
-          </Link>
+          
           
         </div>
       </div>
