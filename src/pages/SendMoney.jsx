@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axiosClient from "../axiosClient";
 import toast from "react-hot-toast";
@@ -23,6 +23,8 @@ export default function SendMoney() {
   const [showFavoriteModal, setShowFavoriteModal] = useState(false);
   const [lastRecipient, setLastRecipient] = useState("");
 
+  const searchTimer = useRef(null);
+
   useEffect(() => {
     axiosClient
       .get("limits/")
@@ -33,14 +35,22 @@ export default function SendMoney() {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearch(value);
+
+    if (searchTimer.current) {
+      clearTimeout(searchTimer.current);
+    }
+
     if (!value.trim()) {
       setResults([]);
       return;
     }
-    axiosClient
-      .get(`users/search/?q=${encodeURIComponent(value)}`)
-      .then((res) => setResults(res.data.results || res.data))
-      .catch(() => setResults([]));
+
+    searchTimer.current = setTimeout(() => {
+      axiosClient
+        .get(`users/search/?q=${encodeURIComponent(value)}`)
+        .then((res) => setResults(res.data.results || res.data))
+        .catch(() => setResults([]));
+    }, 300);
   };
 
   const handleSend = async (event) => {
@@ -83,7 +93,6 @@ export default function SendMoney() {
         {
           recipient: selectedUser.username,
           amount,
-          pin,
           pin_token: pinToken,
           idempotency_key: reference,
         },
@@ -101,7 +110,6 @@ export default function SendMoney() {
       setBusy(false);
     }
   };
-
 
   return (
     <div style={styles.page}>
@@ -228,7 +236,6 @@ export default function SendMoney() {
         onClose={() => setShowFavoriteModal(false)}
         recipientUsername={lastRecipient}
       />
-
     </div>
   );
 }
