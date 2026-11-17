@@ -44,7 +44,7 @@ function isFieldRequired(field, { isNewUser, forceTier2, forceTier3 }) {
       "address", "city", "state", "country",
     ].includes(field);
   }
-  if (forceTier2) return false; // BVN or NIN — optional individually
+  if (forceTier2) return false;
   if (forceTier3) return ["proof_of_address"].includes(field);
   return true;
 }
@@ -79,46 +79,45 @@ function SelfieCamera({ onCapture, onClose }) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   };
-const startCamera = async () => {
-  setError("");
-  setReady(false);
-  try {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error("Camera not supported in this browser.");
-    }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
-      audio: false,
-    });
-
-    streamRef.current = stream;
-    const video = videoRef.current;
-    if (video) {
-      video.srcObject = stream;
-      await video.play();
-      await new Promise((resolve) => {
-        const check = () => {
-          if (video.videoWidth > 0) resolve();
-          else setTimeout(check, 100);
-        };
-        check();
+  const startCamera = async () => {
+    setError("");
+    setReady(false);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera not supported in this browser.");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
       });
-      setReady(true);
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+        await new Promise((resolve) => {
+          const check = () => {
+            if (video.videoWidth > 0) resolve();
+            else setTimeout(check, 100);
+          };
+          check();
+        });
+        setReady(true);
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setError("Camera permission denied. Allow camera access in your browser settings and try again.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setError("No camera found on this device.");
+      } else if (err.name === "NotReadableError") {
+        setError("Camera is already in use by another application.");
+      } else {
+        setError("Camera unavailable. You can upload a photo instead.");
+      }
     }
-  } catch (err) {
-    console.error("Camera error:", err);
-    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-      setError("Camera permission denied. Allow camera access in your browser settings and try again.");
-    } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-      setError("No camera found on this device.");
-    } else if (err.name === "NotReadableError") {
-      setError("Camera is already in use by another application.");
-    } else {
-      setError("Camera unavailable. You can upload a photo instead.");
-    }
-  }
-};
+  };
 
   useEffect(() => {
     startCamera();
@@ -182,10 +181,10 @@ const startCamera = async () => {
           {previewUrl ? (
             <>
               <button type="button" onClick={retake} style={{ padding: "10px 16px", borderRadius: 8, border: "1px solid #fff", background: "transparent", color: "#fff" }}>Retake</button>
-              <button type="button" onClick={accept} style={{ padding: "10px 16px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff" }}>Accept</button>
+              <button type="button" onClick={accept} style={{ padding: "10px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff" }}>Accept</button>
             </>
           ) : (
-            <button type="button" onClick={takePhoto} disabled={!ready} style={{ width: 68, height: 68, borderRadius: "50%", border: "4px solid #fff", background: "#3b82f6", opacity: ready ? 1 : 0.5 }} />
+            <button type="button" onClick={takePhoto} disabled={!ready} style={{ width: 68, height: 68, borderRadius: "50%", border: "4px solid #fff", background: "#2563eb", opacity: ready ? 1 : 0.5 }} />
           )}
         </div>
       </div>
@@ -339,37 +338,51 @@ export default function KYC() {
 
           {fieldsToRender.map((field) => {
             const required = isFieldRequired(field, ctx);
-if (field === "selfie") {
-  return (
-    <div key={field} style={{ marginBottom: 16 }}>
-      <RequiredLabel field={field} required={required} />
-      <button
-        type="button"
-        onClick={() => setShowSelfieCam(true)}
-        style={{
-          padding: "12px 18px",
-          background: "#1e40af",
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        {files.selfie ? "Retake selfie" : "Take selfie"}
-      </button>
-      {files.selfie && (
-        <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>
-      )}
-    </div>
-  );
-}
+
+            if (field === "selfie") {
+              return (
+                <div key={field} style={{ marginBottom: 16 }}>
+                  <RequiredLabel field={field} required={required} />
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfieCam(true)}
+                    style={{
+                      padding: "12px 18px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 10,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {files.selfie ? "Retake selfie" : "Take selfie"}
+                  </button>
+                  {files.selfie && (
+                    <span style={{ color: "#166534", marginLeft: 10 }}>✓ Selfie accepted</span>
+                  )}
+                </div>
+              );
+            }
+
             if (fileFields.has(field)) {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel field={field} required={required} />
-                  <input type="file" accept="image/*" onChange={(e) => handleFile(field, e.target.files[0])} />
-                  {files[field] && <span style={{ color: "#166534", marginLeft: 8 }}>✓ Selected</span>}
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/*"
+                    onChange={(e) => handleFile(field, e.target.files[0])}
+                    style={{ width: "100%", padding: "10px 0" }}
+                  />
+                  <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 0" }}>
+                    PDF or image (JPG, PNG)
+                  </p>
+                  {files[field] && (
+                    <span style={{ color: "#166534", marginTop: 4, display: "block" }}>
+                      ✓ {files[field].name}
+                    </span>
+                  )}
                 </div>
               );
             }
@@ -445,12 +458,10 @@ if (field === "selfie") {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            style={{ marginTop: 8, padding: "12px 20px", background: "#2563EB", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}
+            style={{ marginTop: 8, padding: "12px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}
           >
             {loading ? "Submitting..." : isApproved ? "Upgrade tier" : "Submit Tier 1"}
           </button>
-
-         
         </>
       )}
       {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
