@@ -60,6 +60,9 @@ export default function Business() {
   const [businessEmail, setBusinessEmail] = useState("");
   const [address, setAddress] = useState("");
   const [natureOfBusiness, setNatureOfBusiness] = useState("");
+  const [cacDocument, setCacDocument] = useState(null);
+  const [idDocument, setIdDocument] = useState(null);
+  const [addressDocument, setAddressDocument] = useState(null);
   const [country, setCountry] = useState(countries[0]);
   const [phoneLocal, setPhoneLocal] = useState("");
 
@@ -96,20 +99,34 @@ export default function Business() {
       setErr("CAC registration number is required for registered businesses");
       return;
     }
+    if (needsCac && !cacDocument) {
+      setErr("CAC certificate is required for registered businesses");
+      return;
+    }
+    if (!idDocument) {
+      setErr("Director/proprietor ID is required");
+      return;
+    }
     setBusy(true);
     setErr("");
     try {
-      const res = await axiosClient.put("merchant/apply/", {
-        business_name: applyName,
-        phone: fullPhone,
-        business_type: businessType,
-        cac_number: needsCac ? cacNumber : "",
-        tin,
-        director_name: directorName,
-        bvn_or_nin: bvnOrNin,
-        email: businessEmail,
-        address,
-        nature_of_business: natureOfBusiness,
+      const formData = new FormData();
+      formData.append("business_name", applyName);
+      formData.append("phone", fullPhone);
+      formData.append("business_type", businessType);
+      formData.append("cac_number", needsCac ? cacNumber : "");
+      formData.append("tin", tin);
+      formData.append("director_name", directorName);
+      formData.append("bvn_or_nin", bvnOrNin);
+      formData.append("email", businessEmail);
+      formData.append("address", address);
+      formData.append("nature_of_business", natureOfBusiness);
+      if (cacDocument) formData.append("cac_document", cacDocument);
+      if (idDocument) formData.append("id_document", idDocument);
+      if (addressDocument) formData.append("address_document", addressDocument);
+
+      const res = await axiosClient.put("merchant/apply/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setMe(res.data);
     } catch (e2) {
@@ -341,6 +358,45 @@ export default function Business() {
                   onChange={(e) => setNatureOfBusiness(e.target.value)}
                   style={styles.input}
                 />
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  CAC Certificate {needsCac && <Required />}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setCacDocument(e.target.files[0] || null)}
+                  style={styles.input}
+                  required={needsCac}
+                />
+                <p style={styles.hint}>PDF or clear photo of CAC certificate / status report</p>
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  Director / Proprietor ID <Required />
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setIdDocument(e.target.files[0] || null)}
+                  style={styles.input}
+                  required
+                />
+                <p style={styles.hint}>NIN slip, passport, driver’s licence or voter’s card</p>
+              </div>
+
+              <div>
+                <label style={styles.label}>Proof of address</label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setAddressDocument(e.target.files[0] || null)}
+                  style={styles.input}
+                />
+                <p style={styles.hint}>Utility bill or tenancy agreement (recommended, ≤ 3 months old)</p>
               </div>
 
               <button type="submit" disabled={busy} style={styles.btn}>
