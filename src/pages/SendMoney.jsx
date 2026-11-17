@@ -87,19 +87,19 @@ export default function SendMoney() {
         setBusy(false);
         return;
       }
-
-      await axiosClient.post(
-        "send-money/",
-        {
-          recipient: selectedUser.username,
-          amount,
-          pin_token: pinToken,
-          idempotency_key: reference,
-        },
-        {
-          headers: { "Idempotency-Key": reference },
-        }
-      );
+await axiosClient.post(
+  "send-money/",
+  {
+    recipient: selectedUser.username,
+    amount,
+    pin,                    // required by backend
+    pin_token: pinToken,
+    idempotency_key: reference,
+  },
+  {
+    headers: { "Idempotency-Key": reference },
+  }
+);
 
       sessionStorage.removeItem("send_idem");
       toast.success("Transfer successful");
