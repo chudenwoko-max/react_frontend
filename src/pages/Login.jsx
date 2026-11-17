@@ -16,6 +16,8 @@ function getOrCreateDeviceId() {
 export default function Login() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const [username, setUsername] = useState("");
+  const [showUsername, setShowUsername] = useState(false);
   const [passcode, setPasscode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [showFreeze, setShowFreeze] = useState(false);
@@ -70,14 +72,24 @@ export default function Login() {
       toast.error("Enter your 6-digit passcode");
       return;
     }
+    if (showUsername && !username.trim()) {
+      toast.error("Enter your username");
+      return;
+    }
+
     setLoading(true);
     try {
       const deviceId = getOrCreateDeviceId();
-      const res = await axiosClient.post("login/", {
+      const payload = {
         passcode: fullPasscode,
         device_id: deviceId,
         device_fingerprint: deviceId,
-      });
+      };
+      if (showUsername) {
+        payload.username = username.trim();
+      }
+
+      const res = await axiosClient.post("login/", payload);
 
       if (res.data?.requires_2fa) {
         setTempToken(res.data.temp_token);
@@ -92,7 +104,13 @@ export default function Login() {
       toast.success("Welcome back");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.error || "Invalid credentials");
+      const msg = err.response?.data?.error || "Invalid credentials";
+      if (msg.toLowerCase().includes("username required")) {
+        setShowUsername(true);
+        toast.error("Enter your username to continue");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -199,7 +217,22 @@ export default function Login() {
 
         <form onSubmit={handleLogin}>
           <h1 style={styles.title}>Sign in</h1>
-          <p style={styles.subtitle}>Enter your 6-digit passcode</p>
+          <p style={styles.subtitle}>
+            {showUsername ? "Enter username and passcode" : "Enter your 6-digit passcode"}
+          </p>
+
+          {showUsername && (
+            <>
+              <label style={styles.label}>Username</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={styles.input}
+                autoComplete="username"
+                autoFocus
+              />
+            </>
+          )}
 
           <div style={styles.passcodeContainer} onPaste={handlePaste}>
             {passcode.map((digit, index) => (
