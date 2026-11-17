@@ -21,6 +21,13 @@ const countries = [
   { code: "BR", dial: "+55", name: "Brazil", flag: "🇧🇷" },
 ];
 
+const businessTypes = [
+  { value: "individual", label: "Individual / Sole Proprietor" },
+  { value: "business_name", label: "Business Name (CAC)" },
+  { value: "limited", label: "Limited Liability Company" },
+  { value: "incorporated_trustees", label: "Incorporated Trustees" },
+];
+
 const statusColor = {
   approved: { bg: "#f0fdf4", color: "#166534", border: "#86efac" },
   pending: { bg: "#fffbeb", color: "#92400e", border: "#fcd34d" },
@@ -28,6 +35,8 @@ const statusColor = {
   suspended: { bg: "#fef2f2", color: "#991b1b", border: "#fecaca" },
   not_started: { bg: "#f8fafc", color: "#475569", border: "#e2e8f0" },
 };
+
+const Required = () => <span style={{ color: "#dc2626", marginLeft: 2 }}>*</span>;
 
 export default function Business() {
   const [tab, setTab] = useState("Overview");
@@ -40,7 +49,17 @@ export default function Business() {
   const [email, setEmail] = useState("");
   const [description, setDescription] = useState("Payhost test");
   const [payoutAmount, setPayoutAmount] = useState("500");
+
+  // Apply form state
   const [applyName, setApplyName] = useState("");
+  const [businessType, setBusinessType] = useState("individual");
+  const [cacNumber, setCacNumber] = useState("");
+  const [tin, setTin] = useState("");
+  const [directorName, setDirectorName] = useState("");
+  const [bvnOrNin, setBvnOrNin] = useState("");
+  const [businessEmail, setBusinessEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [natureOfBusiness, setNatureOfBusiness] = useState("");
   const [country, setCountry] = useState(countries[0]);
   const [phoneLocal, setPhoneLocal] = useState("");
 
@@ -65,11 +84,16 @@ export default function Business() {
   }, []);
 
   const fullPhone = `${country.dial}${phoneLocal.replace(/\D/g, "")}`;
+  const needsCac = businessType !== "individual";
 
   const apply = async (e) => {
     e.preventDefault();
     if (!phoneLocal || phoneLocal.replace(/\D/g, "").length < 7) {
       setErr("Enter a valid phone number");
+      return;
+    }
+    if (needsCac && !cacNumber.trim()) {
+      setErr("CAC registration number is required for registered businesses");
       return;
     }
     setBusy(true);
@@ -78,6 +102,14 @@ export default function Business() {
       const res = await axiosClient.put("merchant/apply/", {
         business_name: applyName,
         phone: fullPhone,
+        business_type: businessType,
+        cac_number: needsCac ? cacNumber : "",
+        tin,
+        director_name: directorName,
+        bvn_or_nin: bvnOrNin,
+        email: businessEmail,
+        address,
+        nature_of_business: natureOfBusiness,
       });
       setMe(res.data);
     } catch (e2) {
@@ -151,38 +183,166 @@ export default function Business() {
         {me.can_apply ? (
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Apply to collect payments</h2>
+            <p style={styles.hint}>
+              Fields marked with <span style={{ color: "#dc2626" }}>*</span> are required for CBN compliance.
+            </p>
             <form onSubmit={apply} style={styles.form}>
-              <input
-                placeholder="Business name"
-                value={applyName}
-                onChange={(e) => setApplyName(e.target.value)}
-                required
-                style={styles.input}
-              />
-              <div style={styles.phoneRow}>
+              <div>
+                <label style={styles.label}>
+                  Business type <Required />
+                </label>
                 <select
-                  value={country.code}
-                  onChange={(e) => {
-                    const selected = countries.find((c) => c.code === e.target.value);
-                    if (selected) setCountry(selected);
-                  }}
-                  style={styles.countrySelect}
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  style={styles.input}
+                  required
                 >
-                  {countries.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.flag} {c.dial}
+                  {businessTypes.map((bt) => (
+                    <option key={bt.value} value={bt.value}>
+                      {bt.label}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  Business / Trading name <Required />
+                </label>
                 <input
-                  placeholder="Phone number"
-                  value={phoneLocal}
-                  onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ""))}
-                  style={{ ...styles.input, flex: 1 }}
+                  placeholder="As registered or intended trading name"
+                  value={applyName}
+                  onChange={(e) => setApplyName(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              {needsCac && (
+                <div>
+                  <label style={styles.label}>
+                    CAC registration number <Required />
+                  </label>
+                  <input
+                    placeholder="RC / BN / IT number"
+                    value={cacNumber}
+                    onChange={(e) => setCacNumber(e.target.value)}
+                    required
+                    style={styles.input}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={styles.label}>
+                  TIN (Tax Identification Number) <Required />
+                </label>
+                <input
+                  placeholder="FIRS TIN"
+                  value={tin}
+                  onChange={(e) => setTin(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  Director / Proprietor full name <Required />
+                </label>
+                <input
+                  placeholder="Full legal name"
+                  value={directorName}
+                  onChange={(e) => setDirectorName(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  BVN or NIN <Required />
+                </label>
+                <input
+                  placeholder="11-digit BVN or NIN"
+                  value={bvnOrNin}
+                  onChange={(e) => setBvnOrNin(e.target.value.replace(/\D/g, ""))}
+                  required
+                  maxLength={11}
+                  style={styles.input}
                   inputMode="numeric"
                 />
               </div>
-              <p style={styles.hint}>Full number: {fullPhone || country.dial}</p>
+
+              <div>
+                <label style={styles.label}>
+                  Business email <Required />
+                </label>
+                <input
+                  type="email"
+                  placeholder="you@business.com"
+                  value={businessEmail}
+                  onChange={(e) => setBusinessEmail(e.target.value)}
+                  required
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  Phone number <Required />
+                </label>
+                <div style={styles.phoneRow}>
+                  <select
+                    value={country.code}
+                    onChange={(e) => {
+                      const selected = countries.find((c) => c.code === e.target.value);
+                      if (selected) setCountry(selected);
+                    }}
+                    style={styles.countrySelect}
+                  >
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.dial}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="Phone number"
+                    value={phoneLocal}
+                    onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ""))}
+                    style={{ ...styles.input, flex: 1 }}
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+                <p style={styles.hint}>Full number: {fullPhone || country.dial}</p>
+              </div>
+
+              <div>
+                <label style={styles.label}>
+                  Business address <Required />
+                </label>
+                <textarea
+                  placeholder="Full registered or operating address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  required
+                  rows={3}
+                  style={{ ...styles.input, resize: "vertical" }}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>Nature of business</label>
+                <input
+                  placeholder="What does the business do?"
+                  value={natureOfBusiness}
+                  onChange={(e) => setNatureOfBusiness(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+
               <button type="submit" disabled={busy} style={styles.btn}>
                 {busy ? "Submitting…" : "Submit application"}
               </button>
@@ -212,7 +372,6 @@ export default function Business() {
         </span>
       </div>
 
-      {/* Available balance card */}
       <div style={styles.balanceCard}>
         <p style={styles.balanceLabel}>Available to settle</p>
         <h2 style={styles.balanceAmount}>
@@ -227,7 +386,6 @@ export default function Business() {
         </button>
       </div>
 
-      {/* Stats */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
           <p style={styles.statLabel}>Total charges</p>
@@ -247,7 +405,6 @@ export default function Business() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabBar}>
         {tabs.map((t) => (
           <button
@@ -459,23 +616,33 @@ const styles = {
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 14,
+  },
+  label: {
+    display: "block",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#374151",
+    marginBottom: 4,
   },
   input: {
     padding: "10px 12px",
     border: "1px solid #e5e7eb",
     borderRadius: 8,
     fontSize: 14,
+    width: "100%",
+    boxSizing: "border-box",
   },
   btn: {
     padding: "10px 16px",
-    background:"#2563eb",
+    background: "#2563eb",
     color: "#fff",
     border: "none",
     borderRadius: 8,
     cursor: "pointer",
     fontWeight: 600,
     fontSize: 14,
+    marginTop: 8,
   },
   phoneRow: {
     display: "flex",
@@ -493,7 +660,7 @@ const styles = {
   hint: {
     fontSize: 12,
     color: "#6b7280",
-    margin: 0,
+    margin: "4px 0 0",
   },
   danger: {
     color: "#b91c1c",
