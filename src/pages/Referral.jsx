@@ -67,9 +67,7 @@ export default function Referral() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>Refer friends</h1>
-        <p style={styles.subtitle}>
-          Share Payhost with people you know
-        </p>
+        <p style={styles.subtitle}>Share Payhost with people you know</p>
       </div>
 
       <div style={styles.statsGrid}>
@@ -268,7 +266,7 @@ const styles = {
   },
   applyBtn: {
     padding: "11px 20px",
-    background: "#111827",
+    background: "#2563eb",
     color: "white",
     border: "none",
     borderRadius: 10,
