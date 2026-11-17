@@ -19,6 +19,9 @@ export default function Terms() {
       </a>
 
       <h1>Terms of Use</h1>
+      <p>
+        <strong>Effective Date:</strong> 16 November 2026
+      </p>
 
       <p>
         These Terms of Use govern your access to and use of PayHost. By creating
@@ -29,6 +32,12 @@ export default function Terms() {
       <p>
         PayHost is operated by <strong>PrimeHost Technologies Ltd</strong>,
         a company incorporated in Nigeria.
+      </p>
+
+      <p>
+        PayHost is a digital platform operated by PrimeHost Technologies Ltd for
+        software services, digital commerce tools, business automation solutions,
+        technology integrations, and related digital services.
       </p>
 
       <h2>Eligibility</h2>
@@ -61,9 +70,10 @@ export default function Terms() {
 
       <h2>Merchant Payments</h2>
       <p>
-        Users may make payments to registered merchants and businesses through
-        the platform. All transactions are recorded in our internal ledger and
-        are subject to verification, fraud monitoring, and compliance checks.
+        Users may make payments to registered merchants and businesses through the
+        platform. Transactions are processed through integrated payment partners,
+        recorded in our internal systems, and subject to fraud monitoring,
+        verification, compliance checks, and applicable regulatory requirements.
       </p>
 
       <h2>Chargebacks & Disputes</h2>
@@ -110,8 +120,22 @@ export default function Terms() {
         revised Terms.
       </p>
 
+      <h2>Governing Law</h2>
+      <p>
+        These Terms shall be governed by and interpreted in accordance with the
+        laws of the Federal Republic of Nigeria.
+      </p>
+
       <h2>Contact Us</h2>
       <p>
+        PrimeHost Technologies Ltd
+        <br />
+        13 Tom Makwe Street
+        <br />
+        Asaba, Delta State
+        <br />
+        Nigeria
+        <br />
         Email: hello@payhost.dev
         <br />
         Website: https://payhost.dev
@@ -121,6 +145,8 @@ export default function Terms() {
         <strong>PrimeHost Technologies Ltd</strong>
         <br />
         RC: 10000825
+        <br />
+        Incorporated in the Federal Republic of Nigeria
       </p>
     </div>
   );
