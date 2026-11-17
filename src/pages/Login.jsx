@@ -206,7 +206,7 @@ export default function Login() {
               <input
                 key={index}
                 ref={(el) => (inputsRef.current[index] = el)}
-                type="text"
+                type="password"
                 inputMode="numeric"
                 maxLength={1}
                 value={digit}
