@@ -163,7 +163,7 @@ const styles = {
   button: {
     width: "100%",
     padding: "13px",
-    background: "#0f172a",
+    background: "#2563eb",
     color: "#fff",
     border: "none",
     borderRadius: 10,
