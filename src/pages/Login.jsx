@@ -94,24 +94,28 @@ export default function Login() {
       if (res.data?.requires_2fa) {
         setTempToken(res.data.temp_token);
         setRequires2FA(true);
-        setLoading(false);
         return;
       }
 
       if (res.data?.user) {
         setUser(res.data.user);
+        localStorage.setItem("payhost_username", res.data.user.username);
+        navigate("/dashboard");
       }
-      toast.success("Welcome back");
-      navigate("/dashboard", { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.error || "Invalid credentials";
-      if (msg.toLowerCase().includes("username required")) {
-        setShowUsername(true);
-        toast.error("Enter your username to continue");
-      } else {
-        toast.error(msg);
-      }
-    } finally {
+  const errorMsg = err.response?.data?.error || "Login failed";
+
+  // New device → show username field
+  if (
+    errorMsg.toLowerCase().includes("username required") &&
+    !showUsername
+  ) {
+    setShowUsername(true);
+    toast("First time on this device — enter your username", { icon: "ℹ️" });
+  } else {
+    toast.error(errorMsg);
+  }
+} finally {
       setLoading(false);
     }
   };
@@ -130,9 +134,8 @@ export default function Login() {
       });
       if (res.data?.user) {
         setUser(res.data.user);
+        navigate("/dashboard");
       }
-      toast.success("Welcome back");
-      navigate("/dashboard", { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error || "Invalid code");
     } finally {
@@ -140,70 +143,28 @@ export default function Login() {
     }
   };
 
-  const handleFreezeRequest = async (e) => {
-    e.preventDefault();
-    const email = freezeEmail.trim();
-    if (!email) {
-      toast.error("Enter your account email");
-      return;
-    }
-
-    setFreezeLoading(true);
-    try {
-      await axiosClient.post("security/request-freeze/", { email });
-      toast.success(
-        "If the account exists, a freeze link has been sent to your email."
-      );
-      setFreezeEmail("");
-      setShowFreeze(false);
-    } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Could not send the freeze link. Please try again."
-      );
-    } finally {
-      setFreezeLoading(false);
-    }
-  };
-
   if (requires2FA) {
     return (
       <div style={styles.page}>
-        <form onSubmit={handle2FA} style={styles.card}>
-          <div style={styles.logoWrap}>
-            <img src="/payhost-mark.png" alt="PayHost" style={styles.logo} />
-          </div>
+        <div style={styles.card}>
           <h1 style={styles.title}>Two-factor authentication</h1>
-          <p style={{ textAlign: "center", color: "#6b7280", marginTop: 0, marginBottom: 20 }}>
-            Enter the 6-digit code from your authenticator app
-          </p>
-
-          <label style={styles.label}>Authentication code</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            value={totpCode}
-            onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
-            placeholder="••••••"
-            style={styles.input}
-            autoFocus
-          />
-
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? "Verifying..." : "Verify"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setRequires2FA(false);
-              setTotpCode("");
-            }}
-            style={{ ...styles.switchAccount, marginTop: 16, width: "100%", textAlign: "center" }}
-          >
-            Back to login
-          </button>
-        </form>
+          <p style={styles.subtitle}>Enter the 6-digit code from your authenticator app</p>
+          <form onSubmit={handle2FA}>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="000000"
+              style={styles.input}
+              autoFocus
+            />
+            <button type="submit" disabled={loading} style={styles.button}>
+              {loading ? "Verifying..." : "Verify"}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -212,26 +173,24 @@ export default function Login() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.logoWrap}>
-          <img src="/payhost-mark.png" alt="PayHost" style={styles.logo} />
+          <img src="/payhost-logo.png" alt="Payhost" style={styles.logo} />
         </div>
+        <h1 style={styles.title}>Sign in</h1>
+        <p style={styles.subtitle}>
+          {showUsername ? "Enter username and passcode" : "Enter your 6-digit passcode"}
+        </p>
 
         <form onSubmit={handleLogin}>
-          <h1 style={styles.title}>Sign in</h1>
-          <p style={styles.subtitle}>
-            {showUsername ? "Enter username and passcode" : "Enter your 6-digit passcode"}
-          </p>
-
           {showUsername && (
-            <>
-              <label style={styles.label}>Username</label>
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={styles.input}
-                autoComplete="username"
-                autoFocus
-              />
-            </>
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={styles.input}
+              autoFocus
+              required
+            />
           )}
 
           <div style={styles.passcodeContainer} onPaste={handlePaste}>
@@ -265,30 +224,6 @@ export default function Login() {
             Don't have an account? <Link to="/register">Create Account</Link>
           </p>
         </form>
-
-        {showFreeze && (
-          <form
-            id="freeze-request-form"
-            onSubmit={handleFreezeRequest}
-            style={styles.freezeForm}
-          >
-            <label htmlFor="freeze-email" style={styles.label}>
-              Account email
-            </label>
-            <input
-              id="freeze-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={freezeEmail}
-              onChange={(e) => setFreezeEmail(e.target.value)}
-              style={styles.input}
-            />
-            <button type="submit" disabled={freezeLoading} style={styles.button}>
-              {freezeLoading ? "Sending..." : "Send freeze link"}
-            </button>
-          </form>
-        )}
       </div>
     </div>
   );
@@ -301,21 +236,19 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     background: "#f8fafc",
-    padding: 16,
   },
   card: {
     background: "#fff",
-    padding: 24,
+    padding: 32,
     borderRadius: 16,
     width: "100%",
-    maxWidth: 340,
+    maxWidth: 380,
     boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
   },
   logoWrap: { display: "flex", justifyContent: "center", marginBottom: 8 },
-  logo: { height: 44, width: "auto" },
-  title: { margin: "0 0 6px", fontSize: 22, textAlign: "center" },
-  subtitle: { textAlign: "center", color: "#6b7280", margin: "0 0 18px", fontSize: 14 },
-  label: { display: "block", fontSize: 13, marginBottom: 6, color: "#374151" },
+  logo: { height: 48, width: "auto" },
+  title: { margin: "0 0 8px", fontSize: 24, textAlign: "center" },
+  subtitle: { textAlign: "center", color: "#6b7280", margin: "0 0 24px", fontSize: 14 },
   input: {
     width: "100%",
     padding: "12px 14px",
@@ -343,11 +276,10 @@ const styles = {
     background: "#fff",
   },
   dot: {
-    fontSize: 22,
-    fontWeight: 700,
+    fontSize: 20,
+    fontWeight: 600,
     color: "#111827",
     pointerEvents: "none",
-    lineHeight: 1,
   },
   hiddenInput: {
     position: "absolute",
@@ -357,18 +289,7 @@ const styles = {
     height: "100%",
     border: "none",
     background: "transparent",
-    caretColor: "transparent",
     fontSize: 16,
-  },
-  switchAccount: {
-    background: "none",
-    border: "none",
-    color: "#64748b",
-    fontSize: 14,
-    cursor: "pointer",
-    textAlign: "left",
-    padding: "4px 0 12px",
-    textDecoration: "underline",
   },
   button: {
     width: "100%",
@@ -380,6 +301,5 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  linkRow: { textAlign: "center", marginTop: 14, fontSize: 14 },
-  freezeForm: { marginTop: 20 },
+  linkRow: { textAlign: "center", marginTop: 16, fontSize: 14 },
 };

@@ -1,33 +1,26 @@
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../axiosClient";
+import { useAuth } from "../context/AuthContext";
 
-function LogoutButton() {
+export default function LogoutButton({ children, style }) {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
-  const handleLogout = () => {
-    // Clear tokens
-    localStorage.removeItem("ACCESS_TOKEN");
-    localStorage.removeItem("REFRESH_TOKEN");
-
-    // Force redirect to login
-    navigate("/login", { replace: true });
+  const handleLogout = async () => {
+    try {
+      await axiosClient.post("logout/");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUser(null);
+      localStorage.removeItem("HAS_PIN");
+      navigate("/login");
+    }
   };
 
   return (
-    <button
-      onClick={handleLogout}
-      style={{
-        padding: "8px 14px",
-        background: "#dc3545",
-        color: "#fff",
-        border: "none",
-        borderRadius: "6px",
-        cursor: "pointer",
-        fontWeight: "bold",
-      }}
-    >
-      Logout
+    <button onClick={handleLogout} style={style}>
+      {children || "Log out"}
     </button>
   );
 }
-
-export default LogoutButton;
