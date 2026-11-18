@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
@@ -7,15 +7,38 @@ import useIdleLogout from "../hooks/useIdleLogout";
 export default function MainLayout() {
   useIdleLogout();
 
-  // Always start closed → hamburger shows first
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (
+        sidebarOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target) &&
+        !e.target.closest("[data-menu-button]")
+      ) {
+        setSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [sidebarOpen]);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <div ref={sidebarRef}>
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
       <div
         style={{
@@ -26,8 +49,6 @@ export default function MainLayout() {
           position: "relative",
         }}
       >
-
-        {/* BRAND PATCH — replaces OrbitPay */}
         <div style={{ padding: "12px 20px", borderBottom: "1px solid #E2E8F0" }}>
           <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
             <img
