@@ -122,7 +122,7 @@ export default function Support() {
         </p>
         <p style={{ margin: "8px 0 0", fontWeight: 600 }}>
           WhatsApp / Call: +234 7066435071<br />
-          Email: support@payhost.dev
+          Email: hello@payhost.dev
         </p>
         <p style={{ margin: "6px 0 0", fontSize: 13, color: "#64748b" }}>
           Have your registered email and a recent transaction ready for verification.
