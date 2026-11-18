@@ -116,7 +116,7 @@ export default function VirtualCards() {
       : "linear-gradient(135deg, #1e3a8a, #3b82f6)";
   };
 
-  // Always mask — never show full PAN or CVV (Paystack-hosted)
+  // Always mask — never show full PAN or CVV
   const maskPan = (masked) => masked || "•••• •••• •••• ••••";
 
   return (
@@ -358,7 +358,7 @@ const styles = {
     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   },
   cardVisual: {
-    color: "white",
+    color: "#ffffff",
     padding: "24px",
     minHeight: 200,
     display: "flex",
@@ -374,6 +374,7 @@ const styles = {
     fontSize: 12,
     fontWeight: 600,
     letterSpacing: 1,
+    color: "#ffffff",
   },
   cardStatus: {
     fontSize: 11,
@@ -381,6 +382,7 @@ const styles = {
     padding: "3px 10px",
     borderRadius: 20,
     textTransform: "capitalize",
+    color: "#ffffff",
   },
   chip: {
     width: 40,
@@ -394,6 +396,7 @@ const styles = {
     fontWeight: 600,
     letterSpacing: 2,
     margin: "12px 0",
+    color: "#ffffff",
   },
   cardBottom: {
     display: "flex",
@@ -402,13 +405,15 @@ const styles = {
   cardLabel: {
     margin: 0,
     fontSize: 10,
-    opacity: 0.8,
+    opacity: 0.9,
     textTransform: "uppercase",
+    color: "#ffffff",
   },
   cardValue: {
     margin: "2px 0 0",
     fontSize: 13,
     fontWeight: 600,
+    color: "#ffffff",
   },
   cardInfo: {
     padding: "16px 20px",
