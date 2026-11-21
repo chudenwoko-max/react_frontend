@@ -218,10 +218,10 @@ export default function KYC() {
   const [showUpgradeForm, setShowUpgradeForm] = useState(false);
   const navigate = useNavigate();
 
-  const isApproved = ["approved", "verified"].includes(status.toLowerCase());
-  const isPending = status.toLowerCase() === "pending";
-  const storedTier = Number(limits?.tier || 0);
-  const isFullyVerified = isApproved && !isPending && storedTier >= 3;
+  const isApproved = ["approved", "verified"].includes((status || "").toLowerCase());
+  const isPending = (status || "").toLowerCase() === "pending";
+  const currentTier = Number(limits?.tier || 0);
+  const isFullyVerified = isApproved && !isPending && currentTier >= 3;
 
   useEffect(() => {
     let active = true;
@@ -257,49 +257,47 @@ export default function KYC() {
     setFiles((prev) => ({ ...prev, selfie: file }));
   };
 
-  // Decide which screen / form to show
+  // ---------- Screen / form decision (no auto-jump) ----------
   let mode = "loading"; // "pending" | "fullyVerified" | "tierStatus" | "form"
   let displayTier = "1";
   let fieldsToRender = [];
 
   if (isPending) {
     mode = "pending";
-    displayTier = String(storedTier || 1);
+    displayTier = String(currentTier || 1);
   } else if (isFullyVerified) {
     mode = "fullyVerified";
     displayTier = "3";
-  } else if (isApproved && storedTier >= 1 && storedTier < 3 && !showUpgradeForm) {
-    // Stable status screen after approval – do not auto-jump to next form
+  } else if (isApproved && !showUpgradeForm) {
+    // Approved at Tier 1 or 2 → always show stable status screen.
+    // Never auto-open the next form.
     mode = "tierStatus";
-    displayTier = String(storedTier);
+    displayTier = String(Math.max(currentTier, 1));
   } else if (!isApproved) {
-    // Brand new user → Tier 1 form
+    // Brand-new user → Tier 1 form
     mode = "form";
     displayTier = "1";
     fieldsToRender = [
       "full_name", "date_of_birth", "gender", "phone_number",
       "address", "city", "state", "bvn", "nin",
     ];
-  } else if (storedTier < 2) {
-    // User clicked "Upgrade to Tier 2"
+  } else if (currentTier < 2) {
+    // Approved at Tier 1 + user clicked "Upgrade to Tier 2"
     mode = "form";
     displayTier = "2";
     fieldsToRender = ["government_id_type", "government_id", "selfie", "proof_of_address"];
     if (!backendHasBvn) fieldsToRender.unshift("bvn");
     if (!backendHasNin) fieldsToRender.unshift("nin");
-  } else if (storedTier < 3) {
-    // User clicked "Upgrade to Tier 3"
+  } else {
+    // Approved at Tier 2 + user clicked "Upgrade to Tier 3"
     mode = "form";
     displayTier = "3";
     fieldsToRender = ["proof_of_address"];
-  } else {
-    mode = "fullyVerified";
-    displayTier = "3";
   }
 
   const tierInfo = TIER_INFO[displayTier] || TIER_INFO["1"];
 
-  // Validation – submit button stays disabled until form is complete
+  // ---------- Validation ----------
   const isFormValid = () => {
     if (mode !== "form") return false;
 
@@ -310,9 +308,7 @@ export default function KYC() {
       }
       const bvn = values.bvn?.replace(/\D/g, "") || "";
       const nin = values.nin?.replace(/\D/g, "") || "";
-      const hasValidBvn = bvn.length === 11;
-      const hasValidNin = nin.length === 11;
-      if (!hasValidBvn && !hasValidNin) return false;
+      if (bvn.length !== 11 && nin.length !== 11) return false;
       return true;
     }
 
@@ -322,7 +318,6 @@ export default function KYC() {
       if (!files.selfie) return false;
       if (!files.proof_of_address) return false;
 
-      // BVN / NIN only required if backend still missing them
       if (!backendHasBvn && !backendHasNin) {
         const bvn = values.bvn?.replace(/\D/g, "") || "";
         const nin = values.nin?.replace(/\D/g, "") || "";
@@ -341,6 +336,7 @@ export default function KYC() {
     }
 
     if (displayTier === "3") {
+      // Only proof of address is required
       return !!files.proof_of_address;
     }
 
@@ -437,7 +433,7 @@ export default function KYC() {
         </div>
       )}
 
-      {/* ========== TIER STATUS (after approval, before upgrade) ========== */}
+      {/* ========== TIER STATUS (after approval – no auto-jump) ========== */}
       {mode === "tierStatus" && (
         <div style={{ textAlign: "center", marginTop: 32 }}>
           <p style={{ color: "#166534", fontWeight: 600, fontSize: 16 }}>
@@ -446,7 +442,7 @@ export default function KYC() {
           <p style={{ color: "#64748B", marginTop: 8, marginBottom: 24 }}>
             You can continue using your account with the limits shown above, or upgrade for higher limits.
           </p>
-          {storedTier < 3 && (
+          {currentTier < 3 && (
             <button
               type="button"
               onClick={() => setShowUpgradeForm(true)}
@@ -460,7 +456,7 @@ export default function KYC() {
                 cursor: "pointer",
               }}
             >
-              Upgrade to Tier {storedTier + 1}
+              Upgrade to Tier {currentTier + 1}
             </button>
           )}
         </div>
@@ -472,7 +468,7 @@ export default function KYC() {
           <p style={{ color: "#64748B", marginBottom: 16 }}>
             {displayTier === "1" && "Provide your personal details and either BVN or NIN."}
             {displayTier === "2" && "Upload government ID, take a live selfie and provide proof of address."}
-            {displayTier === "3" && "Upload any one stronger proof of address."}
+            {displayTier === "3" && "Upload a stronger proof of address to complete enhanced verification."}
           </p>
 
           {displayTier === "1" && (
@@ -483,7 +479,13 @@ export default function KYC() {
 
           {displayTier === "3" && (
             <p style={{ fontSize: 13, color: "#475569", background: "#f8fafc", padding: 10, borderRadius: 8, marginBottom: 12 }}>
-              Acceptable documents: utility bill (last 3 months), bank statement, stamped tenancy agreement, or tax clearance certificate.
+              Acceptable documents (must show your name and address, usually not older than 3 months):
+              <br />• Electricity / PHCN bill
+              <br />• Water or waste-management bill
+              <br />• Bank statement
+              <br />• Stamped tenancy / rental agreement
+              <br />• Tax clearance certificate or Land Use Charge receipt
+              <br />• Estate or serviced-apartment receipt
             </p>
           )}
 
