@@ -76,8 +76,9 @@ function SelfieCamera({ onCapture, onClose }) {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera not supported in this browser.");
       }
+      // Force front camera only
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+        video: { facingMode: { exact: "user" } },
         audio: false,
       });
       streamRef.current = stream;
@@ -96,7 +97,30 @@ function SelfieCamera({ onCapture, onClose }) {
       }
     } catch (err) {
       console.error("Camera error:", err);
-      setError("Camera unavailable. You can upload a photo instead.");
+      // Fallback without "exact" in case the device rejects it
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play();
+          await new Promise((resolve) => {
+            const check = () => {
+              if (video.videoWidth > 0) resolve();
+              else setTimeout(check, 100);
+            };
+            check();
+          });
+          setReady(true);
+        }
+      } catch (fallbackErr) {
+        console.error("Camera fallback error:", fallbackErr);
+        setError("Camera is required for selfie verification. Please allow camera access and try again.");
+      }
     }
   };
 
@@ -165,7 +189,12 @@ function SelfieCamera({ onCapture, onClose }) {
               <button type="button" onClick={accept} style={{ padding: "10px 16px", borderRadius: 8, border: "none", background: "#2563eb", color: "#fff" }}>Accept</button>
             </>
           ) : (
-            <button type="button" onClick={takePhoto} disabled={!ready} style={{ width: 68, height: 68, borderRadius: "50%", border: "4px solid #fff", background: "#2563eb", opacity: ready ? 1 : 0.5 }} />
+            <button
+              type="button"
+              onClick={takePhoto}
+              disabled={!ready || !!error}
+              style={{ width: 68, height: 68, borderRadius: "50%", border: "4px solid #fff", background: "#2563eb", opacity: ready && !error ? 1 : 0.5 }}
+            />
           )}
         </div>
       </div>
@@ -186,10 +215,13 @@ export default function KYC() {
   const [backendHasNin, setBackendHasNin] = useState(false);
   const [backendHasProofOfAddress, setBackendHasProofOfAddress] = useState(false);
   const [showSelfieCam, setShowSelfieCam] = useState(false);
+  const [showUpgradeForm, setShowUpgradeForm] = useState(false);
   const navigate = useNavigate();
 
   const isApproved = ["approved", "verified"].includes(status.toLowerCase());
   const isPending = status.toLowerCase() === "pending";
+  const storedTier = Number(limits?.tier || 0);
+  const isFullyVerified = isApproved && !isPending && storedTier >= 3;
 
   useEffect(() => {
     let active = true;
@@ -225,47 +257,100 @@ export default function KYC() {
     setFiles((prev) => ({ ...prev, selfie: file }));
   };
 
-  const hasIdentity = backendHasBvn || backendHasNin;
-  const storedTier = Number(limits?.tier || 0);
-  const isFullyVerified = isApproved && !isPending && storedTier >= 3;
-
-  let fieldsToRender = [];
+  // Decide which screen / form to show
+  let mode = "loading"; // "pending" | "fullyVerified" | "tierStatus" | "form"
   let displayTier = "1";
+  let fieldsToRender = [];
 
   if (isPending) {
+    mode = "pending";
     displayTier = String(storedTier || 1);
-    fieldsToRender = [];
+  } else if (isFullyVerified) {
+    mode = "fullyVerified";
+    displayTier = "3";
+  } else if (isApproved && storedTier >= 1 && storedTier < 3 && !showUpgradeForm) {
+    // Stable status screen after approval – do not auto-jump to next form
+    mode = "tierStatus";
+    displayTier = String(storedTier);
   } else if (!isApproved) {
-    // Brand new user → Tier 1
+    // Brand new user → Tier 1 form
+    mode = "form";
     displayTier = "1";
     fieldsToRender = [
       "full_name", "date_of_birth", "gender", "phone_number",
       "address", "city", "state", "bvn", "nin",
     ];
   } else if (storedTier < 2) {
-    // Approved at Tier 1 → show Tier 2 form
+    // User clicked "Upgrade to Tier 2"
+    mode = "form";
     displayTier = "2";
     fieldsToRender = ["government_id_type", "government_id", "selfie", "proof_of_address"];
     if (!backendHasBvn) fieldsToRender.unshift("bvn");
     if (!backendHasNin) fieldsToRender.unshift("nin");
   } else if (storedTier < 3) {
-    // Approved at Tier 2 → show Tier 3 form
+    // User clicked "Upgrade to Tier 3"
+    mode = "form";
     displayTier = "3";
     fieldsToRender = ["proof_of_address"];
   } else {
+    mode = "fullyVerified";
     displayTier = "3";
-    fieldsToRender = [];
   }
 
   const tierInfo = TIER_INFO[displayTier] || TIER_INFO["1"];
 
-  const handleSubmit = async () => {
-    if (displayTier === "1" && !values.bvn?.trim() && !values.nin?.trim()) {
-      const msg = "Please provide either BVN or NIN.";
-      setError(msg);
-      alert(msg);
-      return;
+  // Validation – submit button stays disabled until form is complete
+  const isFormValid = () => {
+    if (mode !== "form") return false;
+
+    if (displayTier === "1") {
+      const required = ["full_name", "date_of_birth", "gender", "phone_number", "address", "city", "state"];
+      for (const f of required) {
+        if (!values[f]?.trim()) return false;
+      }
+      const bvn = values.bvn?.replace(/\D/g, "") || "";
+      const nin = values.nin?.replace(/\D/g, "") || "";
+      const hasValidBvn = bvn.length === 11;
+      const hasValidNin = nin.length === 11;
+      if (!hasValidBvn && !hasValidNin) return false;
+      return true;
     }
+
+    if (displayTier === "2") {
+      if (!values.government_id_type?.trim()) return false;
+      if (!files.government_id) return false;
+      if (!files.selfie) return false;
+      if (!files.proof_of_address) return false;
+
+      // BVN / NIN only required if backend still missing them
+      if (!backendHasBvn && !backendHasNin) {
+        const bvn = values.bvn?.replace(/\D/g, "") || "";
+        const nin = values.nin?.replace(/\D/g, "") || "";
+        if (bvn.length !== 11 && nin.length !== 11) return false;
+      } else {
+        if (!backendHasBvn) {
+          const bvn = values.bvn?.replace(/\D/g, "") || "";
+          if (bvn.length !== 11) return false;
+        }
+        if (!backendHasNin) {
+          const nin = values.nin?.replace(/\D/g, "") || "";
+          if (nin.length !== 11) return false;
+        }
+      }
+      return true;
+    }
+
+    if (displayTier === "3") {
+      return !!files.proof_of_address;
+    }
+
+    return false;
+  };
+
+  const formIsValid = isFormValid();
+
+  const handleSubmit = async () => {
+    if (!formIsValid) return;
 
     setLoading(true);
     setError("");
@@ -315,21 +400,57 @@ export default function KYC() {
 
       {status && <p style={{ color: "#475569" }}>Status: {status.toUpperCase()}</p>}
 
-      {isFullyVerified ? (
+      {/* ========== FULLY VERIFIED ========== */}
+      {mode === "fullyVerified" && (
         <div style={{ textAlign: "center", marginTop: 40 }}>
-          <p style={{ color: "#166534", fontWeight: 600, fontSize: 16 }}>Fully verified</p>
-          <p style={{ color: "#64748B" }}>Your account is at the highest tier.</p>
+          <p style={{ color: "#166534", fontWeight: 600, fontSize: 18 }}>Fully verified</p>
+          <p style={{ color: "#64748B", marginTop: 8 }}>Your account is at the highest tier. No further action is required.</p>
         </div>
-      ) : isPending ? (
+      )}
+
+      {/* ========== PENDING ========== */}
+      {mode === "pending" && (
         <div style={{ textAlign: "center", marginTop: 40 }}>
           <p style={{ color: "#92400e", fontWeight: 600 }}>Under review</p>
           <p style={{ color: "#64748B" }}>Your documents have been submitted and are awaiting approval.</p>
         </div>
-      ) : (
+      )}
+
+      {/* ========== TIER STATUS (after approval, before upgrade) ========== */}
+      {mode === "tierStatus" && (
+        <div style={{ textAlign: "center", marginTop: 32 }}>
+          <p style={{ color: "#166534", fontWeight: 600, fontSize: 16 }}>
+            You are verified at {tierInfo.title}
+          </p>
+          <p style={{ color: "#64748B", marginTop: 8, marginBottom: 24 }}>
+            You can continue using your account with the limits shown above, or upgrade for higher limits.
+          </p>
+          {storedTier < 3 && (
+            <button
+              type="button"
+              onClick={() => setShowUpgradeForm(true)}
+              style={{
+                padding: "12px 24px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Upgrade to Tier {storedTier + 1}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ========== FORM ========== */}
+      {mode === "form" && (
         <>
           <p style={{ color: "#64748B", marginBottom: 16 }}>
             {displayTier === "1" && "Provide your personal details and either BVN or NIN."}
-            {displayTier === "2" && "Upload government ID, selfie and proof of address."}
+            {displayTier === "2" && "Upload government ID, take a live selfie and provide proof of address."}
             {displayTier === "3" && "Upload any one stronger proof of address."}
           </p>
 
@@ -348,10 +469,11 @@ export default function KYC() {
           {fieldsToRender.map((field) => {
             const required = field !== "bvn" && field !== "nin";
 
+            // Selfie – live camera only, no file upload
             if (field === "selfie") {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
-                  <RequiredLabel required={required}>Selfie</RequiredLabel>
+                  <RequiredLabel required={true}>Selfie (live camera only)</RequiredLabel>
                   <button
                     type="button"
                     onClick={() => setShowSelfieCam(true)}
@@ -374,6 +496,7 @@ export default function KYC() {
               );
             }
 
+            // Other file fields (gov ID, proof of address)
             if (fileFields.has(field)) {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
@@ -400,7 +523,11 @@ export default function KYC() {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel required={required}>Gender</RequiredLabel>
-                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                  <select
+                    value={values[field] || ""}
+                    onChange={(e) => setValues({ ...values, [field]: e.target.value })}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                  >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -414,9 +541,15 @@ export default function KYC() {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel required={required}>State</RequiredLabel>
-                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                  <select
+                    value={values[field] || ""}
+                    onChange={(e) => setValues({ ...values, [field]: e.target.value })}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                  >
                     <option value="">Select state</option>
-                    {NIGERIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+                    {NIGERIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
                   </select>
                 </div>
               );
@@ -426,7 +559,11 @@ export default function KYC() {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel required={required}>Government ID type</RequiredLabel>
-                  <select value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                  <select
+                    value={values[field] || ""}
+                    onChange={(e) => setValues({ ...values, [field]: e.target.value })}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                  >
                     <option value="">Select ID type</option>
                     <option value="national_id">National ID (NIN Slip / Card)</option>
                     <option value="passport">International Passport</option>
@@ -441,7 +578,12 @@ export default function KYC() {
               return (
                 <div key={field} style={{ marginBottom: 16 }}>
                   <RequiredLabel required={required}>Date of birth</RequiredLabel>
-                  <input type="date" value={values[field] || ""} onChange={(e) => setValues({ ...values, [field]: e.target.value })} style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }} />
+                  <input
+                    type="date"
+                    value={values[field] || ""}
+                    onChange={(e) => setValues({ ...values, [field]: e.target.value })}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                  />
                 </div>
               );
             }
@@ -480,13 +622,24 @@ export default function KYC() {
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
-            style={{ marginTop: 8, padding: "12px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}
+            disabled={loading || !formIsValid}
+            style={{
+              marginTop: 8,
+              padding: "12px 20px",
+              background: formIsValid && !loading ? "#2563eb" : "#94a3b8",
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              cursor: formIsValid && !loading ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              opacity: formIsValid && !loading ? 1 : 0.7,
+            }}
           >
             {loading ? "Submitting..." : `Submit ${tierInfo.title}`}
           </button>
         </>
       )}
+
       {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
 
       {showSelfieCam && (
