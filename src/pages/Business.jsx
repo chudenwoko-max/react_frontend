@@ -92,11 +92,19 @@ export default function Business() {
   const isFormValid = () => {
     if (!applyName.trim()) return false;
     if (!directorName.trim()) return false;
-    if (!/^\d{11}$/.test(bvnOrNin.trim())) return false;
     if (!businessEmail.trim()) return false;
     if (!phoneLocal || phoneLocal.replace(/\D/g, "").length < 7) return false;
     if (!address.trim()) return false;
     if (!idDocument) return false;
+
+    if (!/^\d{11}$/.test(bvnOrNin.trim())) return false;
+
+    if (needsCac) {
+      if (!/^\d{10,15}$/.test(tin.trim())) return false;
+    } else if (tin.trim() && !/^\d{10,15}$/.test(tin.trim())) {
+      return false;
+    }
+
     if (needsCac && !cacNumber.trim()) return false;
     if (needsCac && !cacDocument) return false;
     return true;
@@ -110,21 +118,21 @@ export default function Business() {
     }
     setBusy(true);
     setErr("");
-    try {
-      const formData = new FormData();
-      formData.append("business_name", applyName);
-      formData.append("phone", fullPhone);
-      formData.append("business_type", businessType);
-      formData.append("cac_number", needsCac ? cacNumber : "");
-      formData.append("tin", tin);
-      formData.append("director_name", directorName);
-      formData.append("bvn_or_nin", bvnOrNin);
-      formData.append("email", businessEmail);
-      formData.append("address", address);
-      formData.append("nature_of_business", natureOfBusiness);
-      if (cacDocument) formData.append("cac_document", cacDocument);
-      if (idDocument) formData.append("id_document", idDocument);
-      if (addressDocument) formData.append("address_document", addressDocument);
+    try {const formData = new FormData();
+formData.append("business_name", applyName);
+formData.append("phone", fullPhone);
+formData.append("business_type", businessType);
+formData.append("cac_number", needsCac ? cacNumber : "");
+formData.append("tin", tin);
+formData.append("director_name", directorName);
+formData.append("bvn", bvn.trim());          // backend picks bvn || nin
+formData.append("nin", nin.trim());
+formData.append("business_email", businessEmail);   // ← renamed
+formData.append("address", address);
+formData.append("nature_of_business", natureOfBusiness);
+if (cacDocument) formData.append("cac_document", cacDocument);
+if (idDocument) formData.append("id_document", idDocument);
+if (addressDocument) formData.append("address_document", addressDocument);
 
       const res = await axiosClient.put("merchant/apply/", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -253,13 +261,15 @@ export default function Business() {
 
               <div>
                 <label style={styles.label}>
-                  TIN (Tax Identification Number) <Required />
+                  TIN (Tax Identification Number) {needsCac && <Required />}
                 </label>
                 <input
                   placeholder="FIRS TIN"
                   value={tin}
-                  onChange={(e) => setTin(e.target.value)}
-                  required
+                  onChange={(e) => setTin(e.target.value.replace(/\D/g, ""))}
+                  required={needsCac}
+                  maxLength={15}
+                  inputMode="numeric"
                   style={styles.input}
                 />
               </div>
