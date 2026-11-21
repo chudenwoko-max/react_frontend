@@ -79,9 +79,7 @@ export default function KYCTier1() {
       <p style={{ color: "#64748B", marginBottom: 16 }}>
         Provide your personal details and either BVN or NIN.
       </p>
-      <p style={{ fontSize: 14, color: "#1e40af", background: "#eff6ff", padding: 10, borderRadius: 8, marginBottom: 12 }}>
-        Provide either BVN or NIN (one is enough).
-      </p>
+      
 
       {/* Full legal name */}
       <div style={{ marginBottom: 16 }}>
