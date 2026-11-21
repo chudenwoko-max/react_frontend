@@ -5,15 +5,25 @@ import KYCTier2 from "./KYCTier2";
 import KYCTier3 from "./KYCTier3";
 import KYCFullyVerified from "./KYCFullyVerified";
 
-const TIER_INFO = {
-  "1": { title: "Tier 1", daily: "₦50,000", perTx: "₦50,000", balance: "₦300,000", desc: "Basic verification" },
-  "2": { title: "Tier 2", daily: "₦200,000", perTx: "₦200,000", balance: "₦500,000", desc: "Full identity + address" },
-  "3": { title: "Tier 3", daily: "₦5,000,000", perTx: "₦1,000,000", balance: "Unlimited", desc: "Enhanced verification" },
+// Fallback only — live values come from API limits
+const TIER_FALLBACK = {
+  0: { title: "Unverified", daily: "₦5,000", perTx: "₦5,000", balance: "₦5,000", desc: "Not verified" },
+  1: { title: "Tier 1", daily: "₦50,000", perTx: "₦20,000", balance: "₦300,000", desc: "Basic verification" },
+  2: { title: "Tier 2", daily: "₦200,000", perTx: "₦100,000", balance: "₦500,000", desc: "Full identity + address" },
+  3: { title: "Tier 3", daily: "₦5,000,000", perTx: "₦1,000,000", balance: "Unlimited", desc: "Enhanced verification" },
 };
+
+function formatNgn(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  if (Number.isNaN(n)) return null;
+  return `₦${n.toLocaleString("en-NG")}`;
+}
 
 export default function KYC() {
   const [status, setStatus] = useState("");
   const [limits, setLimits] = useState(null);
+  const [apiTier, setApiTier] = useState(0);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
   const [backendHasBvn, setBackendHasBvn] = useState(false);
@@ -23,11 +33,8 @@ export default function KYC() {
   const isApproved = ["approved", "verified"].includes((status || "").toLowerCase());
   const isPending = (status || "").toLowerCase() === "pending";
 
-  // Backend sometimes returns 0 / null after Tier 1 approval.
-  // Treat any approved user with tier < 1 as Tier 1.
-  const rawTier = Number(limits?.tier || 0);
-  const currentTier = isApproved ? Math.max(rawTier, 1) : rawTier;
-
+  const rawTier = Number(apiTier || limits?.tier || 0);
+  const currentTier = isApproved ? Math.max(rawTier, 1) : Math.max(rawTier, 0);
   const isFullyVerified = isApproved && !isPending && currentTier >= 3;
 
   useEffect(() => {
@@ -40,6 +47,7 @@ export default function KYC() {
         if (!active) return;
         setStatus(data.status || "");
         setLimits(data.limits || null);
+        setApiTier(Number(data.limits?.tier ?? data.tier ?? 0));
         setBackendHasBvn(!!data.bvn);
         setBackendHasNin(!!data.nin);
       } catch (err) {
@@ -49,37 +57,59 @@ export default function KYC() {
       }
     };
     fetchStatus();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Decide what to show
   let mode = "loading";
-  let displayTier = "1";
+  let displayTier = 1;
 
   if (isPending) {
     mode = "pending";
-    displayTier = String(currentTier || 1);
+    displayTier = Math.max(currentTier, 1);
   } else if (isFullyVerified) {
     mode = "fullyVerified";
-    displayTier = "3";
+    displayTier = 3;
   } else if (isApproved && !showUpgradeForm) {
-    // Stable status screen – never auto-jump
     mode = "tierStatus";
-    displayTier = String(currentTier); // already >= 1 when approved
+    displayTier = currentTier;
   } else if (!isApproved) {
     mode = "form";
-    displayTier = "1";
-  } else if (currentTier < 2) {
-    // Approved at Tier 1 → show Tier 2 form
+    displayTier = 1;
+  } else if (showUpgradeForm && currentTier === 1) {
     mode = "form";
-    displayTier = "2";
+    displayTier = 2;
+  } else if (showUpgradeForm && currentTier === 2) {
+    mode = "form";
+    displayTier = 3;
+  } else if (showUpgradeForm && currentTier >= 3) {
+    mode = "fullyVerified";
+    displayTier = 3;
   } else {
-    // Approved at Tier 2 → show Tier 3 form
-    mode = "form";
-    displayTier = "3";
+    mode = "tierStatus";
+    displayTier = Math.max(currentTier, 1);
   }
 
-  const tierInfo = TIER_INFO[displayTier] || TIER_INFO["1"];
+  const fallback = TIER_FALLBACK[displayTier] || TIER_FALLBACK[1];
+
+  // Live limits from API when this screen is showing the user's current tier
+  const useLiveLimits = mode === "tierStatus" || mode === "fullyVerified" || mode === "pending";
+  const tierInfo = {
+    title: fallback.title,
+    desc: fallback.desc,
+    daily:
+      (useLiveLimits && formatNgn(limits?.daily_send_ngn)) ||
+      fallback.daily,
+    perTx:
+      (useLiveLimits && formatNgn(limits?.single_send_ngn)) ||
+      fallback.perTx,
+    balance:
+      (useLiveLimits && limits?.balance_label) ||
+      fallback.balance,
+  };
+
+  const nextTier = Math.min(currentTier + 1, 3);
 
   if (fetching) {
     return <div style={{ padding: 40, textAlign: "center" }}>Loading KYC status…</div>;
@@ -133,17 +163,17 @@ export default function KYC() {
                 cursor: "pointer",
               }}
             >
-              Upgrade to Tier {currentTier + 1}
+              Upgrade to Tier {nextTier}
             </button>
           )}
         </div>
       )}
 
-      {mode === "form" && displayTier === "1" && <KYCTier1 />}
-      {mode === "form" && displayTier === "2" && (
+      {mode === "form" && displayTier === 1 && <KYCTier1 />}
+      {mode === "form" && displayTier === 2 && (
         <KYCTier2 backendHasBvn={backendHasBvn} backendHasNin={backendHasNin} />
       )}
-      {mode === "form" && displayTier === "3" && <KYCTier3 />}
+      {mode === "form" && displayTier === 3 && <KYCTier3 />}
 
       {error && <p style={{ color: "#B91C1C", marginTop: 12 }}>{error}</p>}
     </div>
