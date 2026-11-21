@@ -118,28 +118,37 @@ export default function Business() {
     }
     setBusy(true);
     setErr("");
-    try {const formData = new FormData();
-formData.append("business_name", applyName);
-formData.append("phone", fullPhone);
-formData.append("business_type", businessType);
-formData.append("cac_number", needsCac ? cacNumber : "");
-formData.append("tin", tin);
-formData.append("director_name", directorName);
-formData.append("bvn", bvn.trim());          // backend picks bvn || nin
-formData.append("nin", nin.trim());
-formData.append("business_email", businessEmail);   // ← renamed
-formData.append("address", address);
-formData.append("nature_of_business", natureOfBusiness);
-if (cacDocument) formData.append("cac_document", cacDocument);
-if (idDocument) formData.append("id_document", idDocument);
-if (addressDocument) formData.append("address_document", addressDocument);
+    try {
+      const formData = new FormData();
+      formData.append("business_name", applyName);
+      formData.append("phone", fullPhone);
+      formData.append("business_type", businessType);
+      formData.append("cac_number", needsCac ? cacNumber : "");
+      formData.append("tin", tin);
+      formData.append("director_name", directorName);
+      // Backend reads bvn || nin (both keys accepted). Send the same value twice
+      // is harmless, so send it as bvn and leave nin empty.
+      formData.append("bvn", bvnOrNin.trim());
+      formData.append("nin", "");
+      formData.append("business_email", businessEmail);
+      formData.append("address", address);
+      formData.append("nature_of_business", natureOfBusiness);
+      if (cacDocument) formData.append("cac_document", cacDocument);
+      if (idDocument) formData.append("id_document", idDocument);
+      if (addressDocument) formData.append("address_document", addressDocument);
 
-      const res = await axiosClient.put("merchant/apply/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Do NOT set Content-Type manually — axios adds the boundary automatically.
+      const res = await axiosClient.put("merchant/apply/", formData);
       setMe(res.data);
     } catch (e2) {
-      setErr(e2.response?.data?.error || "Apply failed");
+      const d = e2.response?.data;
+      const msg =
+        (typeof d === "string" ? d : d?.error || d?.detail || JSON.stringify(d)) ||
+        e2.message ||
+        "Apply failed";
+      // Surface the real reason for debugging
+      console.error("merchant/apply/ failed:", e2);
+      setErr(msg);
     } finally {
       setBusy(false);
     }
@@ -160,7 +169,11 @@ if (addressDocument) formData.append("address_document", addressDocument);
         window.location.href = res.data.authorization_url;
       }
     } catch (e2) {
-      setErr(e2.response?.data?.error || "Could not create payment");
+      const d = e2.response?.data;
+      setErr(
+        (typeof d === "string" ? d : d?.error || d?.detail) ||
+          "Could not create payment"
+      );
     } finally {
       setBusy(false);
     }
@@ -177,7 +190,11 @@ if (addressDocument) formData.append("address_document", addressDocument);
       await load();
       setErr(res.data?.error || "Payout requested");
     } catch (e2) {
-      setErr(e2.response?.data?.error || "Payout failed (expected on Paystack Starter)");
+      const d = e2.response?.data;
+      setErr(
+        (typeof d === "string" ? d : d?.error || d?.detail) ||
+          "Payout failed (expected on Paystack Starter)"
+      );
     } finally {
       setBusy(false);
     }
@@ -264,7 +281,7 @@ if (addressDocument) formData.append("address_document", addressDocument);
                   TIN (Tax Identification Number) {needsCac && <Required />}
                 </label>
                 <input
-                  placeholder="FIRS TIN"
+                  placeholder="FIRS TIN (10–15 digits)"
                   value={tin}
                   onChange={(e) => setTin(e.target.value.replace(/\D/g, ""))}
                   required={needsCac}
@@ -408,8 +425,8 @@ if (addressDocument) formData.append("address_document", addressDocument);
                   style={styles.input}
                 />
                 <p style={styles.hint}>
-  Utility bill, bank statement, or tenancy agreement (not older than 3 months)
-</p>
+                  Utility bill, bank statement, or tenancy agreement (not older than 3 months)
+                </p>
               </div>
 
               <button
@@ -525,8 +542,9 @@ if (addressDocument) formData.append("address_document", addressDocument);
           <form onSubmit={createCharge} style={styles.form}>
             <input
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
               placeholder="Amount (NGN)"
+              inputMode="numeric"
               style={styles.input}
             />
             <input
@@ -559,8 +577,9 @@ if (addressDocument) formData.append("address_document", addressDocument);
           <form onSubmit={sendPayout} style={styles.form}>
             <input
               value={payoutAmount}
-              onChange={(e) => setPayoutAmount(e.target.value)}
+              onChange={(e) => setPayoutAmount(e.target.value.replace(/\D/g, ""))}
               placeholder="Payout amount"
+              inputMode="numeric"
               style={styles.input}
             />
             <button type="submit" disabled={busy} style={styles.btn}>
