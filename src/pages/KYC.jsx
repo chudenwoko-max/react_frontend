@@ -385,6 +385,27 @@ export default function KYC() {
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
+      {/* Kill browser autofill yellow background */}
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active,
+        select:-webkit-autofill,
+        select:-webkit-autofill:hover,
+        select:-webkit-autofill:focus,
+        select:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+          box-shadow: 0 0 0 30px #ffffff inset !important;
+          -webkit-text-fill-color: #0f172a !important;
+          transition: background-color 9999s ease-in-out 0s;
+          caret-color: #0f172a;
+        }
+        input, select {
+          background-color: #ffffff !important;
+        }
+      `}</style>
+
       <h1 style={{ fontFamily: "serif", fontSize: 26, marginBottom: 12 }}>Get Verified</h1>
 
       <div style={{ background: "#eff6ff", padding: 14, borderRadius: 12, marginBottom: 16 }}>
@@ -526,7 +547,7 @@ export default function KYC() {
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -544,7 +565,7 @@ export default function KYC() {
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                   >
                     <option value="">Select state</option>
                     {NIGERIAN_STATES.map((st) => (
@@ -562,7 +583,7 @@ export default function KYC() {
                   <select
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                   >
                     <option value="">Select ID type</option>
                     <option value="national_id">National ID (NIN Slip / Card)</option>
@@ -582,7 +603,7 @@ export default function KYC() {
                     type="date"
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value })}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                   />
                 </div>
               );
@@ -597,7 +618,7 @@ export default function KYC() {
                     value={values[field] || ""}
                     onChange={(e) => setValues({ ...values, [field]: e.target.value.replace(/\D/g, "") })}
                     maxLength={11}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                   />
                 </div>
               );
@@ -614,7 +635,7 @@ export default function KYC() {
                     if (field === "phone_number") v = v.replace(/\D/g, "");
                     setValues({ ...values, [field]: v });
                   }}
-                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0" }}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #E2E8F0", backgroundColor: "#ffffff" }}
                 />
               </div>
             );
