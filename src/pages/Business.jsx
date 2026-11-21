@@ -396,7 +396,9 @@ export default function Business() {
                   onChange={(e) => setAddressDocument(e.target.files[0] || null)}
                   style={styles.input}
                 />
-                <p style={styles.hint}>Utility bill or tenancy agreement (recommended, ≤ 3 months old)</p>
+                <p style={styles.hint}>
+  Utility bill, bank statement, or tenancy agreement (not older than 3 months)
+</p>
               </div>
 
               <button type="submit" disabled={busy} style={styles.btn}>
