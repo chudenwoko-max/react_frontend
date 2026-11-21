@@ -89,22 +89,23 @@ export default function Business() {
   const fullPhone = `${country.dial}${phoneLocal.replace(/\D/g, "")}`;
   const needsCac = businessType !== "individual";
 
+  const isFormValid = () => {
+    if (!applyName.trim()) return false;
+    if (!directorName.trim()) return false;
+    if (!/^\d{11}$/.test(bvnOrNin.trim())) return false;
+    if (!businessEmail.trim()) return false;
+    if (!phoneLocal || phoneLocal.replace(/\D/g, "").length < 7) return false;
+    if (!address.trim()) return false;
+    if (!idDocument) return false;
+    if (needsCac && !cacNumber.trim()) return false;
+    if (needsCac && !cacDocument) return false;
+    return true;
+  };
+
   const apply = async (e) => {
     e.preventDefault();
-    if (!phoneLocal || phoneLocal.replace(/\D/g, "").length < 7) {
-      setErr("Enter a valid phone number");
-      return;
-    }
-    if (needsCac && !cacNumber.trim()) {
-      setErr("CAC registration number is required for registered businesses");
-      return;
-    }
-    if (needsCac && !cacDocument) {
-      setErr("CAC certificate is required for registered businesses");
-      return;
-    }
-    if (!idDocument) {
-      setErr("Director/proprietor ID is required");
+    if (!isFormValid()) {
+      setErr("Please fill all required fields");
       return;
     }
     setBusy(true);
@@ -401,7 +402,15 @@ export default function Business() {
 </p>
               </div>
 
-              <button type="submit" disabled={busy} style={styles.btn}>
+              <button
+                type="submit"
+                disabled={busy || !isFormValid()}
+                style={{
+                  ...styles.btn,
+                  opacity: busy || !isFormValid() ? 0.6 : 1,
+                  cursor: busy || !isFormValid() ? "not-allowed" : "pointer",
+                }}
+              >
                 {busy ? "Submitting…" : "Submit application"}
               </button>
             </form>
