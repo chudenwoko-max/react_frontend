@@ -22,7 +22,12 @@ export default function KYC() {
 
   const isApproved = ["approved", "verified"].includes((status || "").toLowerCase());
   const isPending = (status || "").toLowerCase() === "pending";
-  const currentTier = Number(limits?.tier || 0);
+
+  // Backend sometimes returns 0 / null after Tier 1 approval.
+  // Treat any approved user with tier < 1 as Tier 1.
+  const rawTier = Number(limits?.tier || 0);
+  const currentTier = isApproved ? Math.max(rawTier, 1) : rawTier;
+
   const isFullyVerified = isApproved && !isPending && currentTier >= 3;
 
   useEffect(() => {
@@ -60,14 +65,16 @@ export default function KYC() {
   } else if (isApproved && !showUpgradeForm) {
     // Stable status screen – never auto-jump
     mode = "tierStatus";
-    displayTier = String(Math.max(currentTier, 1));
+    displayTier = String(currentTier); // already >= 1 when approved
   } else if (!isApproved) {
     mode = "form";
     displayTier = "1";
   } else if (currentTier < 2) {
+    // Approved at Tier 1 → show Tier 2 form
     mode = "form";
     displayTier = "2";
   } else {
+    // Approved at Tier 2 → show Tier 3 form
     mode = "form";
     displayTier = "3";
   }
