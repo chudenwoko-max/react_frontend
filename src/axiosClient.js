@@ -1,5 +1,8 @@
+import axios from "axios";
+
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://api.payhost.dev/api/",
+  //baseURL: "https://api.payhost.dev/api/",
+  baseURL: "https://currency-cvt-fintech-1-production.up.railway.app/api/",
   headers: {
     "Content-Type": "application/json",
     "X-Client": "web",
