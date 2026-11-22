@@ -1,7 +1,5 @@
-import axios from "axios";
-
 const axiosClient = axios.create({
-  baseURL: "https://api.payhost.dev/api/",
+  baseURL: import.meta.env.VITE_API_URL || "https://api.payhost.dev/api/",
   headers: {
     "Content-Type": "application/json",
     "X-Client": "web",
