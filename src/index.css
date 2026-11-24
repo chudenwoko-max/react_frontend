@@ -1,3 +1,4 @@
+
 /* Global background and font */
 html,
 body {
@@ -40,12 +41,17 @@ label,
 input,
 textarea,
 select {
-  color: #475569; /* soft slate grey */
+  color: #475569;
 }
 
 /* Headings */
-h1, h2, h3, h4, h5, h6 {
-  color: #0f172a; /* darker for headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #0f172a;
   margin: 0;
 }
 
@@ -70,7 +76,7 @@ select {
   color: #0f172a;
 }
 
-/* Smooth transitions for UI elements */
+/* Smooth transitions */
 * {
   transition: all 0.2s ease;
 }
@@ -117,10 +123,7 @@ select {
   opacity: 1;
 }
 
-/* ===============================
-   GitHub‑style tooltip for menu button
-   =============================== */
-
+/* Menu tooltip */
 .menu-tip {
   position: relative;
 }
@@ -148,31 +151,28 @@ select {
   opacity: 1;
 }
 
-/* ===============================
-   Responsive Sidebar
-   =============================== */
+/* Sidebar desktop and mobile behaviour */
+.sidebar {
+  will-change: transform;
+}
 
+/* Desktop: retain React-controlled open/close state */
 @media (min-width: 1024px) {
   .sidebar {
-    transform: translateX(0) !important;
-    position: sticky !important;
-    top: 0 !important;
-    height: 100vh !important;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    height: calc(100vh - 64px);
+    z-index: 999;
   }
 
-  .menu-btn {
-    display: none !important;
-  }
-
+  .menu-btn,
   .close-btn {
-    display: none !important;
+    display: flex;
   }
 }
 
-/* ===============================
-   PRINT MODE FOR STATEMENTS
-   =============================== */
-
+/* Print mode for statements */
 @media print {
   body * {
     visibility: hidden;

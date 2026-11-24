@@ -73,6 +73,8 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
+        type="button"
+        data-menu-button
           onClick={onMenuClick}
           style={{
             background: "transparent",
