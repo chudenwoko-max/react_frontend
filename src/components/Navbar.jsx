@@ -73,6 +73,7 @@ export default function Navbar({ isSidebarOpen, onMenuClick }) {
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button
+          data-menu-button // ------------------ PATCHED SECTION ------------------
           onClick={onMenuClick}
           style={{
             background: "transparent",
