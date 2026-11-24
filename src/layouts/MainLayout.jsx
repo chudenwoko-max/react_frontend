@@ -33,12 +33,12 @@ export default function MainLayout() {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f7f9fc" }}>
-      {/* Pass the ref directly to Sidebar, not a wrapper div */}
-      <Sidebar
-        ref={sidebarRef} // <--- ADD THIS
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <div ref={sidebarRef}>
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
       <div
         style={{
@@ -49,11 +49,22 @@ export default function MainLayout() {
           position: "relative",
         }}
       >
-        {/* ... rest of your layout ... */}
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid #E2E8F0" }}>
+          <Link to="/dashboard" style={{ display: "flex", alignItems: "center" }}>
+            <img
+              src="/payhost-logo.png"
+              alt="Payhost"
+              height={56}
+              style={{ display: "block" }}
+            />
+          </Link>
+        </div>
+
         <Navbar
           isSidebarOpen={sidebarOpen}
           onMenuClick={() => setSidebarOpen((prev) => !prev)}
         />
+
         <main style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
           <Outlet />
         </main>

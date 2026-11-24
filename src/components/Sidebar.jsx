@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import { NavLink } from "react-router-dom";
 import { 
   FaHome, 
@@ -25,11 +24,7 @@ import {
   FaEnvelope 
 } from "react-icons/fa";
 
-// ------------------ PATCHED SECTION ------------------
-// Wrapped in forwardRef to accept the ref from MainLayout
-const Sidebar = forwardRef(({ isOpen, onClose }, ref) => {
-// ------------------ END PATCHED SECTION ------------------
-
+export default function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: <FaHome /> },
     { path: "/wallet", label: "Wallet", icon: <FaWallet /> },
@@ -55,7 +50,6 @@ const Sidebar = forwardRef(({ isOpen, onClose }, ref) => {
 
   return (
     <div
-      ref={ref} // ------------------ PATCHED SECTION: Attached ref here ------------------
       style={{
         ...styles.sidebar,
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
@@ -127,11 +121,7 @@ const Sidebar = forwardRef(({ isOpen, onClose }, ref) => {
       </nav>
     </div>
   );
-// ------------------ PATCHED SECTION: Closed the forwardRef ------------------
-});
-
-export default Sidebar;
-// ------------------ END PATCHED SECTION ------------------
+}
 
 const styles = {
   sidebar: {
