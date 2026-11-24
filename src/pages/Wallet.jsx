@@ -136,13 +136,15 @@ export default function Wallet() {
               style={{
                 ...styles.walletCard,
                 background:
-                  wallet.currency_code === "NGN"
-                    ? "linear-gradient(135deg, #1e40af, #3b82f6)"
-                    : wallet.currency_code === "USD"
-                    ? "linear-gradient(135deg, #065f46, #10b981)"
-                    : wallet.currency_code === "GBP"
-                    ? "linear-gradient(135deg, #7c2d12, #ea580c)"
-                    : "linear-gradient(135deg, #4c1d95, #8b5cf6)",
+  wallet.currency_code === "NGN"
+    ? "linear-gradient(135deg, #334155, #64748b)"
+    : wallet.currency_code === "USD"
+    ? "linear-gradient(135deg, #14532d, #16a34a)"
+    : wallet.currency_code === "GBP"
+    ? "linear-gradient(135deg, #312e81, #6366f1)"
+    : wallet.currency_code === "EUR"
+    ? "linear-gradient(135deg, #78350f, #d97706)"
+    : "linear-gradient(135deg, #334155, #64748b)",
               }}
             >
               <div style={styles.walletTop}>
@@ -370,11 +372,12 @@ const styles = {
     marginBottom: 28,
   },
   walletCard: {
-    color: "white",
-    borderRadius: 16,
-    padding: "22px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-  },
+  color: "#FFFFFF",
+  borderRadius: 16,
+  padding: "22px",
+  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+  fontFamily: 'Georgia, "Times New Roman", serif',
+},
   walletTop: {
     display: "flex",
     justifyContent: "space-between",
@@ -382,10 +385,10 @@ const styles = {
     marginBottom: 4,
   },
   currencyCode: {
-    fontSize: 14,
-    fontWeight: 600,
-    opacity: 0.9,
-  },
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#FFFFFF",
+},
   defaultBadge: {
     fontSize: 10,
     background: "rgba(255,255,255,0.25)",
@@ -393,20 +396,21 @@ const styles = {
     borderRadius: 10,
   },
   currencyName: {
-    margin: "0 0 12px 0",
-    fontSize: 13,
-    opacity: 0.85,
-  },
+  margin: "0 0 12px 0",
+  fontSize: 13,
+  color: "#FFFFFF",
+},
   balance: {
-    margin: 0,
-    fontSize: 24,
-    fontWeight: 700,
-  },
+  margin: 0,
+  fontSize: 24,
+  fontWeight: 700,
+  color: "#FFFFFF",
+},
   walletNote: {
-    margin: "8px 0 0",
-    fontSize: 11,
-    opacity: 0.75,
-  },
+  margin: "8px 0 0",
+  fontSize: 11,
+  color: "#FFFFFF",
+},
   actionsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
