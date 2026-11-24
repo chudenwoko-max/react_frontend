@@ -56,6 +56,7 @@ export default function Business() {
   const [cacNumber, setCacNumber] = useState("");
   const [tin, setTin] = useState("");
   const [directorName, setDirectorName] = useState("");
+  const [identityType, setIdentityType] = useState("bvn");
   const [bvnOrNin, setBvnOrNin] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -126,10 +127,15 @@ export default function Business() {
       formData.append("cac_number", needsCac ? cacNumber : "");
       formData.append("tin", tin);
       formData.append("director_name", directorName);
-      // Backend reads bvn || nin (both keys accepted). Send the same value twice
-      // is harmless, so send it as bvn and leave nin empty.
-      formData.append("bvn", bvnOrNin.trim());
-      formData.append("nin", "");
+      // Submit the selected identity type only.
+      // Django will perform the actual Dojah verification.
+      if (identityType === "bvn") {
+        formData.append("bvn", bvnOrNin.trim());
+        formData.append("nin", "");
+      } else {
+        formData.append("nin", bvnOrNin.trim());
+        formData.append("bvn", "");
+      }
       formData.append("business_email", businessEmail);
       formData.append("address", address);
       formData.append("nature_of_business", natureOfBusiness);
@@ -138,7 +144,15 @@ export default function Business() {
       if (addressDocument) formData.append("address_document", addressDocument);
 
       // Do NOT set Content-Type manually — axios adds the boundary automatically.
-      const res = await axiosClient.put("merchant/apply/", formData);
+      const res = await axiosClient.put(
+        "merchant/apply/",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       setMe(res.data);
     } catch (e2) {
       const d = e2.response?.data;
@@ -306,17 +320,45 @@ export default function Business() {
 
               <div>
                 <label style={styles.label}>
-                  BVN or NIN <Required />
+                  Identity verification type <Required />
                 </label>
+
+                <select
+                  value={identityType}
+                  onChange={(e) => {
+                    setIdentityType(e.target.value);
+                    setBvnOrNin("");
+                  }}
+                  style={styles.input}
+                >
+                  <option value="bvn">Bank Verification Number (BVN)</option>
+                  <option value="nin">National Identification Number (NIN)</option>
+                </select>
+
+                <label style={{ ...styles.label, marginTop: 12 }}>
+                  {identityType === "bvn" ? "BVN" : "NIN"} <Required />
+                </label>
+
                 <input
-                  placeholder="11-digit BVN or NIN"
+                  placeholder={
+                    identityType === "bvn"
+                      ? "Enter your 11-digit BVN"
+                      : "Enter your 11-digit NIN"
+                  }
                   value={bvnOrNin}
-                  onChange={(e) => setBvnOrNin(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) =>
+                    setBvnOrNin(e.target.value.replace(/\D/g, "").slice(0, 11))
+                  }
                   required
                   maxLength={11}
                   style={styles.input}
                   inputMode="numeric"
                 />
+
+                <p style={styles.hint}>
+                  Your identity will be verified securely through Dojah.
+                  Your identity number is not displayed publicly.
+                </p>
               </div>
 
               <div>
