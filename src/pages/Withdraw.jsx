@@ -149,11 +149,12 @@ export default function Withdraw() {
       </div>
 
       <PinModal
-        open={showPin}
-        onClose={() => setShowPin(false)}
-        onVerified={handlePinVerified}
-        mode="verify"
-      />
+  open={showPin}
+  onClose={() => setShowPin(false)}
+  onVerified={handlePinVerified}
+  mode="verify"
+  actionLabel="Withdraw"
+/>
     </div>
   );
 }

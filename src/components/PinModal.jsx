@@ -1,7 +1,13 @@
 import { useState } from "react";
 import axiosClient from "../axiosClient";
 
-export default function PinModal({ open, onClose, onVerified, mode = "set" }) {
+export default function PinModal({
+  open,
+  onClose,
+  onVerified,
+  mode = "set",
+  actionLabel = "Transfer",
+}) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
 
@@ -75,8 +81,8 @@ export default function PinModal({ open, onClose, onVerified, mode = "set" }) {
         {error && <p style={styles.error}>{error}</p>}
 
         <button onClick={handleSubmit} style={styles.primaryBtn}>
-          {mode === "set" ? "Set PIN" : "Confirm Transfer"}
-        </button>
+  {mode === "set" ? "Set PIN" : `Confirm ${actionLabel}`}
+</button>
 
         <button onClick={onClose} style={styles.cancelBtn}>
           Cancel
