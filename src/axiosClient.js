@@ -1,14 +1,18 @@
+// axiosClient.js
+
 import axios from "axios";
 
 const axiosClient = axios.create({
   baseURL: "https://api.payhost.dev/api/",
-  //baseURL: "https://currency-cvt-fintech-1-production.up.railway.app/api/",
+  withCredentials: true,
   headers: {
-    "Content-Type": "application/json",
     "X-Client": "web",
     "X-Payhost-Client": "web",
   },
-  withCredentials: true,
 });
+
+axiosClient.defaults.xsrfCookieName = "csrftoken";
+axiosClient.defaults.xsrfHeaderName = "X-CSRFToken";
+axiosClient.defaults.withXSRFToken = true;
 
 export default axiosClient;
